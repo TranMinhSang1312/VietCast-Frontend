@@ -18,10 +18,10 @@
 //
 // Why a separate file rather than an axios interceptor?
 // The renderer can recover from some errors by retrying (VideoHistory
-// polls every 7s, AdminDashboard has a Retry button, etc.) — those flows
-// want the *structured* info. An interceptor would still need to expose
-// the same shape, so we keep the helper as the source of truth and let
-// components opt in via `handleApiError(err)`.
+// polls every 7s) — those flows want the *structured* info. An
+// interceptor would still need to expose the same shape, so we keep
+// the helper as the source of truth and let components opt in via
+// `handleApiError(err)`.
 
 // Substrings that strongly suggest the payload is a server-side stack
 // trace rather than a user-facing message. We treat any of these as

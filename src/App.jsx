@@ -4,9 +4,7 @@ import { useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import VideoDashboard from "./pages/VideoDashboard";
 import VideoHistory from "./pages/VideoHistory";
-import AdminDashboard from "./pages/AdminDashboard";
 import VersionCheckModal from "./components/VersionCheckModal";
-import AdminRoute from "./components/AdminRoute";
 import { Wand2, History, LogOut, Coins } from "lucide-react";
 
 function AppContent() {
@@ -108,16 +106,6 @@ function App() {
           {/* Login page — accessible to unauthenticated users */}
           <Route path="/login" element={<Login />} />
 
-          {/* Admin console — hidden URL, role-gated */}
-          <Route
-            path="/admin-secret"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          />
-
           {/* Main dashboard — explicit route so post-login redirect
               has a real destination (instead of relying on the catch-
               all). Any authenticated user may land here. */}
@@ -130,7 +118,9 @@ function App() {
 
           {/* Catch-all — also requires auth, so an unknown URL
               bounces an anonymous user back to /login and lets an
-              authenticated user fall through to the tabbed UI. */}
+              authenticated user fall through to the tabbed UI. The
+              admin surface is intentionally NOT mounted here —
+              admins use a separate external app. */}
           <Route
             path="/*"
             element={

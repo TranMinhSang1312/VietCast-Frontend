@@ -35,8 +35,10 @@ export function AuthProvider({ children }) {
 
   /**
    * Re-validate the cached user against the server. Useful on app boot
-   * so that a stale localStorage copy (e.g. role was demoted while the
-   * user was offline) gets refreshed before any UI gate trusts it.
+   * so a stale localStorage snapshot (e.g. creditBalance was spent
+   * while the user was offline) gets refreshed before any UI gate
+   * trusts it. The endpoint intentionally returns the same shape that
+   * {@link #login} persists so we can write it through unchanged.
    *
    * <p>Fails silently when the JWT has expired — the auth-gate logic
    * will see no token and route to /login.
@@ -48,7 +50,6 @@ export function AuthProvider({ children }) {
       const updated = {
         username: data.username,
         creditBalance: data.creditBalance,
-        role: data.role || "USER",
       };
       setUser(updated);
       localStorage.setItem(USER_KEY, JSON.stringify(updated));
@@ -79,10 +80,13 @@ export function AuthProvider({ children }) {
         throw new Error("Đăng nhập thất bại, máy chủ không trả về mã xác thực.");
       }
 
+      // End-user app: we only persist fields the UI actually consumes.
+      // Role / isAdmin flags are deliberately NOT exposed here because
+      // admin operations live in a separate external app; carrying the
+      // field would only confuse future contributors who grep for `role`.
       const userPayload = {
         username: data.username,
         creditBalance: data.creditBalance,
-        role: data.role || "USER",
       };
 
       localStorage.setItem(TOKEN_KEY, data.token);
@@ -120,9 +124,7 @@ export function AuthProvider({ children }) {
   const value = {
     token,
     user,
-    role: user?.role || "USER",
     isAuthenticated: !!token,
-    isAdmin: (user?.role || "USER") === "ADMIN",
     isLoading,
     login,
     logout,

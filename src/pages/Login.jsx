@@ -8,7 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,10 +23,10 @@ export default function Login() {
       // keeps the current URL (#/login) matched by the `/login` Route
       // until we leave it. Without this navigate(), the user sees the
       // login form even after a successful login until they manually
-      // change the URL or reload.
-      const next =
-        user?.role === "ADMIN" ? "/admin-secret" : "/dashboard";
-      navigate(next, { replace: true });
+      // change the URL or reload. The admin surface lives in a
+      // separate external app, so every authenticated user lands on
+      // /dashboard here.
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       // Interceptor in src/config.js turns the axios error into an
       // ApiError whose `.message` is already Vietnamese + user-safe.
