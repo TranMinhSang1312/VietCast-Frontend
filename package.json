@@ -1,0 +1,133 @@
+{
+  "name": "vietcast-frontend",
+  "version": "1.0.0",
+  "description": "VietCast Desktop — Electron + ReactJS shell around VietCast Engine.",
+  "private": true,
+  "author": {
+    "name": "VietCast",
+    "email": "support@vietcast.com"
+  },
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "concurrently -k \"vite --port 3000\" \"wait-on http://localhost:3000 && electron .\"",
+    "build:react": "vite build",
+    "build:win": "npm run build:react && electron-builder --win --x64 --publish never",
+    "build:mac": "npm run build:react && electron-builder --mac --publish never",
+    "build:linux": "npm run build:react && electron-builder --linux --publish never",
+    "build": "npm run build:react && electron-builder --win --x64 --publish never",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.18.1",
+    "lucide-react": "^1.23.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^6.30.4",
+    "recharts": "^2.15.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.3",
+    "electron": "^43.1.0",
+    "electron-builder": "^25.1.8",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "tailwindcss": "^4.3.2",
+    "vite": "^8.1.1",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.vietcast.desktop",
+    "productName": "VietCast",
+    "copyright": "Copyright © 2026 VietCast",
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "!**/*.map",
+      "!**/__pycache__/**",
+      "!**/.git/**",
+      "!**/node_modules/**/*.{md,markdown,test.*,spec.*}"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/**/*.{node,dll}"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "publisherName": "VietCast"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VietCast",
+      "include": "build/installer.nsh"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.video",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "AudioVideo"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "TranMinhSang1312",
+        "repo": "VietCast-Frontend"
+      }
+    ]
+  }
+}

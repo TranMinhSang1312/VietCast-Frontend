@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Test artifacts
+release
+
+# Env files (keep .env.example checked in)
+.env
+.env.local
+.env.*.local
+
+# PyInstaller artifacts (built via ../build_exe.bat)
+bin/main.exe
+bin/main.bin
+bin/ffmpeg.exe
+bin/ffmpeg
+public/main.exe
+public/ffmpeg.exe
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
