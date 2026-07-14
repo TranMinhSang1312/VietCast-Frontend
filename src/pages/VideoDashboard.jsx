@@ -308,20 +308,23 @@ export default function VideoDashboard() {
 
               {/* Advanced Crop Tools (Logo & Subtitles) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="logo-coordinates" className="block text-sm font-semibold text-zinc-300 mb-2">
-                    Khung xóa Logo cứng (Delogo)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="logo-coordinates"
-                      type="text"
-                      placeholder="x:y:w:h (ví dụ 10:10:100:50)"
-                      value={logoCoordinates}
-                      onChange={(e) => setLogoCoordinates(e.target.value)}
-                      disabled={isLoading || isProcessing}
-                      className="flex-1 px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-650 focus:border-brand-500 focus:outline-none transition disabled:opacity-50 text-sm font-mono"
-                    />
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-950 border border-zinc-850">
+                  <div>
+                    <span className="block text-sm font-semibold text-zinc-350">Xóa Logo cứng (Delogo)</span>
+                    <span className="text-xs text-zinc-500 font-mono mt-0.5 block">
+                      {logoCoordinates ? `Đã chọn: ${logoCoordinates}` : "Chưa chọn khung"}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {logoCoordinates && (
+                      <button
+                        type="button"
+                        onClick={() => setLogoCoordinates("")}
+                        className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/25 active:scale-[0.98] transition select-none"
+                      >
+                        Xóa
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={isLoading || isProcessing}
@@ -329,27 +332,30 @@ export default function VideoDashboard() {
                         setCropType("logo");
                         setIsCropOpen(true);
                       }}
-                      className="px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-850 active:scale-[0.98] transition select-none shrink-0"
+                      className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold hover:bg-zinc-800 active:scale-[0.98] transition select-none"
                     >
                       Vẽ khung
                     </button>
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="subtitle-mask" className="block text-sm font-semibold text-zinc-300 mb-2">
-                    Khung đè phụ đề gốc
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="subtitle-mask"
-                      type="text"
-                      placeholder="x:y:w:h (ví dụ 0:600:1280:120)"
-                      value={subtitleMask}
-                      onChange={(e) => setSubtitleMask(e.target.value)}
-                      disabled={isLoading || isProcessing}
-                      className="flex-1 px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-650 focus:border-brand-500 focus:outline-none transition disabled:opacity-50 text-sm font-mono"
-                    />
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-950 border border-zinc-850">
+                  <div>
+                    <span className="block text-sm font-semibold text-zinc-350">Đè phụ đề gốc</span>
+                    <span className="text-xs text-zinc-500 font-mono mt-0.5 block">
+                      {subtitleMask ? `Đã chọn: ${subtitleMask}` : "Chưa chọn khung"}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {subtitleMask && (
+                      <button
+                        type="button"
+                        onClick={() => setSubtitleMask("")}
+                        className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/25 active:scale-[0.98] transition select-none"
+                      >
+                        Xóa
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={isLoading || isProcessing}
@@ -357,7 +363,7 @@ export default function VideoDashboard() {
                         setCropType("subtitle");
                         setIsCropOpen(true);
                       }}
-                      className="px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-850 active:scale-[0.98] transition select-none shrink-0"
+                      className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold hover:bg-zinc-800 active:scale-[0.98] transition select-none"
                     >
                       Vẽ khung
                     </button>
