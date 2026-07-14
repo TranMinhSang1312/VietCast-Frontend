@@ -38,9 +38,9 @@ function AppContent() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100">
-      <nav className="sticky top-0 z-10 backdrop-blur-xl bg-slate-950/70 border-b border-slate-800/60">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
+      <nav className="sticky top-0 z-10 backdrop-blur-xl bg-zinc-950/70 border-b border-zinc-900">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-300 mr-2">
@@ -160,7 +160,7 @@ function App() {
     <BrowserRouter>
       {/* Show loading spinner while checking auth */}
       {isLoading ? (
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-950">
+        <div className="min-h-screen w-full flex items-center justify-center bg-zinc-950">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-slate-400 text-sm">Đang tải...</span>
