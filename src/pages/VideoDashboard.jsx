@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, Wand2, Mic, Subtitles, CheckCircle2, Download, AlertCircle, Film, Languages, CreditCard } from "lucide-react";
+import { Loader2, Wand2, Mic, Subtitles, CheckCircle2, Download, AlertCircle, Film, Languages } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
+import WatermarkRemover from "../components/watermark/WatermarkRemover";
 
 const AUDIO_MODES = [
   {
@@ -46,12 +47,19 @@ export default function VideoDashboard() {
   const { updateCreditBalance } = useAuth();
   const [url, setUrl] = useState("");
   const [audioMode, setAudioMode] = useState("mix");
+  const [logoCoordinates, setLogoCoordinates] = useState("");
+  const [subtitleMask, setSubtitleMask] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [progress, setProgress] = useState(0);
+  
+  // Crop modal states
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [cropType, setCropType] = useState("logo"); // "logo" | "subtitle"
+
   const pollIntervalRef = useRef(null);
   const usageLoggedTaskIdRef = useRef(null);
 
@@ -96,6 +104,8 @@ export default function VideoDashboard() {
   const handleReset = useCallback(() => {
     setUrl("");
     setAudioMode("mix");
+    setLogoCoordinates("");
+    setSubtitleMask("");
     setResult(null);
     setError(null);
     setVideoReady(false);
@@ -129,7 +139,12 @@ export default function VideoDashboard() {
       try {
         const { data } = await axios.post(
           `${API_BASE_URL}/api/v1/videos/process`,
-          { url: cleanUrl, audioMode },
+          { 
+            url: cleanUrl, 
+            audioMode,
+            logoCoordinates: logoCoordinates.trim() || null,
+            subtitleMask: subtitleMask.trim() || null
+          },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
         setResult({ ...data, url: data.url ?? cleanUrl, audioMode: data.audioMode ?? audioMode });
@@ -156,7 +171,7 @@ export default function VideoDashboard() {
         setIsLoading(false);
       }
     },
-    [url, audioMode, updateCreditBalance],
+    [url, audioMode, logoCoordinates, subtitleMask, updateCreditBalance],
   );
 
   useEffect(() => {
@@ -276,8 +291,8 @@ export default function VideoDashboard() {
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               {/* URL input */}
               <div>
-                <label htmlFor="video-url" className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2">
-                  Đường dẫn Video <span className="text-zinc-650">(TikTok / YouTube / Douyin)</span>
+                <label htmlFor="video-url" className="block text-sm font-semibold text-zinc-300 mb-2">
+                  Đường dẫn Video <span className="text-zinc-500 font-normal">(TikTok / YouTube / Douyin)</span>
                 </label>
                 <input
                   id="video-url"
@@ -287,13 +302,72 @@ export default function VideoDashboard() {
                   value={url}
                   onChange={handleUrlChange}
                   disabled={isLoading || isProcessing}
-                  className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-600 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="w-full px-4 py-3.5 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-650 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed text-base font-mono"
                 />
+              </div>
+
+              {/* Advanced Crop Tools (Logo & Subtitles) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="logo-coordinates" className="block text-sm font-semibold text-zinc-300 mb-2">
+                    Khung xóa Logo cứng (Delogo)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="logo-coordinates"
+                      type="text"
+                      placeholder="x:y:w:h (ví dụ 10:10:100:50)"
+                      value={logoCoordinates}
+                      onChange={(e) => setLogoCoordinates(e.target.value)}
+                      disabled={isLoading || isProcessing}
+                      className="flex-1 px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-650 focus:border-brand-500 focus:outline-none transition disabled:opacity-50 text-sm font-mono"
+                    />
+                    <button
+                      type="button"
+                      disabled={isLoading || isProcessing}
+                      onClick={() => {
+                        setCropType("logo");
+                        setIsCropOpen(true);
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-850 active:scale-[0.98] transition select-none shrink-0"
+                    >
+                      Vẽ khung
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="subtitle-mask" className="block text-sm font-semibold text-zinc-300 mb-2">
+                    Khung đè phụ đề gốc
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="subtitle-mask"
+                      type="text"
+                      placeholder="x:y:w:h (ví dụ 0:600:1280:120)"
+                      value={subtitleMask}
+                      onChange={(e) => setSubtitleMask(e.target.value)}
+                      disabled={isLoading || isProcessing}
+                      className="flex-1 px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-650 focus:border-brand-500 focus:outline-none transition disabled:opacity-50 text-sm font-mono"
+                    />
+                    <button
+                      type="button"
+                      disabled={isLoading || isProcessing}
+                      onClick={() => {
+                        setCropType("subtitle");
+                        setIsCropOpen(true);
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-850 active:scale-[0.98] transition select-none shrink-0"
+                    >
+                      Vẽ khung
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Audio mode selector */}
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-3">
+                <label className="block text-sm font-semibold text-zinc-300 mb-3">
                   Chế độ âm thanh
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -314,16 +388,16 @@ export default function VideoDashboard() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm shadow-lg shadow-brand-500/10 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed select-none"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-base shadow-lg shadow-brand-500/10 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed select-none"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Đang phân tích...</span>
                     </>
                   ) : (
                     <>
-                      <Wand2 className="w-4.5 h-4.5" />
+                      <Wand2 className="w-5 h-5" />
                       <span>Bắt đầu xử lý video</span>
                     </>
                   )}
@@ -337,7 +411,7 @@ export default function VideoDashboard() {
                   className="flex items-start gap-2.5 p-4 rounded-xl bg-red-950/20 border border-red-900/40 text-red-200"
                 >
                   <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-                  <div className="text-xs leading-normal">
+                  <div className="text-sm leading-normal">
                     <div className="font-semibold mb-0.5">Yêu cầu thất bại</div>
                     {error}
                   </div>
@@ -363,24 +437,41 @@ export default function VideoDashboard() {
                 onSetError={setError}
               />
             ) : (
-              <div className="h-full min-h-[300px] border border-dashed border-zinc-850 rounded-2xl flex flex-col items-center justify-center p-8 text-center bg-zinc-900/10 backdrop-blur-md">
-                <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 mb-4">
+              <div className="h-full min-h-[300px] border border-dashed border-zinc-850 rounded-2xl flex flex-col items-center justify-center p-8 text-center bg-zinc-900/10 backdrop-blur-md select-none">
+                <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-550 mb-4">
                   <Film className="w-6 h-6" />
                 </div>
                 <h3 className="text-sm font-semibold text-zinc-200">Bản xem trước video</h3>
-                <p className="text-xs text-zinc-500 mt-1 max-w-[250px] mx-auto leading-relaxed">
+                <p className="text-xs text-zinc-550 mt-1.5 max-w-[250px] mx-auto leading-relaxed font-medium">
                   Vui lòng nhập đường dẫn video bên trái để bắt đầu quá trình dịch và lồng tiếng.
                 </p>
               </div>
             )}
           </section>
         </div>
-
-        {/* Footer */}
-        <footer className="mt-16 pt-8 border-t border-zinc-900 text-center text-[10px] font-mono text-zinc-600">
-          VietCast Engine · React + Tailwind CSS v4 · Server: <span className="text-zinc-500">{API_BASE_URL}</span>
-        </footer>
       </div>
+
+      {/* Crop Modal */}
+      {isCropOpen && (
+        <WatermarkRemover
+          videoSrc={extractUrl(url) || ""}
+          title={cropType === "logo" ? "Vẽ khung xóa Logo cứng" : "Vẽ khung đè phụ đề gốc"}
+          description={
+            cropType === "logo"
+              ? "Kéo chuột để vẽ một ô vuông bao quanh Logo cứng. Hệ thống sẽ che Logo này bằng thuật toán FFmpeg delogo. Lưu ý: Bạn cần dùng đường dẫn video trực tiếp (ví dụ link đuôi .mp4) để tải được khung hình vẽ."
+              : "Kéo chuột để vẽ một ô chữ nhật dài che phụ đề gốc. Hệ thống sẽ bôi mờ phụ đề cũ và đè phụ đề tiếng Việt mới lên trên. Lưu ý: Bạn cần dùng đường dẫn video trực tiếp (ví dụ link đuôi .mp4) để tải được khung hình vẽ."
+          }
+          onConfirm={(coords) => {
+            if (cropType === "logo") {
+              setLogoCoordinates(coords);
+            } else {
+              setSubtitleMask(coords);
+            }
+            setIsCropOpen(false);
+          }}
+          onCancel={() => setIsCropOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -407,15 +498,15 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
         className="sr-only"
       />
       <div
-        className={`shrink-0 mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center ${
-          checked ? "bg-brand-500 text-white" : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+        className={`shrink-0 mt-0.5 w-8.5 h-8.5 rounded-lg flex items-center justify-center ${
+          checked ? "bg-brand-500 text-white" : "bg-zinc-900 text-zinc-550 border border-zinc-800"
         }`}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4.5 h-4.5" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-medium text-xs text-zinc-200">{mode.label}</span>
+          <span className="font-semibold text-sm text-zinc-200">{mode.label}</span>
           <span
             className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
               checked ? "border-brand-500" : "border-zinc-700"
@@ -424,7 +515,7 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
             {checked && <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />}
           </span>
         </div>
-        <p className="text-[10px] text-zinc-500 mt-1 leading-normal">{mode.description}</p>
+        <p className="text-xs text-zinc-500 mt-1 leading-normal font-medium">{mode.description}</p>
       </div>
     </label>
   );
@@ -448,12 +539,12 @@ const ResultPanel = memo(function ResultPanel({
       <div>
         <div className="flex items-start justify-between gap-3 mb-6 select-none">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-zinc-200">Tác vụ đang xử lý</h2>
-              <p className="text-[10px] text-zinc-500 mt-0.5 font-mono">
+              <h2 className="text-base font-bold text-zinc-200">Tác vụ đang xử lý</h2>
+              <p className="text-xs text-zinc-500 mt-0.5 font-mono">
                 Task ID: <span className="text-emerald-400">{result.taskId}</span>
               </p>
             </div>
@@ -461,7 +552,7 @@ const ResultPanel = memo(function ResultPanel({
           <button
             type="button"
             onClick={onReset}
-            className="text-[10px] text-zinc-400 hover:text-white underline underline-offset-4 decoration-zinc-800 transition"
+            className="text-xs text-zinc-400 hover:text-white underline underline-offset-4 decoration-zinc-800 transition"
           >
             Tạo task khác
           </button>
@@ -470,7 +561,7 @@ const ResultPanel = memo(function ResultPanel({
         {/* Progress Bar */}
         {isProcessing && (
           <div className="mb-6 select-none">
-            <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 mb-1.5">
+            <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
               <span>ĐANG XỬ LÝ...</span>
               <span className="text-zinc-200">{progress}%</span>
             </div>
@@ -508,7 +599,7 @@ const ResultPanel = memo(function ResultPanel({
           {videoError && result.videoUrl && (
             <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center">
               <AlertCircle className="w-6 h-6 text-amber-500 mb-2" />
-              <p className="text-xs text-zinc-300">Không thể phát trực tiếp video. Hãy thử tải về máy của bạn.</p>
+              <p className="text-sm text-zinc-355">Không thể phát trực tiếp video. Hãy thử tải về máy của bạn.</p>
             </div>
           )}
         </div>
@@ -516,8 +607,8 @@ const ResultPanel = memo(function ResultPanel({
 
       {/* Action Actions */}
       <div className="mt-6 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-zinc-950/60 border border-zinc-850 select-none text-xs">
-          <span className="text-zinc-400 font-mono uppercase tracking-wider text-[10px]">Trạng thái:</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-850 select-none text-sm">
+          <span className="text-zinc-400 font-mono uppercase tracking-wider text-xs">Trạng thái:</span>
           <span className="inline-flex items-center gap-1.5">
             <span
               className={`w-1.5 h-1.5 rounded-full ${
@@ -528,22 +619,22 @@ const ResultPanel = memo(function ResultPanel({
                   : "bg-amber-400 animate-pulse"
               }`}
             />
-            <span className="font-semibold font-mono text-[10px]">
+            <span className="font-semibold font-mono text-xs">
               {result.status === "COMPLETED" ? "HOÀN TẤT" : result.status === "FAILED" ? "THẤT BẠI" : "ĐANG CHẠY"}
             </span>
           </span>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           {result.srtUrl && (
             <a
               href={result.srtUrl}
               download={`phude_viet_${result.taskId}.srt`}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-805 text-zinc-300 text-xs font-medium active:scale-[0.98] transition"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-805 text-zinc-300 text-sm font-semibold active:scale-[0.98] transition"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>Tải Phụ đề</span>
             </a>
           )}
@@ -553,9 +644,9 @@ const ResultPanel = memo(function ResultPanel({
               download={`VietCast_${result.taskId}.mp4`}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold shadow-md shadow-brand-500/10 active:scale-[0.98] transition"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-md shadow-brand-500/10 active:scale-[0.98] transition"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>Tải Video</span>
             </a>
           )}
@@ -563,7 +654,7 @@ const ResultPanel = memo(function ResultPanel({
       </div>
 
       {result.message && (
-        <p className="mt-4 text-[10px] text-zinc-500 italic text-center select-none">{result.message}</p>
+        <p className="mt-4 text-xs text-zinc-500 italic text-center select-none">{result.message}</p>
       )}
     </div>
   );
@@ -573,8 +664,8 @@ const VideoPlaceholder = memo(function VideoPlaceholder({ message = "Đang rende
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500 bg-zinc-950 p-4 text-center select-none">
       <Loader2 className="w-7 h-7 animate-spin text-brand-500 mb-3" />
-      <p className="text-xs font-semibold text-zinc-300">{message}</p>
-      <p className="text-[10px] text-zinc-600 mt-1">Kết quả sẽ hiển thị ngay khi pipeline hoàn thành.</p>
+      <p className="text-sm font-semibold text-zinc-300">{message}</p>
+      <p className="text-xs text-zinc-600 mt-1.5 font-medium">Kết quả sẽ hiển thị ngay khi pipeline hoàn thành.</p>
     </div>
   );
 });

@@ -3,28 +3,6 @@ import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Eraser, Loader2, X } from "lucide-react";
 
-// ---------------------------------------------------------------------------
-// WatermarkRemover
-// ---------------------------------------------------------------------------
-//
-// Lets the user mark a rectangular watermark region on a <video> frame and
-// returns the coordinates in the SOURCE video's pixel space (x:y:w:h) so the
-// FFmpeg `delogo` filter on the engine side knows exactly where to erase.
-//
-// Conversion pipeline (this is the bit that has to be right):
-//
-//     <video> clientWidth/clientHeight  -- scaleX/Y -->  videoWidth/videoHeight
-//
-// We do NOT trust any CSS-reported size because the <video> element scales
-// its intrinsic source resolution to whatever pixel box we render it in.
-// Instead we read the LIVE clientWidth/clientHeight from the DOM ref on every
-// confirm click; React re-renders are not a reliable source for layout.
-//
-// On confirm we console.log the final `x:y:w:h` string AND call
-// `onConfirm(coordString)` so the parent form can stash it into the
-// `logoCoordinates` field that travels to the backend (RabbitMQ payload).
-// ---------------------------------------------------------------------------
-
 const DEFAULT_CROP_PERCENT = 30;
 
 /**
@@ -33,12 +11,16 @@ const DEFAULT_CROP_PERCENT = 30;
  * @param {(coord: string) => void} [props.onConfirm]      Called with "x:y:w:h"
  * @param {() => void} [props.onCancel]                     Optional close handler
  * @param {number} [props.initialAspect]                    Optional locked aspect ratio (e.g. 16/9)
+ * @param {string} [props.title]                            Modal title
+ * @param {string} [props.description]                      Modal description text
  */
 export default function WatermarkRemover({
   videoSrc,
   onConfirm,
   onCancel,
   initialAspect,
+  title = "Xóa logo cứng (Delogo)",
+  description = "Kéo chuột để vẽ một ô vuông che logo. Hệ thống sẽ quy đổi tọa độ màn hình sang độ phân giải gốc của video và gửi xuống FFmpeg.",
 }) {
   const videoRef = useRef(null);
   const [crop, setCrop] = useState(() =>
@@ -59,13 +41,6 @@ export default function WatermarkRemover({
   // Helpers
   // ------------------------------------------------------------------
 
-  /**
-   * Convert a crop expressed in display pixels (the ReactCrop default)
-   * into the SOURCE video's pixel grid using a live read of the <video>
-   * element. We do the multiplication by hand on every confirm so the
-   * result is always correct even if the user resized the window
-   * between drag and click.
-   */
   const resolveSourceCoords = useCallback((displayCrop) => {
     const video = videoRef.current;
     if (!video) {
@@ -93,11 +68,6 @@ export default function WatermarkRemover({
     };
   }, []);
 
-  /**
-   * Same conversion but from a percent-based crop (the form ReactCrop
-   * hands back when `unit: "%"` is used). Useful when the user wants to
-   * reason in percent rather than raw display pixels.
-   */
   const resolveSourceCoordsFromPercent = useCallback((percentCrop) => {
     const video = videoRef.current;
     if (!video) throw new Error("Video element not mounted yet.");
@@ -118,8 +88,6 @@ export default function WatermarkRemover({
   // ------------------------------------------------------------------
 
   const handleCropChange = useCallback((pixelCrop, percentCrop) => {
-    // Keep both representations so the user can move the box before
-    // letting go of the mouse.
     setCrop(pixelCrop);
     setCompletedPercentCrop(percentCrop);
   }, []);
@@ -152,7 +120,7 @@ export default function WatermarkRemover({
     }
 
     const coordString = `${coords.x}:${coords.y}:${coords.w}:${coords.h}`;
-    console.log("[WatermarkRemover] logoCoordinates =", coordString);
+    console.log("[WatermarkRemover] coordinates confirmed =", coordString);
     if (onConfirm) onConfirm(coordString);
   }, [
     completedCrop,
@@ -171,29 +139,29 @@ export default function WatermarkRemover({
       role="dialog"
       aria-modal="true"
       aria-labelledby="watermark-title"
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget && onCancel) onCancel();
       }}
     >
-      <div className="w-full max-w-3xl bg-slate-900 border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+      <div className="w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <Eraser className="w-5 h-5 text-rose-400" />
+        <div className="flex items-center justify-between px-6 py-4.5 border-b border-zinc-800">
+          <div className="flex items-center gap-2.5">
+            <Eraser className="w-5 h-5 text-brand-500" />
             <h2
               id="watermark-title"
-              className="text-lg font-semibold text-slate-100"
+              className="text-lg font-bold text-zinc-100"
             >
-              Xoa logo cung (Delogo)
+              {title}
             </h2>
           </div>
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
-              aria-label="Dong"
+              className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition active:scale-[0.98]"
+              aria-label="Đóng"
             >
               <X className="w-5 h-5" />
             </button>
@@ -202,22 +170,18 @@ export default function WatermarkRemover({
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-          <p className="text-sm text-slate-400">
-            Keo chuot de ve mot o vuong che logo. He thong se quy doi toa do
-            man hinh sang do phan giai goc cua video va gui xuong FFmpeg.
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            {description}
           </p>
 
-          {/* Crop stage: video element + ReactCrop overlay share the
-              same flex container so the crop box tracks the video's
-              actual rendered size. */}
           <div
-            className="relative w-full bg-black rounded-xl overflow-hidden flex items-center justify-center"
+            className="relative w-full bg-black rounded-xl overflow-hidden flex items-center justify-center border border-zinc-850"
             style={{ minHeight: 320 }}
           >
             {!isVideoReady && (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Dang tai video...
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-400 text-sm font-mono">
+                <Loader2 className="w-5 h-5 mr-2 animate-spin text-brand-500" />
+                Đang tải video...
               </div>
             )}
             {videoSrc && (
@@ -235,20 +199,19 @@ export default function WatermarkRemover({
                   muted
                   playsInline
                   onLoadedMetadata={() => setIsVideoReady(true)}
-                  className="max-h-[60vh] max-w-full block"
+                  className="max-h-[55vh] max-w-full block"
                   crossOrigin="anonymous"
                 />
               </ReactCrop>
             )}
           </div>
 
-          {/* Live preview of the converted coords so the user can sanity
-              check the numbers BEFORE pressing confirm. */}
-          <div className="rounded-xl bg-slate-950/50 border border-slate-800 px-4 py-3">
-            <div className="text-xs text-slate-500 mb-1">
-              Toa do (sau khi quy doi ve video goc)
+          {/* Live preview */}
+          <div className="rounded-xl bg-zinc-950 border border-zinc-850 px-4 py-3">
+            <div className="text-xs font-semibold text-zinc-500 mb-1 font-mono uppercase tracking-wider">
+              Tọa độ (sau khi quy đổi về video gốc)
             </div>
-            <div className="font-mono text-sm text-slate-100">
+            <div className="font-mono text-sm text-zinc-200">
               {(() => {
                 try {
                   if (
@@ -269,32 +232,32 @@ export default function WatermarkRemover({
                     );
                     return `${c.x}:${c.y}:${c.w}:${c.h}`;
                   }
-                  return "(chua co)";
+                  return "(chưa có)";
                 } catch {
-                  return "(chua co)";
+                  return "(chưa có)";
                 }
               })()}
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2.5">
             {onCancel && (
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition"
+                className="px-4.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-semibold transition active:scale-[0.98]"
               >
-                Huy
+                Hủy
               </button>
             )}
             <button
               type="button"
               onClick={handleConfirm}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-700 hover:to-rose-600 text-white text-sm font-semibold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-lg shadow-brand-500/10 transition active:scale-[0.98]"
             >
               <Eraser className="w-4 h-4" />
-              <span>Xac nhan</span>
+              <span>Xác nhận</span>
             </button>
           </div>
         </div>

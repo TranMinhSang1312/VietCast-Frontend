@@ -39,21 +39,21 @@ function AppContent() {
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-100">
-      <nav className="sticky top-0 z-10 backdrop-blur-xl bg-zinc-950/70 border-b border-zinc-900">
+      <nav className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-800 shadow-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-300 mr-2">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-base font-bold text-zinc-200 mr-3 select-none">
                 VietCast
               </span>
-              <div className="inline-flex rounded-xl bg-slate-900/60 border border-slate-800 p-1">
+              <div className="inline-flex rounded-xl bg-zinc-950 border border-zinc-850 p-1">
                 <button
                   type="button"
                   onClick={() => setActiveTab("dashboard")}
-                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
                     activeTab === "dashboard"
-                      ? "bg-brand-600 text-white shadow shadow-brand-500/30"
-                      : "text-slate-300 hover:text-slate-100"
+                      ? "bg-brand-500 text-white shadow-md shadow-brand-500/10"
+                      : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   <Wand2 className="w-4 h-4" />
@@ -62,10 +62,10 @@ function AppContent() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("history")}
-                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
                     activeTab === "history"
-                      ? "bg-brand-600 text-white shadow shadow-brand-500/30"
-                      : "text-slate-300 hover:text-slate-100"
+                      ? "bg-brand-500 text-white shadow-md shadow-brand-500/10"
+                      : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   <History className="w-4 h-4" />
@@ -76,14 +76,10 @@ function AppContent() {
 
             {/* User info & Logout */}
             <div className="flex items-center gap-4">
-              {/* Admin shortcut — only visible for ROLE_ADMIN users. The
-                  link uses a normal anchor (not a tab state) so it shares
-                  the /admin route with React Router. Non-admins don't even
-                  see the badge. */}
               {user?.role === "ADMIN" && (
                 <a
                   href="/admin"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-xs font-medium text-violet-200 hover:bg-violet-500/20 transition"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-500/20 transition"
                   title="Mở trang quản trị"
                 >
                   <Shield className="w-3.5 h-3.5" />
@@ -91,22 +87,17 @@ function AppContent() {
                 </a>
               )}
               {/* Credit balance + Topup trigger */}
-              <div className="flex items-center gap-1.5">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                  <Coins className="w-4 h-4 text-amber-400" />
-                  <span className="text-sm font-medium text-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-950 border border-zinc-850">
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-medium text-zinc-300">
                     {user?.creditBalance ?? 0} credit
                   </span>
                 </div>
-                {/* PayOS topup — opens the modal that POSTs to
-                    /api/v1/payment/create and redirects to the
-                    returned checkoutUrl. Visible to every
-                    authenticated user (incl. ROLE_ADMIN — they pay
-                    the merchant subscription themselves). */}
                 <button
                   type="button"
                   onClick={() => setIsTopupOpen(true)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-medium hover:bg-amber-500/20 transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold hover:bg-amber-500/20 transition active:scale-[0.98]"
                   title="Nạp thêm credit qua PayOS / VietQR"
                 >
                   <Coins className="w-3.5 h-3.5" />
@@ -115,7 +106,7 @@ function AppContent() {
               </div>
 
               {/* Username */}
-              <div className="hidden sm:block text-sm text-slate-400">
+              <div className="hidden sm:block text-sm text-zinc-400">
                 {user?.username}
               </div>
 
@@ -123,7 +114,7 @@ function AppContent() {
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850/60 transition active:scale-[0.98]"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Đăng xuất</span>
