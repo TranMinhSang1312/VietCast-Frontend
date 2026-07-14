@@ -1,13 +1,14 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
-import { Eraser, Loader2, X } from "lucide-react";
+import { Eraser, Loader2, X, AlertTriangle } from "lucide-react";
+import axios from "axios";
 
 const DEFAULT_CROP_PERCENT = 30;
 
 /**
  * @param {Object} props
- * @param {string} props.videoSrc                           URL or blob: of the source video
+ * @param {string} props.videoSrc                           URL of the video page (YouTube, TikTok, Douyin or raw URL)
  * @param {(coord: string) => void} [props.onConfirm]      Called with "x:y:w:h"
  * @param {() => void} [props.onCancel]                     Optional close handler
  * @param {number} [props.initialAspect]                    Optional locked aspect ratio (e.g. 16/9)
@@ -20,9 +21,9 @@ export default function WatermarkRemover({
   onCancel,
   initialAspect,
   title = "Xóa logo cứng (Delogo)",
-  description = "Kéo chuột để vẽ một ô vuông che logo. Hệ thống sẽ quy đổi tọa độ màn hình sang độ phân giải gốc của video và gửi xuống FFmpeg.",
+  description = "Vẽ khung chữ nhật che phần logo hoặc phụ đề. Khung vẽ sẽ được trích xuất trực tiếp trên khung hình thực tế của video.",
 }) {
-  const videoRef = useRef(null);
+  const imageRef = useRef(null);
   const [crop, setCrop] = useState(() =>
     centerCrop(
       makeAspectCrop(
@@ -35,25 +36,77 @@ export default function WatermarkRemover({
   );
   const [completedCrop, setCompletedCrop] = useState(null);
   const [completedPercentCrop, setCompletedPercentCrop] = useState(null);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+
+  // Preview frame extraction state
+  const [frameUrl, setFrameUrl] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl = null;
+
+    async function loadFrame() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/v1/videos/preview-frame`,
+          {
+            params: { url: videoSrc },
+            responseType: "blob",
+          }
+        );
+        if (active) {
+          objectUrl = URL.createObjectURL(response.data);
+          setFrameUrl(objectUrl);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error("Failed to load preview frame:", err);
+        if (active) {
+          let msg = "Không thể trích xuất khung hình xem trước.";
+          if (err.response?.data?.message) {
+            msg = err.response.data.message;
+          }
+          setError(msg);
+          setIsLoading(false);
+        }
+      }
+    }
+
+    if (videoSrc) {
+      loadFrame();
+    } else {
+      setError("Đường dẫn video không hợp lệ.");
+      setIsLoading(false);
+    }
+
+    return () => {
+      active = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [videoSrc]);
 
   // ------------------------------------------------------------------
   // Helpers
   // ------------------------------------------------------------------
 
   const resolveSourceCoords = useCallback((displayCrop) => {
-    const video = videoRef.current;
-    if (!video) {
-      throw new Error("Video element not mounted yet.");
+    const img = imageRef.current;
+    if (!img) {
+      throw new Error("Image element not mounted yet.");
     }
-    const displayW = video.clientWidth;
-    const displayH = video.clientHeight;
+    const displayW = img.clientWidth;
+    const displayH = img.clientHeight;
     if (!displayW || !displayH) {
-      throw new Error("Video has zero display size - is it hidden?");
+      throw new Error("Image has zero display size.");
     }
 
-    const scaleX = video.videoWidth / displayW;
-    const scaleY = video.videoHeight / displayH;
+    const scaleX = img.naturalWidth / displayW;
+    const scaleY = img.naturalHeight / displayH;
 
     const x = displayCrop.x * scaleX;
     const y = displayCrop.y * scaleY;
@@ -69,12 +122,12 @@ export default function WatermarkRemover({
   }, []);
 
   const resolveSourceCoordsFromPercent = useCallback((percentCrop) => {
-    const video = videoRef.current;
-    if (!video) throw new Error("Video element not mounted yet.");
-    const x = (percentCrop.x / 100) * video.videoWidth;
-    const y = (percentCrop.y / 100) * video.videoHeight;
-    const w = (percentCrop.width / 100) * video.videoWidth;
-    const h = (percentCrop.height / 100) * video.videoHeight;
+    const img = imageRef.current;
+    if (!img) throw new Error("Image element not mounted yet.");
+    const x = (percentCrop.x / 100) * img.naturalWidth;
+    const y = (percentCrop.y / 100) * img.naturalHeight;
+    const w = (percentCrop.width / 100) * img.naturalWidth;
+    const h = (percentCrop.height / 100) * img.naturalHeight;
     return {
       x: Math.round(x),
       y: Math.round(y),
@@ -176,15 +229,23 @@ export default function WatermarkRemover({
 
           <div
             className="relative w-full bg-black rounded-xl overflow-hidden flex items-center justify-center border border-zinc-850"
-            style={{ minHeight: 320 }}
+            style={{ minHeight: 360 }}
           >
-            {!isVideoReady && (
-              <div className="absolute inset-0 flex items-center justify-center text-zinc-400 text-sm font-mono">
-                <Loader2 className="w-5 h-5 mr-2 animate-spin text-brand-500" />
-                Đang tải video...
+            {isLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 text-sm font-mono gap-3 bg-zinc-950/80">
+                <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+                <span>Đang trích xuất khung hình từ video (giây thứ 10)...</span>
               </div>
             )}
-            {videoSrc && (
+
+            {error && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-red-400 text-sm font-medium gap-3 bg-zinc-950/80">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+                <span className="max-w-md">{error}</span>
+              </div>
+            )}
+
+            {frameUrl && !isLoading && (
               <ReactCrop
                 crop={crop}
                 onChange={handleCropChange}
@@ -192,15 +253,11 @@ export default function WatermarkRemover({
                 keepSelection
                 ruleOfThirds
               >
-                <video
-                  ref={videoRef}
-                  src={videoSrc}
-                  controls
-                  muted
-                  playsInline
-                  onLoadedMetadata={() => setIsVideoReady(true)}
-                  className="max-h-[55vh] max-w-full block"
-                  crossOrigin="anonymous"
+                <img
+                  ref={imageRef}
+                  src={frameUrl}
+                  alt="Khung hình video xem trước"
+                  className="max-h-[55vh] max-w-full block object-contain"
                 />
               </ReactCrop>
             )}
@@ -253,8 +310,9 @@ export default function WatermarkRemover({
             )}
             <button
               type="button"
+              disabled={isLoading || error}
               onClick={handleConfirm}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-lg shadow-brand-500/10 transition active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-lg shadow-brand-500/10 transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Eraser className="w-4 h-4" />
               <span>Xác nhận</span>

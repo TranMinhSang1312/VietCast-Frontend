@@ -460,7 +460,7 @@ export default function VideoDashboard() {
       {/* Crop Modal */}
       {isCropOpen && (
         <WatermarkRemover
-          videoSrc={extractUrl(url) || ""}
+          videoSrc={url || ""}
           title={cropType === "logo" ? "Vẽ khung xóa Logo cứng" : "Vẽ khung đè phụ đề gốc"}
           description={
             cropType === "logo"
