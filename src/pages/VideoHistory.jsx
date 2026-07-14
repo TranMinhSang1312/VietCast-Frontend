@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
 import {
     History,
@@ -18,14 +18,12 @@ const POLL_INTERVAL_MS = 7000;
 const STATUS_STYLES = {
     PROCESSING: {
         label: "Đang xử lý",
-        className:
-            "bg-amber-500/15 text-amber-300 border-amber-500/30",
+        className: "bg-amber-500/15 text-amber-300 border-amber-500/30",
         dotClass: "bg-amber-400 animate-pulse",
     },
     COMPLETED: {
         label: "Hoàn tất",
-        className:
-            "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+        className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
         dotClass: "bg-emerald-400",
     },
     FAILED: {
@@ -33,6 +31,12 @@ const STATUS_STYLES = {
         className: "bg-red-500/15 text-red-300 border-red-500/30",
         dotClass: "bg-red-400",
     },
+};
+
+const FALLBACK_STATUS_STYLE = {
+    label: "UNKNOWN",
+    className: "bg-slate-700/40 text-slate-300 border-slate-600/40",
+    dotClass: "bg-slate-400",
 };
 
 function formatTimestamp(value) {
@@ -49,11 +53,18 @@ function formatTimestamp(value) {
     return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
 }
 
-function StatusPill({ status }) {
+// ---------------------------------------------------------------------------
+// Sub-components — wrapped in React.memo so a single item re-rendering
+// (e.g. because its progress number ticked) does NOT re-render every
+// sibling row. This is the load-bearing perf win for the history list:
+// a poll tick fetches the full array and react-redux's reconciliation
+// would otherwise redo every item's tree-diff.
+// ---------------------------------------------------------------------------
+
+const StatusPill = memo(function StatusPill({ status }) {
     const style = STATUS_STYLES[status] ?? {
-        label: status ?? "UNKNOWN",
-        className: "bg-slate-700/40 text-slate-300 border-slate-600/40",
-        dotClass: "bg-slate-400",
+        ...FALLBACK_STATUS_STYLE,
+        label: status ?? FALLBACK_STATUS_STYLE.label,
     };
     return (
         <span
@@ -63,9 +74,9 @@ function StatusPill({ status }) {
             {style.label}
         </span>
     );
-}
+});
 
-function ProgressBar({ value }) {
+const ProgressBar = memo(function ProgressBar({ value }) {
     const pct = typeof value === "number" ? Math.max(0, Math.min(100, value)) : 0;
     return (
         <div className="mt-3">
@@ -87,14 +98,21 @@ function ProgressBar({ value }) {
             </div>
         </div>
     );
-}
+});
 
-function VideoHistoryItem({ video }) {
+const VideoHistoryItem = memo(function VideoHistoryItem({ video }) {
     const status = video.status;
     const isCompleted = status === "COMPLETED";
     const isFailed = status === "FAILED";
     const isProcessing = status === "PROCESSING";
-    const fileName = `VietCast_${video.taskId}.mp4`;
+    const fileName = useMemo(
+        () => `VietCast_${video.taskId}.mp4`,
+        [video.taskId],
+    );
+    const srtName = useMemo(
+        () => `phude_viet_${video.taskId}.srt`,
+        [video.taskId],
+    );
 
     return (
         <article className="bg-slate-900/60 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-lg shadow-black/30 p-5 sm:p-6">
@@ -155,7 +173,7 @@ function VideoHistoryItem({ video }) {
                 {video.srtUrl && (
                     <a
                         href={video.srtUrl}
-                        download={`phude_viet_${video.taskId}.srt`}
+                        download={srtName}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium text-sm transition"
@@ -174,7 +192,11 @@ function VideoHistoryItem({ video }) {
             </footer>
         </article>
     );
-}
+});
+
+// ---------------------------------------------------------------------------
+// Container
+// ---------------------------------------------------------------------------
 
 export default function VideoHistory() {
     const [history, setHistory] = useState([]);
@@ -191,33 +213,54 @@ export default function VideoHistory() {
         historyRef.current = history;
     }, [history]);
 
-    const fetchHistory = async (showSpinner = false) => {
-        // The setStates below are driven by a network request kicked off
-        // inside a useEffect; they are the response, not synchronous churn.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+    const fetchHistory = useCallback(async (showSpinner = false) => {
         if (showSpinner) setIsLoading(true);
         try {
-            // GET /api/v1/history is backed by the `usage_logs` table and
-            // is filtered to the authenticated user server-side. It is
-            // durable (lives across server restarts) whereas the older
-            // /api/v1/videos/history read from an in-memory cache that
-            // got evicted 30 min after each task terminated.
+            // GET /api/v1/tasks — backed by the `video_tasks` table
+            // owned by the new TaskController. Auth header
+            // (`Authorization: Bearer <token>`) is attached
+            // automatically by the global request interceptor in
+            // `utils/axiosInterceptor.js`, which is wired in via the
+            // side-effect import in `config.js`.
+            console.log("[VideoHistory] GET /api/v1/tasks — fetching history…");
             const { data } = await axios.get(
-                `${API_BASE_URL}/api/v1/history`,
+                `${API_BASE_URL}/api/v1/tasks`,
                 { timeout: 10000 }
+            );
+            console.log(
+                `[VideoHistory] GET /api/v1/tasks — received ${Array.isArray(data) ? data.length : "?"} task(s)`
             );
             // Defensive: server may return null briefly during HMR restarts.
             setHistory(Array.isArray(data) ? data : []);
             setError(null);
         } catch (err) {
+            // ────────────────────────────────────────────────────────────
+            // Debug logging — print the full axios error so the failure
+            // mode (network vs HTTP status vs CORS) is obvious in the
+            // browser console without having to open DevTools Network.
+            // ────────────────────────────────────────────────────────────
+            console.error("[VideoHistory] GET /api/v1/tasks — FAILED");
+            console.error("  err.message :", err?.message);
+            console.error("  err.code    :", err?.code);
+            console.error("  err.status  :", err?.response?.status ?? err?.status ?? "(none)");
+            console.error("  err.data    :", err?.response?.data);
+            console.error("  full error  :", err);
+
             // Keep the previous list visible; only surface the error.
-            // Interceptor in src/config.js already translated the
-            // axios error into a Vietnamese message.
+            // Interceptor in utils/axiosInterceptor.js already translated
+            // the axios error into a Vietnamese message.
             setError(err?.message || "Không thể tải lịch sử. Đang thử lại…");
         } finally {
             if (showSpinner) setIsLoading(false);
         }
-    };
+    }, []);
+
+    const clearPollInterval = useCallback(() => {
+        if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         // Kick off the initial load — only purpose here is to subscribe to
@@ -241,14 +284,11 @@ export default function VideoHistory() {
 
         pollTimerRef.current = setInterval(tick, POLL_INTERVAL_MS);
 
-        return () => {
-            if (pollTimerRef.current) {
-                clearInterval(pollTimerRef.current);
-                pollTimerRef.current = null;
-            }
-        };
+        return clearPollInterval;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const handleManualRefresh = useCallback(() => fetchHistory(true), [fetchHistory]);
 
     const hasItems = Array.isArray(history) && history.length > 0;
 
@@ -286,7 +326,7 @@ export default function VideoHistory() {
                         </div>
                         <button
                             type="button"
-                            onClick={() => fetchHistory(true)}
+                            onClick={handleManualRefresh}
                             className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-900/70 border border-red-700/60 text-xs text-red-100 transition"
                         >
                             <Loader2 className="w-3.5 h-3.5" />
@@ -324,7 +364,7 @@ export default function VideoHistory() {
                     <div className="mt-6 flex items-center justify-end">
                         <button
                             type="button"
-                            onClick={() => fetchHistory(true)}
+                            onClick={handleManualRefresh}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 transition"
                         >
                             <Loader2 className="w-3.5 h-3.5" />
@@ -334,7 +374,7 @@ export default function VideoHistory() {
                 )}
 
                 <footer className="mt-10 text-center text-xs text-slate-500">
-                    VietCast Engine · Trang lịch sử · API: <span className="font-mono">{API_BASE_URL}/api/v1/videos/history</span>
+                    VietCast Engine · Trang lịch sử · API: <span className="font-mono">{API_BASE_URL}/api/v1/tasks</span>
                 </footer>
             </div>
         </div>

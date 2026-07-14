@@ -1,14 +1,40 @@
-import { useState } from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, lazy, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
-import VideoDashboard from "./pages/VideoDashboard";
-import VideoHistory from "./pages/VideoHistory";
-import VersionCheckModal from "./components/VersionCheckModal";
-import { Wand2, History, LogOut, Coins } from "lucide-react";
+import TopupModal from "./components/topup/TopupModal";
+import { Wand2, History, LogOut, Coins, Loader2, Shield } from "lucide-react";
+
+// Lazy-load the heavy tab contents so the initial bundle only ships the
+// Login + nav chrome. Each tab is its own chunk that gets fetched the
+// first time the user clicks the tab — measurable cold-start win on
+// the first paint.
+const VideoDashboard = lazy(() => import("./pages/VideoDashboard"));
+const VideoHistory   = lazy(() => import("./pages/VideoHistory"));
+
+// Admin surface is its own lazy chunk so a non-admin user never pays
+// the bytes. Mounted only when user.role === "ADMIN" (see App below).
+const AdminApp        = lazy(() => import("./pages/admin/AdminApp"));
+
+// PayOS landing pages — small enough to inline but kept lazy for
+// consistency with the rest of the chrome.
+const PaymentSuccess  = lazy(() => import("./pages/PaymentSuccess"));
+const PaymentCancel   = lazy(() => import("./pages/PaymentCancel"));
+
+function TabFallback() {
+  return (
+    <div className="min-h-[40vh] w-full flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3 text-slate-400">
+        <Loader2 className="w-7 h-7 animate-spin text-brand-500" />
+        <span className="text-sm">Đang tải…</span>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "history"
+  const [isTopupOpen, setIsTopupOpen] = useState(false);
   const { user, logout } = useAuth();
 
   return (
@@ -50,12 +76,42 @@ function AppContent() {
 
             {/* User info & Logout */}
             <div className="flex items-center gap-4">
-              {/* Credit balance */}
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                <Coins className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-medium text-slate-200">
-                  {user?.creditBalance ?? 0} credit
-                </span>
+              {/* Admin shortcut — only visible for ROLE_ADMIN users. The
+                  link uses a normal anchor (not a tab state) so it shares
+                  the /admin route with React Router. Non-admins don't even
+                  see the badge. */}
+              {user?.role === "ADMIN" && (
+                <a
+                  href="/admin"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-xs font-medium text-violet-200 hover:bg-violet-500/20 transition"
+                  title="Mở trang quản trị"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Quản trị</span>
+                </a>
+              )}
+              {/* Credit balance + Topup trigger */}
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                  <Coins className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-medium text-slate-200">
+                    {user?.creditBalance ?? 0} credit
+                  </span>
+                </div>
+                {/* PayOS topup — opens the modal that POSTs to
+                    /api/v1/payment/create and redirects to the
+                    returned checkoutUrl. Visible to every
+                    authenticated user (incl. ROLE_ADMIN — they pay
+                    the merchant subscription themselves). */}
+                <button
+                  type="button"
+                  onClick={() => setIsTopupOpen(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-medium hover:bg-amber-500/20 transition"
+                  title="Nạp thêm credit qua PayOS / VietQR"
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Nạp tiền</span>
+                </button>
               </div>
 
               {/* Username */}
@@ -77,8 +133,17 @@ function AppContent() {
         </div>
       </nav>
 
-      {activeTab === "dashboard" && <VideoDashboard />}
-      {activeTab === "history" && <VideoHistory />}
+      <Suspense fallback={<TabFallback />}>
+        {activeTab === "dashboard" && <VideoDashboard />}
+        {activeTab === "history" && <VideoHistory />}
+      </Suspense>
+
+      {/* Topup modal lives at the App root so it can be opened from
+          any tab and survives tab switches. */}
+      <TopupModal
+        isOpen={isTopupOpen}
+        onClose={() => setIsTopupOpen(false)}
+      />
     </div>
   );
 }
@@ -86,13 +151,13 @@ function AppContent() {
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Forced update modal — rendered FIRST, OUTSIDE the auth gate, so
-  // even unauthenticated users with an outdated build cannot bypass it.
-  // The modal itself is non-dismissible when shown.
+  // We use BrowserRouter (NOT HashRouter) so the production web build
+  // serves clean URLs like https://vietcast.com/dashboard. Hash-based
+  // routing only made sense inside Electron's loadFile() context where
+  // the renderer never sees a real server-side route — on the web we
+  // want every URL to be a real, shareable path.
   return (
-    <HashRouter>
-      <VersionCheckModal />
-
+    <BrowserRouter>
       {/* Show loading spinner while checking auth */}
       {isLoading ? (
         <div className="min-h-screen w-full flex items-center justify-center bg-slate-950">
@@ -106,6 +171,13 @@ function App() {
           {/* Login page — accessible to unauthenticated users */}
           <Route path="/login" element={<Login />} />
 
+          {/* PayOS landing pages — public so the redirect after
+              payment (which may strip auth headers) still loads.
+              Both pages call refreshProfile() on mount so the user
+              sees their new balance without re-logging-in. */}
+          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/payment/cancel" element={<PaymentCancel />} />
+
           {/* Main dashboard — explicit route so post-login redirect
               has a real destination (instead of relying on the catch-
               all). Any authenticated user may land here. */}
@@ -116,11 +188,22 @@ function App() {
             }
           />
 
+          {/* Admin surface — server-side already locks /api/v1/admin/**
+              behind hasRole("ADMIN"). Frontend mirrors that gate here so
+              a non-admin gets redirected back to /dashboard instead of
+              seeing an empty / broken admin shell. */}
+          <Route
+            path="/admin/*"
+            element={
+              !isAuthenticated
+                ? <Navigate to="/login" replace />
+                : <AdminApp />
+            }
+          />
+
           {/* Catch-all — also requires auth, so an unknown URL
               bounces an anonymous user back to /login and lets an
-              authenticated user fall through to the tabbed UI. The
-              admin surface is intentionally NOT mounted here —
-              admins use a separate external app. */}
+              authenticated user fall through to the tabbed UI. */}
           <Route
             path="/*"
             element={
@@ -129,7 +212,7 @@ function App() {
           />
         </Routes>
       )}
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 

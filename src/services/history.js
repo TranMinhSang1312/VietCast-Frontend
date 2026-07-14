@@ -8,7 +8,12 @@ import { API_BASE_URL_PROVIDER } from "../config";
  * a row in the {@code usage_logs} table. Lives in {@code src/services/}
  * (not next to the React pages) so a future mobile / desktop surface
  * can re-use the same call sites.
+ *
+ * Auth is handled automatically by the global request interceptor in config.js
+ * which attaches the JWT token from localStorage to every axios request.
  */
+
+const TOKEN_KEY = "vietcast_token";
 
 let cachedBaseUrl = null;
 async function baseUrl() {
@@ -19,23 +24,6 @@ async function baseUrl() {
 }
 
 /**
- * Fetch the authenticated user's history (newest-first), restricted to
- * rows in {@code usage_logs} owned by the JWT subject. Returns an empty
- * array on network failure so the caller can keep the previous list
- * visible — the error itself is logged here for diagnostics.
- */
-export async function fetchHistory() {
-  try {
-    const base = await baseUrl();
-    const { data } = await axios.get(`${base}/api/v1/history`, { timeout: 10000 });
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.error("[history] fetch failed:", err?.message || err);
-    return [];
-  }
-}
-
-/**
  * Persist a usage_logs row after the React/Electron side observes the
  * pipeline terminate. Idempotent on {@code taskId} — the backend returns
  * the existing row unchanged when called twice with the same id, so a
@@ -43,6 +31,8 @@ export async function fetchHistory() {
  *
  * Returns the persisted row (or null on failure) so callers can update
  * their local state without re-fetching the full history list.
+ *
+ * On 403 (forbidden/no token), redirects to login screen.
  *
  * @param {object} row
  * @param {string} row.taskId
@@ -57,8 +47,20 @@ export async function recordUsageLog(row) {
     console.warn("[history] recordUsageLog called without taskId; skipping");
     return null;
   }
+
+  // No auth token → bounce to login. We can do this synchronously since
+  // the request interceptor in config.js only attaches the token IF one
+  // is present — the server will then 401/403 and we would just loop.
+  if (!localStorage.getItem(TOKEN_KEY)) {
+    console.warn("[history] No auth token found, redirecting to login...");
+    window.location.hash = "#/login";
+    window.location.reload();
+    return null;
+  }
+
   try {
     const base = await baseUrl();
+    // Auth header is attached automatically by global interceptor in config.js
     const { data } = await axios.post(
       `${base}/api/v1/usage-logs`,
       {
@@ -69,10 +71,25 @@ export async function recordUsageLog(row) {
         exitCode: row.exitCode,
         note: row.note,
       },
-      { headers: { "Content-Type": "application/json" }, timeout: 10000 },
+      { headers: { "Content-Type": "application/json" }, timeout: 10000 }
     );
     return data;
   } catch (err) {
+    const status = err?.response?.status || err?.status;
+    const code = err?.response?.data?.code || err?.code;
+    if (status === 403 || status === 401) {
+      console.warn("[history] auth rejected, redirecting to login...");
+      window.location.hash = "#/login";
+      window.location.reload();
+    } else if (status === 402 || code === "INSUFFICIENT_CREDIT") {
+      // Backend rejected the audit row because the user is out of credit.
+      // Surface a dedicated flag so the caller (e.g. VideoDashboard) can
+      // refresh the cached balance and show a top-up CTA. We deliberately
+      // do NOT throw — the local video file is still viewable; only the
+      // cloud-side ledger needs a follow-up top-up.
+      console.warn("[history] recordUsageLog rejected: insufficient credit");
+      err.__insufficientCredit = true;
+    }
     // Network blip or backend cold-start. Do NOT throw — the user's
     // view of the video is what matters; the history row can be back-
     // filled on the next pipeline run via the backend worker's own

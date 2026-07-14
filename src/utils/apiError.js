@@ -222,15 +222,3 @@ export class ApiError extends Error {
     this.raw = apiError.raw;
   }
 }
-
-export function throwApiError(err) {
-  throw new ApiError(handleApiError(err));
-}
-
-/**
- * Returns just the user-facing message. Useful when the caller doesn't
- * care about status / code, only wants to display a string.
- */
-export function apiErrorMessage(err) {
-  return handleApiError(err).message;
-}
