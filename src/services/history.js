@@ -51,10 +51,12 @@ export async function recordUsageLog(row) {
   // No auth token → bounce to login. We can do this synchronously since
   // the request interceptor in config.js only attaches the token IF one
   // is present — the server will then 401/403 and we would just loop.
+  // We use ``window.location.assign`` (not hash assignment) because
+  // this app uses BrowserRouter, not HashRouter; setting a hash on
+  // a BrowserRouter URL does NOT trigger React Router's route matcher.
   if (!localStorage.getItem(TOKEN_KEY)) {
     console.warn("[history] No auth token found, redirecting to login...");
-    window.location.hash = "#/login";
-    window.location.reload();
+    window.location.assign("/login");
     return null;
   }
 
@@ -79,8 +81,8 @@ export async function recordUsageLog(row) {
     const code = err?.response?.data?.code || err?.code;
     if (status === 403 || status === 401) {
       console.warn("[history] auth rejected, redirecting to login...");
-      window.location.hash = "#/login";
-      window.location.reload();
+      window.location.assign("/login");
+      return null;
     } else if (status === 402 || code === "INSUFFICIENT_CREDIT") {
       // Backend rejected the audit row because the user is out of credit.
       // Surface a dedicated flag so the caller (e.g. VideoDashboard) can

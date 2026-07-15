@@ -20,6 +20,10 @@ const USER_KEY = "vietcast_user";
  */
 function toUserPayload(data) {
   return {
+    // ``id`` is required by AdminUsers' self-lock guard so the admin
+    // cannot lock their own account. Backend already returns it via
+    // /api/v1/auth/me; we just persist it now.
+    id: data.id ?? data.userId ?? null,
     username: data.username ?? data.email,
     email: data.email ?? null,
     creditBalance: data.creditBalance ?? 0,

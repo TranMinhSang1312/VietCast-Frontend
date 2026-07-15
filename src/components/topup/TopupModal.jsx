@@ -59,8 +59,35 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
       const result = await createPaymentLink({
         amount: effectiveVnd,
       });
-      window.location.href = result.checkoutUrl;
-      if (onSuccess) onSuccess(result.checkoutUrl);
+
+      // Security: only redirect to known PayOS hosts. A compromised
+      // backend (or a buggy proxy) returning a phishing URL would
+      // otherwise land the user on a clone of the PayOS checkout.
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(result.checkoutUrl);
+      } catch {
+        throw new Error("Phản hồi từ máy chủ không chứa URL hợp lệ.");
+      }
+      if (parsedUrl.protocol !== "https:") {
+        throw new Error("Link thanh toán phải dùng giao thức HTTPS.");
+      }
+      const host = parsedUrl.hostname.toLowerCase();
+      const allowed =
+        host === "payos.vn" ||
+        host === "checkout.payos.vn" ||
+        host.endsWith(".payos.vn");
+      if (!allowed) {
+        throw new Error(
+          "Link thanh toán trỏ tới máy chủ không xác định — đã hủy."
+        );
+      }
+
+      // Navigate BEFORE firing the callback so the navigation wins the
+      // microtask race (the callback would otherwise schedule a setState
+      // on a component about to unmount).
+      window.location.href = parsedUrl.toString();
+      if (onSuccess) onSuccess(parsedUrl.toString());
     } catch (err) {
       setError(
         err?.message ||

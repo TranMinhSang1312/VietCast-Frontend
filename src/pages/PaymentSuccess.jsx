@@ -24,9 +24,11 @@ export default function PaymentSuccess() {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [attempts, setAttempts] = useState(0);
-  const [creditBefore, setCreditBefore] = useState(
-    () => user?.creditBalance ?? 0
-  );
+  // Baseline balance is captured AFTER the first profile refresh (not
+  // from a possibly-stale ``user?.creditBalance`` snapshot from
+  // localStorage). This avoids displaying "credited N" against a
+  // baseline the user already had bumped in another tab.
+  const [creditBefore, setCreditBefore] = useState(null);
   const [creditAfter, setCreditAfter] = useState(null);
   const [error, setError] = useState(null);
   // Guard against double-mount in React 19 strict mode firing two
@@ -39,21 +41,33 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     let timer = null;
+    let cancelled = false;
     const deadline = Date.now() + POLL_TIMEOUT_MS;
 
     async function poll() {
-      if (stoppedRef.current) return;
+      if (stoppedRef.current || cancelled) return;
       const updated = await refreshProfile();
+      if (cancelled) return;
       if (updated) {
-        setCreditAfter(updated.creditBalance);
-        if (updated.creditBalance > creditBefore) {
-          // Webhook landed — stop polling.
-          stoppedRef.current = true;
-          return;
+        // Lock in the FIRST observed balance as the baseline. The
+        // server is authoritative here; if the webhook landed in the
+        // few hundred ms between page load and first poll, this still
+        // reflects the user's actual pre-payment balance (because the
+        // webhook is idempotent and our baseline is captured once).
+        if (creditBefore == null) {
+          setCreditBefore(updated.creditBalance);
+          setCreditAfter(updated.creditBalance);
+        } else {
+          setCreditAfter(updated.creditBalance);
+          if (updated.creditBalance > creditBefore) {
+            // Webhook landed — stop polling.
+            stoppedRef.current = true;
+            return;
+          }
         }
       }
       setAttempts((n) => n + 1);
-      if (Date.now() < deadline && !stoppedRef.current) {
+      if (Date.now() < deadline && !stoppedRef.current && !cancelled) {
         timer = setTimeout(poll, POLL_INTERVAL_MS);
       } else {
         // Out of patience. Show the success UI anyway — the credit
@@ -66,19 +80,20 @@ export default function PaymentSuccess() {
     poll();
     return () => {
       stoppedRef.current = true;
+      cancelled = true;
       if (timer) clearTimeout(timer);
     };
-    // creditBefore is captured at mount; we only want the closure to
-    // re-create when the component remounts, not when local state
-    // changes. eslint-disable-next-line react-hooks/exhaustive-deps
+    // creditBefore is captured on the first poll; we only want the
+    // closure to re-create when the component remounts, not when local
+    // state changes. eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const credited = creditAfter !== null && creditAfter > creditBefore;
+  const credited = creditAfter !== null && creditBefore !== null && creditAfter > creditBefore;
   const creditedAmount =
     creditAfter !== null && creditBefore !== null
       ? Math.max(0, creditAfter - creditBefore)
       : 0;
-  const stillWaiting = !stoppedRef.current && !credited && !error;
+  const stillWaiting = !stoppedRef.current && !credited && !error && creditBefore !== null;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">

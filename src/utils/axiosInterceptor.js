@@ -95,20 +95,16 @@ axios.interceptors.request.use(
 // (server-message extraction, status→Vietnamese fallback, stack-trace
 // guard). Here we just wrap the rejection so components can use
 // `err.message` AND `err.status` / `err.code` uniformly.
+//
+// We intentionally do NOT delete the global Authorization header on 401.
+// The decision to log the user out lives in AuthContext.refreshProfile,
+// which has the full picture (multiple tabs, in-flight requests, etc.).
+// Auto-clearing here was the source of bug C-3 in the security review:
+// a single 401 from a misconfigured endpoint would lock the user out
+// even though their session was valid for every other route.
 axios.interceptors.response.use(
   (response) => response,
   (err) => {
-    // 401 is special: the token the client still trusts is now
-    // server-rejected. We do NOT clear it here (that decision lives
-    // in the calling component — AuthContext for normal API errors,
-    // a manual logout flow for explicit sign-out). But we DO remove
-    // the Authorization header so the NEXT request fails fast
-    // instead of looping with the same expired token.
-    if (err && err.response && err.response.status === 401) {
-      if (axios.defaults.headers.common) {
-        delete axios.defaults.headers.common.Authorization;
-      }
-    }
     const processed = handleApiError(err);
     return Promise.reject(new ApiError(processed));
   }

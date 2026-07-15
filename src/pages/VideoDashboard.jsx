@@ -33,6 +33,21 @@ const AUDIO_MODES = [
   },
 ];
 
+// Whitelist kept in sync with backend VideoRequest.@Pattern on `voice`.
+// Blank / null means "use the engine's built-in TTS_VOICE default".
+const VOICE_OPTIONS = [
+  {
+    value: "vi-VN-NamMinhNeural",
+    label: "Nam Minh (nam, mặc định)",
+    description: "Giọng nam miền Bắc tự nhiên, phù hợp phim tài liệu / tin tức.",
+  },
+  {
+    value: "vi-VN-HoaiMyNeural",
+    label: "Hoài My (nữ)",
+    description: "Giọng nữ miền Bắc ấm áp, phù hợp video giải trí / kể chuyện.",
+  },
+];
+
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const PROGRESS_REGEX = /(\d{1,3})\s*%/;
 
@@ -47,6 +62,7 @@ export default function VideoDashboard() {
   const { updateCreditBalance } = useAuth();
   const [url, setUrl] = useState("");
   const [audioMode, setAudioMode] = useState("mix");
+  const [voice, setVoice] = useState("vi-VN-NamMinhNeural");
   const [logoCoordinates, setLogoCoordinates] = useState("");
   const [subtitleMask, setSubtitleMask] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -139,15 +155,18 @@ export default function VideoDashboard() {
       try {
         const { data } = await axios.post(
           `${API_BASE_URL}/api/v1/videos/process`,
-          { 
-            url: cleanUrl, 
+          {
+            url: cleanUrl,
             audioMode,
+            // Only forward a voice value when the user picked an
+            // AI-dub mode; otherwise the engine skips TTS anyway.
+            voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
             logoCoordinates: logoCoordinates.trim() || null,
             subtitleMask: subtitleMask.trim() || null
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
-        setResult({ ...data, url: data.url ?? cleanUrl, audioMode: data.audioMode ?? audioMode });
+        setResult({ ...data, url: data.url ?? cleanUrl, audioMode: data.audioMode ?? audioMode, voice: data.voice ?? voice });
       } catch (err) {
         const status = err?.response?.status || err?.status;
         const code = err?.response?.data?.code || err?.code;
@@ -179,6 +198,11 @@ export default function VideoDashboard() {
     if (result.status !== "PROCESSING") return;
 
     const taskId = result.taskId;
+    // Snapshot the starting status so a transient COMPLETED→PROCESSING
+    // flicker (e.g. retry/rollback) doesn't tear down the polling
+    // interval and freeze the UI on the last value seen. We gate the
+    // poll on a stable taskId only, and the poll itself decides when
+    // to stop based on the latest server status.
 
     const fetchStatus = async () => {
       try {
@@ -221,8 +245,27 @@ export default function VideoDashboard() {
     fetchStatus();
     pollIntervalRef.current = setInterval(fetchStatus, 2000);
 
-    return clearPollInterval;
-  }, [result?.taskId, result?.status, clearPollInterval]);
+    // Pause polling when the tab is hidden — saves backend cycles and
+    // avoids waking the user's laptop. Resume on visibility change.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && !pollIntervalRef.current) {
+        fetchStatus();
+        pollIntervalRef.current = setInterval(fetchStatus, 2000);
+      } else if (document.visibilityState !== "visible" && pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearPollInterval();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // Depend ONLY on taskId — depending on status caused the interval
+    // to be torn down + recreated on every status tick (C-1 race).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result?.taskId]);
 
   useEffect(() => {
     if (!result?.taskId) return;
@@ -388,6 +431,60 @@ export default function VideoDashboard() {
                   ))}
                 </div>
               </div>
+
+              {/* Voice selector — only relevant when the engine will actually TTS */}
+              {(audioMode === "dub" || audioMode === "mix") && (
+                <div>
+                  <label
+                    htmlFor="voice-select"
+                    className="block text-sm font-semibold text-zinc-300 mb-3"
+                  >
+                    Giọng đọc tiếng Việt
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {VOICE_OPTIONS.map((opt) => {
+                      const checked = voice === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={isLoading || isProcessing}
+                          onClick={() => setVoice(opt.value)}
+                          className={[
+                            "relative text-left rounded-xl border p-3 transition select-none",
+                            "active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed",
+                            checked
+                              ? "border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/40"
+                              : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 hover:bg-zinc-900",
+                          ].join(" ")}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-zinc-100">
+                              {opt.label}
+                            </span>
+                            <span
+                              className={[
+                                "h-4 w-4 rounded-full border flex items-center justify-center",
+                                checked
+                                  ? "border-brand-500 bg-brand-500"
+                                  : "border-zinc-600 bg-transparent",
+                              ].join(" ")}
+                              aria-hidden="true"
+                            >
+                              {checked && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                              )}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
+                            {opt.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Submit Action */}
               {!isProcessing && (
