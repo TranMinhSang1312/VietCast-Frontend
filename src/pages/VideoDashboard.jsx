@@ -130,6 +130,17 @@ export default function VideoDashboard() {
     clearPollInterval();
   }, [clearPollInterval]);
 
+  const refreshUserCredit = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/api/auth/me`);
+      if (data && typeof data.creditBalance === "number") {
+        updateCreditBalance(data.creditBalance);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [updateCreditBalance]);
+
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
@@ -167,6 +178,7 @@ export default function VideoDashboard() {
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
         setResult({ ...data, url: data.url ?? cleanUrl, audioMode: data.audioMode ?? audioMode, voice: data.voice ?? voice });
+        refreshUserCredit();
       } catch (err) {
         const status = err?.response?.status || err?.status;
         const code = err?.response?.data?.code || err?.code;
@@ -191,7 +203,7 @@ export default function VideoDashboard() {
         setIsLoading(false);
       }
     },
-    [url, audioMode, logoCoordinates, subtitleMask, updateCreditBalance],
+    [url, audioMode, logoCoordinates, subtitleMask, updateCreditBalance, refreshUserCredit],
   );
 
   useEffect(() => {
@@ -234,6 +246,7 @@ export default function VideoDashboard() {
 
         if (data.status === "COMPLETED" || data.status === "FAILED") {
           clearPollInterval();
+          refreshUserCredit();
         }
       } catch (err) {
         if (err.response?.status === 404) {
