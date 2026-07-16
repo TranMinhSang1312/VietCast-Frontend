@@ -170,7 +170,8 @@ export default function VideoDashboard() {
       } catch (err) {
         const status = err?.response?.status || err?.status;
         const code = err?.response?.data?.code || err?.code;
-        if (status === 402 || code === "INSUFFICIENT_CREDIT") {
+        const backendMessage = err?.response?.data?.message;
+        if (status === 402 || status === 403 || code === "INSUFFICIENT_CREDIT") {
           try {
             const { data } = await axios.get(`${API_BASE_URL}/api/auth/me`);
             if (data && typeof data.creditBalance === "number") {
@@ -180,11 +181,11 @@ export default function VideoDashboard() {
             /* ignore */
           }
           setError(
-            err?.message ||
-              "Bạn không đủ credit để xử lý video. Vui lòng nạp thêm để tiếp tục."
+            backendMessage ||
+              "Bạn không đủ credit để xử lý video. Vui lòng click nút 'Nạp tiền' ở góc trên bên phải để nạp thêm credit."
           );
         } else {
-          setError(err?.message || "Không thể kết nối tới máy chủ. Vui lòng thử lại sau.");
+          setError(backendMessage || err?.message || "Không thể kết nối tới máy chủ. Vui lòng thử lại sau.");
         }
       } finally {
         setIsLoading(false);

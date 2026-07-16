@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Coins, Loader2, XCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Coins, Loader2, XCircle, ArrowRight, RefreshCw } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { confirmPayment } from "../services/payment";
 
 // ---------------------------------------------------------------------------
 // PaymentSuccess — landing page for the {@code payos.return-url}.
@@ -14,6 +15,12 @@ import { useAuth } from "../contexts/AuthContext";
 // hand off to /dashboard so a slow webhook does not block the user
 // from continuing. The next manual refresh will catch any missed
 // credit.
+//
+// As a fallback for environments where the webhook never reaches us
+// (typical localhost dev: PayOS servers cannot POST to a private IP),
+// the page also exposes a "Tôi đã thanh toán — kiểm tra ngay" button
+// that calls POST /api/v1/payment/confirm/{orderCode} to manually
+// reconcile the order.
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 2_000;
@@ -31,6 +38,10 @@ export default function PaymentSuccess() {
   const [creditBefore, setCreditBefore] = useState(null);
   const [creditAfter, setCreditAfter] = useState(null);
   const [error, setError] = useState(null);
+  // Manual reconciliation state — triggered by the "Tôi đã thanh toán"
+  // button as a fallback when the webhook never arrives (dev localhost).
+  const [confirming, setConfirming] = useState(false);
+  const [confirmOutcome, setConfirmOutcome] = useState(null);
   // Guard against double-mount in React 19 strict mode firing two
   // polling intervals at once.
   const stoppedRef = useRef(false);
@@ -95,6 +106,65 @@ export default function PaymentSuccess() {
       : 0;
   const stillWaiting = !stoppedRef.current && !credited && !error && creditBefore !== null;
 
+  // Translate a ConfirmOutcome string from the backend into a friendly
+  // Vietnamese message. We deliberately do NOT echo the SDK error text
+  // because the user does not need to know about webhook races.
+  const confirmLabel = (() => {
+    if (!confirmOutcome) return null;
+    switch (confirmOutcome) {
+      case "JUST_PAID":
+        return "Đã ghi nhận thanh toán và cộng credit thành công.";
+      case "ALREADY_TERMINAL":
+        return "Giao dịch này đã được xử lý trước đó.";
+      case "STILL_PENDING":
+        return "Hệ thống chưa nhận được xác nhận từ PayOS. Vui lòng đợi thêm vài giây rồi thử lại.";
+      case "UNKNOWN_ORDER":
+        return "Không tìm thấy giao dịch này. Vui lòng kiểm tra lại mã đơn hoặc liên hệ hỗ trợ.";
+      default:
+        return null;
+    }
+  })();
+
+  // Manual reconciliation handler. POSTs to the backend which asks
+  // PayOS for the authoritative order status. Safe to spam — the
+  // backend is idempotent and returns JUST_PAID once.
+  const handleManualConfirm = async () => {
+    if (!orderCode || confirming) return;
+    setConfirming(true);
+    setConfirmOutcome(null);
+    try {
+      const res = await confirmPayment(orderCode);
+      setConfirmOutcome(res.outcome);
+      // Pull the latest balance so the "Số dư hiện tại" line updates
+      // even when the polling loop has already stopped.
+      const refreshed = await refreshProfile();
+      if (res.outcome === "JUST_PAID" || res.outcome === "ALREADY_TERMINAL") {
+        // Stop the polling loop AND mirror the post-credit balance into
+        // local state so `credited` flips true and the "Đã thử N lần"
+        // affordance disappears. Without this branch the page lingers
+        // on the "Đã nhận được yêu cầu thanh toán" state even though
+        // credit already landed — confusing because the success banner
+        // never appears.
+        const finalBalance =
+          typeof res.creditBalance === "number"
+            ? res.creditBalance
+            : refreshed?.creditBalance ?? null;
+        if (finalBalance !== null) {
+          // Seed creditBefore to the same value so the "+creditedAmount"
+          // copy reads sensibly (delta is 0 on a no-op ALREADY_TERMINAL
+          // path, which is correct — credit landed on a prior flow).
+          setCreditBefore((prev) => (prev == null ? finalBalance : prev));
+          setCreditAfter(finalBalance);
+        }
+        stoppedRef.current = true;
+      }
+    } catch {
+      setConfirmOutcome("STILL_PENDING");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/40 p-8 text-center">
@@ -142,18 +212,14 @@ export default function PaymentSuccess() {
             error
           ) : stillWaiting ? (
             <>
-              Hệ thống đang đợi PayOS xác nhận giao dịch. Vui lòng giữ
+              Hệ thống đang xác nhận giao dịch với PayOS. Vui lòng giữ
               trang này mở trong vài giây...
             </>
           ) : (
             <>
-              PayOS đã báo thanh toán thành công nhưng hệ thống chưa cộng
-              credit tự động. Vui lòng tải lại trang sau vài phút — nếu vẫn
-              chưa nhận được, liên hệ hỗ trợ với mã đơn{" "}
-              <span className="font-mono text-slate-200">
-                {orderCode ?? "?"}
-              </span>
-              .
+              Thanh toán đã được PayOS xác nhận. Hệ thống đang xử lý và sẽ
+              cộng credit cho bạn trong ít phút. Bạn có thể tải lại trang
+              chính để kiểm tra — credit sẽ tự động hiển thị khi sẵn sàng.
             </>
           )}
         </p>
@@ -180,6 +246,45 @@ export default function PaymentSuccess() {
             Đóng
           </Link>
         </div>
+
+        {/* Manual reconciliation block — only useful when polling has
+            timed out and credit has not yet landed. We hide it once
+            credited to avoid suggesting duplicate actions. */}
+        {!credited && !error && orderCode && (
+          <div className="mt-6 pt-5 border-t border-slate-700/60">
+            <button
+              type="button"
+              onClick={handleManualConfirm}
+              disabled={confirming}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-medium border border-slate-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            >
+              {confirming ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Đang kiểm tra với PayOS...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Tôi đã thanh toán — kiểm tra ngay</span>
+                </>
+              )}
+            </button>
+            {confirmLabel && (
+              <p
+                className={`mt-3 text-xs text-center ${
+                  confirmOutcome === "JUST_PAID"
+                    ? "text-emerald-300"
+                    : confirmOutcome === "ALREADY_TERMINAL"
+                      ? "text-slate-300"
+                      : "text-amber-300"
+                }`}
+              >
+                {confirmLabel}
+              </p>
+            )}
+          </div>
+        )}
 
         {!credited && !error && (
           <p className="mt-4 text-xs text-slate-500 flex items-center justify-center gap-1.5">

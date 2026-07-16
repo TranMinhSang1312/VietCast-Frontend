@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Coins, Loader2, X, AlertCircle, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Coins, Loader2, X, AlertCircle, ExternalLink, Receipt, Wallet } from "lucide-react";
 import {
   createPaymentLink,
   formatVnd,
@@ -214,6 +215,29 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
               Bạn sẽ được chuyển hướng sang trang thanh toán PayOS. Nội dung chuyển khoản (ghi chú) sẽ được tạo ngẫu nhiên để tăng tính bảo mật và tự động hóa xử lý giao dịch.
             </span>
           </p>
+
+          {/* History shortcuts — quick audit trail for the user without
+              leaving the topup flow. Both routes are mounted in App.jsx
+              behind the authenticated gate. Closing the modal after
+              clicking keeps the rest of the dashboard state intact. */}
+          <div className="grid grid-cols-2 gap-2 pt-1 select-none">
+            <Link
+              to="/topup-history"
+              onClick={() => !isSubmitting && onClose()}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950/70 border border-zinc-850 text-[11px] font-medium text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 hover:border-zinc-700 active:scale-[0.98] transition"
+            >
+              <Receipt className="w-3.5 h-3.5 text-amber-400" />
+              <span>Lịch sử nạp</span>
+            </Link>
+            <Link
+              to="/credit-usage"
+              onClick={() => !isSubmitting && onClose()}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950/70 border border-zinc-850 text-[11px] font-medium text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 hover:border-zinc-700 active:scale-[0.98] transition"
+            >
+              <Wallet className="w-3.5 h-3.5 text-violet-300" />
+              <span>Lịch sử tiêu</span>
+            </Link>
+          </div>
 
           {/* Submit button */}
           <button

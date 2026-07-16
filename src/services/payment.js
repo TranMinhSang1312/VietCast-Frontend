@@ -31,6 +31,8 @@ const ENDPOINTS = Object.freeze({
   create: `${API_BASE_URL}/api/v1/payment/create`,
   // /webhook is NOT callable from the browser — PayOS servers hit it.
   // Listed here only so grep-for-`/api/v1/payment` lands on this file.
+  confirm: (orderCode) =>
+    `${API_BASE_URL}/api/v1/payment/confirm/${encodeURIComponent(orderCode)}`,
 });
 
 /**
@@ -49,6 +51,46 @@ const ENDPOINTS = Object.freeze({
 export async function createPaymentLink({ amount, description }) {
   const { data } = await axios.post(ENDPOINTS.create, { amount, description });
   return data;
+}
+
+/**
+ * Ask the backend to reconcile a PayOS order by its `orderCode`.
+ * Used when the PayOS webhook never reached us (typical localhost dev:
+ * PayOS servers cannot POST to a private IP).
+ *
+ * The backend asks PayOS for the authoritative status and credits the
+ * user if PayOS says PAID. Safe to call repeatedly — idempotent.
+ *
+ * @param {string} orderCode — numeric string PayOS assigned at create time.
+ * @returns {Promise<{
+ *   outcome: 'JUST_PAID' | 'ALREADY_TERMINAL' | 'STILL_PENDING' | 'UNKNOWN_ORDER',
+ *   creditBalance: number,
+ * }>}
+ */
+export async function confirmPayment(orderCode) {
+  const { data } = await axios.post(ENDPOINTS.confirm(orderCode));
+  return data;
+}
+
+/**
+ * Page through the calling user's topup history (PaymentOrder rows),
+ * newest first. Used by the "Lịch sử nạp credit" page.
+ *
+ * @param {{ page?: number, size?: number }} [opts]
+ * @returns {Promise<Array<{
+ *   orderCode: string,
+ *   amountVnd: number,
+ *   creditAmount: number,
+ *   status: 'PENDING' | 'SUCCESS' | 'CANCELLED' | 'FAILED',
+ *   createdAt: string,
+ *   paidAt: string | null,
+ * }>>}
+ */
+export async function listMyTopups({ page = 0, size = 50 } = {}) {
+  const { data } = await axios.get(`${API_BASE_URL}/api/v1/payment/orders`, {
+    params: { page, size },
+  });
+  return Array.isArray(data) ? data : [];
 }
 
 /**
