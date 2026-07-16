@@ -47,14 +47,18 @@ function TabFallback() {
 // username, logout — keeping the top bar visually quiet.
 function AppShell() {
   const [isTopupOpen, setIsTopupOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen w-full bg-zinc-950 text-zinc-100 flex">
-      <Sidebar />
+    <div className="h-screen w-full bg-zinc-950 text-zinc-100 flex overflow-hidden">
+      <Sidebar
+        collapsed={isSidebarCollapsed}
+        onToggle={() => setIsSidebarCollapsed((v) => !v)}
+      />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-800 shadow-md">
+      <div className="flex-1 flex flex-col min-w-0 h-screen">
+        <header className="shrink-0 z-10 bg-zinc-900 border-b border-zinc-800 shadow-md">
           <div className="flex items-center justify-between px-4 sm:px-6 py-3">
             {/* Mobile-only brand — sidebar is hidden < md and we still
                 want a tiny label so the empty header doesn't read as
@@ -115,7 +119,7 @@ function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
           {/* Outlet lets each sidebar link render its own page inside
               this shell. The Suspense boundary covers lazy chunks. */}
           <Suspense fallback={<TabFallback />}>

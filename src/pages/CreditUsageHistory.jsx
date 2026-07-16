@@ -106,7 +106,7 @@ export default function CreditUsageHistory() {
   const hasItems = Array.isArray(txns) && txns.length > 0;
 
   return (
-    <div className="min-h-screen w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-zinc-950 font-sans text-zinc-100 relative overflow-x-hidden">
+    <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-zinc-950 font-sans text-zinc-100 relative overflow-x-hidden">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-500/3 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-2xl z-10">

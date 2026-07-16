@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Coins, Loader2, X, AlertCircle, ExternalLink, Receipt, Wallet } from "lucide-react";
+import { Coins, Loader2, X, AlertCircle, ExternalLink } from "lucide-react";
 import {
   createPaymentLink,
   formatVnd,
@@ -8,10 +7,11 @@ import {
 } from "../../services/payment";
 
 const PRESETS = Object.freeze([
-  { vnd: 10_000,  label: "10.000" },
-  { vnd: 50_000,  label: "50.000" },
-  { vnd: 100_000, label: "100.000" },
-  { vnd: 500_000, label: "500.000" },
+  { vnd: 10_000,    label: "10.000" },
+  { vnd: 50_000,    label: "50.000" },
+  { vnd: 100_000,   label: "100.000" },
+  { vnd: 200_000,   label: "200.000" },
+  { vnd: 500_000,   label: "500.000" },
   { vnd: 1_000_000, label: "1.000.000" },
 ]);
 
@@ -39,6 +39,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : presetVnd;
   })();
   const effectiveCredits = vndToCredits(effectiveVnd);
+  const isCustom = customStr !== "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -133,15 +134,14 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-          {/* Presets */}
+          {/* Presets + Custom shortcut */}
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2 select-none">
               Chọn gói nhanh (VND)
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {PRESETS.map((p) => {
-                const selected =
-                  customStr === "" && presetVnd === p.vnd;
+                const selected = !isCustom && presetVnd === p.vnd;
                 return (
                   <button
                     key={p.vnd}
@@ -161,6 +161,22 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
                   </button>
                 );
               })}
+              <button
+                key="__custom__"
+                type="button"
+                onClick={() => {
+                  setCustomStr(customStr === "" ? String(presetVnd) : customStr);
+                  document.getElementById("topup-custom")?.focus();
+                }}
+                disabled={isSubmitting}
+                className={`px-2 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 select-none ${
+                  isCustom
+                    ? "bg-brand-500 border-brand-500 text-white shadow-md shadow-brand-500/10 active:scale-[0.98]"
+                    : "bg-zinc-950/70 border-zinc-850 text-zinc-400 hover:border-zinc-700 active:scale-[0.98]"
+                }`}
+              >
+                Tuỳ chỉnh
+              </button>
             </div>
           </div>
 
@@ -193,9 +209,9 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Credit nhận được</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Số credit nhận được</div>
               <div className="text-base font-bold text-amber-500 mt-0.5">
-                {effectiveCredits} credit
+                ≈ {effectiveCredits} credit
               </div>
             </div>
           </div>
@@ -215,29 +231,6 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
               Bạn sẽ được chuyển hướng sang trang thanh toán PayOS. Nội dung chuyển khoản (ghi chú) sẽ được tạo ngẫu nhiên để tăng tính bảo mật và tự động hóa xử lý giao dịch.
             </span>
           </p>
-
-          {/* History shortcuts — quick audit trail for the user without
-              leaving the topup flow. Both routes are mounted in App.jsx
-              behind the authenticated gate. Closing the modal after
-              clicking keeps the rest of the dashboard state intact. */}
-          <div className="grid grid-cols-2 gap-2 pt-1 select-none">
-            <Link
-              to="/topup-history"
-              onClick={() => !isSubmitting && onClose()}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950/70 border border-zinc-850 text-[11px] font-medium text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 hover:border-zinc-700 active:scale-[0.98] transition"
-            >
-              <Receipt className="w-3.5 h-3.5 text-amber-400" />
-              <span>Lịch sử nạp</span>
-            </Link>
-            <Link
-              to="/credit-usage"
-              onClick={() => !isSubmitting && onClose()}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-950/70 border border-zinc-850 text-[11px] font-medium text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 hover:border-zinc-700 active:scale-[0.98] transition"
-            >
-              <Wallet className="w-3.5 h-3.5 text-violet-300" />
-              <span>Lịch sử tiêu</span>
-            </Link>
-          </div>
 
           {/* Submit button */}
           <button

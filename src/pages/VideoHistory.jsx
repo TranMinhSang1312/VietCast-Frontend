@@ -244,7 +244,7 @@ export default function VideoHistory() {
     const hasItems = Array.isArray(history) && history.length > 0;
 
     return (
-        <div className="min-h-screen w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-zinc-950 font-sans text-zinc-100 relative overflow-x-hidden">
+        <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-zinc-950 font-sans text-zinc-100 relative overflow-x-hidden">
             {/* Ambient glows */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/3 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-brand-500/2 rounded-full blur-[100px] pointer-events-none" />

@@ -317,7 +317,7 @@ export default function VideoDashboard() {
   }, [isProcessing, result?.status]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center bg-zinc-950 font-sans text-zinc-100 px-4 py-8 sm:py-12 relative overflow-x-hidden">
+    <div className="w-full flex flex-col items-center bg-zinc-950 font-sans text-zinc-100 px-4 py-8 sm:py-12 relative overflow-x-hidden">
       {/* Ambient backgrounds */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-500/5 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-500/2 rounded-full blur-[120px] pointer-events-none" />
