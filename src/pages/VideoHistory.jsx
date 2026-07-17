@@ -256,6 +256,7 @@ export default function VideoHistory() {
             setError(err?.message || "Không thể tải lịch sử. Đang thử lại…");
         } finally {
             if (showSpinner) setIsLoading(false);
+        }
     }, []);
 
     const handleRetryTask = useCallback(async (taskId) => {
