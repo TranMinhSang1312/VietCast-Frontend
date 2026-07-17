@@ -9,6 +9,7 @@ import {
     Film,
     Subtitles,
     Clock,
+    RefreshCw,
 } from "lucide-react";
 import { API_BASE_URL_PROVIDER } from "../config";
 
@@ -91,11 +92,21 @@ const ProgressBar = memo(function ProgressBar({ value }) {
     );
 });
 
-const VideoHistoryItem = memo(function VideoHistoryItem({ video }) {
+const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const status = video.status;
     const isCompleted = status === "COMPLETED";
     const isFailed = status === "FAILED";
     const isProcessing = status === "PROCESSING";
+    const [isRetrying, setIsRetrying] = useState(false);
+
+    const isStuck = useMemo(() => {
+        if (!isProcessing || !video.createdAt) return false;
+        const createdTime = new Date(video.createdAt).getTime();
+        const diff = Date.now() - createdTime;
+        // Stuck if processing for more than 10 minutes
+        return diff > 10 * 60 * 1000;
+    }, [isProcessing, video.createdAt]);
+
     const fileName = useMemo(
         () => `VietCast_${video.taskId}.mp4`,
         [video.taskId],
@@ -104,6 +115,18 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video }) {
         () => `phude_viet_${video.taskId}.srt`,
         [video.taskId],
     );
+
+    const handleRetryClick = async () => {
+        if (isRetrying) return;
+        setIsRetrying(true);
+        try {
+            await onRetry(video.taskId);
+        } catch (err) {
+            // Error is handled by parent
+        } finally {
+            setIsRetrying(false);
+        }
+    };
 
     return (
         <article className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-5 sm:p-6 backdrop-blur-md">
@@ -117,7 +140,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video }) {
                             <h3 className="text-base font-bold text-slate-100 font-mono">
                                 Task #{video.taskId}
                             </h3>
-                            <StatusPill status={status} />
+                            <StatusPill status={isStuck ? "FAILED" : status} />
                         </div>
                         <div className="flex items-center gap-1.5 mt-1 text-xs font-mono text-zinc-500">
                             <Clock className="w-3.5 h-3.5" />
@@ -133,12 +156,19 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video }) {
                 </p>
             )}
 
-            {isProcessing && <ProgressBar value={video.progress ?? 0} />}
+            {isProcessing && !isStuck && <ProgressBar value={video.progress ?? 0} />}
+
+            {isStuck && (
+                <div className="mt-3 flex items-start gap-2.5 p-4 rounded-xl bg-amber-950/20 border border-amber-900/30 text-sm text-amber-200">
+                    <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-amber-400" />
+                    <span>Tác vụ này có vẻ đã bị kẹt (quá 10 phút). Bạn có thể bấm nút Thử lại bên dưới để chạy lại.</span>
+                </div>
+            )}
 
             {isFailed && (
                 <div className="mt-3 flex items-start gap-2.5 p-4 rounded-xl bg-rose-950/30 border border-rose-900/40 text-sm text-red-200">
                     <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-rose-400" />
-                    <span>{video.message || "Quá trình render thất bại. Vui lòng kiểm tra log hệ thống."}</span>
+                    <span>{video.message || "Quá trình render thất bại. Vui lòng kiểm tra log hệ thống hoặc bấm Thử lại."}</span>
                 </div>
             )}
 
@@ -174,10 +204,22 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video }) {
                     </a>
                 )}
 
-                {!isCompleted && !isFailed && (
+                {(isFailed || isStuck) && (
+                    <button
+                        type="button"
+                        disabled={isRetrying}
+                        onClick={handleRetryClick}
+                        className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:opacity-50 text-white font-semibold text-xs active:scale-[0.98] transition select-none cursor-pointer"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                        <span>{isRetrying ? "Đang gửi..." : "Thử lại"}</span>
+                    </button>
+                )}
+
+                {!isCompleted && !isFailed && !isStuck && (
                     <span className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-slate-950/70 border border-white/[0.06] text-xs font-mono uppercase tracking-wider text-zinc-500 select-none">
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" />
-                        Đang xếp hàng...
+                        Đang xử lý...
                     </span>
                 )}
             </footer>
@@ -214,8 +256,18 @@ export default function VideoHistory() {
             setError(err?.message || "Không thể tải lịch sử. Đang thử lại…");
         } finally {
             if (showSpinner) setIsLoading(false);
-        }
     }, []);
+
+    const handleRetryTask = useCallback(async (taskId) => {
+        try {
+            await axios.post(`${API_BASE_URL}/api/v1/videos/${taskId}/retry`);
+            fetchHistory(false);
+        } catch (err) {
+            const serverMessage = err.response?.data?.message || err.message || "Không thể chạy lại tác vụ. Vui lòng thử lại sau.";
+            alert(serverMessage);
+            throw err;
+        }
+    }, [fetchHistory]);
 
     const clearPollInterval = useCallback(() => {
         if (pollTimerRef.current) {
@@ -313,6 +365,7 @@ export default function VideoHistory() {
                             <VideoHistoryItem
                                 key={video.taskId}
                                 video={video}
+                                onRetry={handleRetryTask}
                             />
                         ))}
                     </div>
