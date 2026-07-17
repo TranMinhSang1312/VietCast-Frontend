@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { Coins, Loader2, X, AlertCircle, ExternalLink } from "lucide-react";
+import { Coins, Loader2, X, AlertCircle } from "lucide-react";
 import {
   createPaymentLink,
   formatVnd,
-  vndToCredits,
 } from "../../services/payment";
 
 const PRESETS = Object.freeze([
@@ -38,7 +37,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
     const parsed = parseInt(customStr.replaceAll(".", ""), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : presetVnd;
   })();
-  const effectiveCredits = vndToCredits(effectiveVnd);
+  const effectiveCredits = effectiveVnd;
   const isCustom = customStr !== "";
 
   const handleSubmit = async (e) => {
@@ -109,23 +108,23 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
         if (e.target === e.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="w-full max-w-md bg-zinc-950 border border-zinc-900 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden font-sans text-zinc-100">
+      <div className="w-full max-w-md rounded-3xl border border-white/[0.06] bg-slate-950 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] shadow-black/40 overflow-hidden font-sans text-zinc-100">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-2 select-none">
-            <Coins className="w-5 h-5 text-amber-500" />
+            <Coins className="w-5 h-5 text-yellow-300" />
             <h2
               id="topup-title"
-              className="text-sm font-bold tracking-tight text-zinc-200"
+              className="text-sm font-bold tracking-tight text-slate-200"
             >
-              Nạp credit qua PayOS
+              Nạp credit
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="rounded-lg p-1.5 text-zinc-500 hover:text-zinc-250 hover:bg-zinc-900 disabled:opacity-50 transition active:scale-[0.95]"
+            className="rounded-lg p-1.5 text-slate-500 hover:text-slate-200 hover:bg-white/[0.06] disabled:opacity-50 transition active:scale-[0.95]"
             aria-label="Đóng"
           >
             <X className="w-4 h-4" />
@@ -153,8 +152,8 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
                     disabled={isSubmitting}
                     className={`px-2 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 select-none ${
                       selected
-                        ? "bg-brand-500 border-brand-500 text-white shadow-md shadow-brand-500/10 active:scale-[0.98]"
-                        : "bg-zinc-950/70 border-zinc-850 text-zinc-400 hover:border-zinc-700 active:scale-[0.98]"
+                        ? "bg-emerald-400 border-emerald-400 text-slate-950 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98]"
+                        : "bg-slate-950/70 border-white/[0.06] text-slate-400 hover:border-white/[0.12] active:scale-[0.98]"
                     }`}
                   >
                     {p.label}
@@ -171,8 +170,8 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
                 disabled={isSubmitting}
                 className={`px-2 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 select-none ${
                   isCustom
-                    ? "bg-brand-500 border-brand-500 text-white shadow-md shadow-brand-500/10 active:scale-[0.98]"
-                    : "bg-zinc-950/70 border-zinc-850 text-zinc-400 hover:border-zinc-700 active:scale-[0.98]"
+                    ? "bg-emerald-400 border-emerald-400 text-slate-950 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98]"
+                    : "bg-slate-950/70 border-white/[0.06] text-slate-400 hover:border-white/[0.12] active:scale-[0.98]"
                 }`}
               >
                 Tuỳ chỉnh
@@ -196,47 +195,39 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
               onChange={(e) => setCustomStr(e.target.value)}
               disabled={isSubmitting}
               placeholder="vd: 200000"
-              className="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-850 text-zinc-100 placeholder:text-zinc-650 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition disabled:opacity-50 text-xs"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-white/[0.06] text-zinc-100 placeholder:text-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 focus:outline-none transition disabled:opacity-50 text-xs"
             />
           </div>
 
           {/* Summary info box */}
-          <div className="rounded-xl bg-zinc-900/10 border border-zinc-850 px-4 py-3 flex items-center justify-between select-none">
+          <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] px-4 py-3 flex items-center justify-between select-none">
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Số tiền thanh toán</div>
-              <div className="text-base font-bold text-zinc-200 mt-0.5">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">Số tiền thanh toán</div>
+              <div className="text-base font-bold text-slate-200 mt-0.5">
                 {formatVnd(effectiveVnd)} VND
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Số credit nhận được</div>
-              <div className="text-base font-bold text-amber-500 mt-0.5">
-                ≈ {effectiveCredits} credit
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">Số credit nhận được</div>
+              <div className="text-base font-bold text-yellow-300 mt-0.5">
+                {formatVnd(effectiveCredits)} credit
               </div>
             </div>
           </div>
 
           {/* Error display */}
           {error && (
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-950/20 border border-red-900/40 text-red-200">
-              <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-red-400" />
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-200">
+              <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-rose-400" />
               <div className="text-xs">{error}</div>
             </div>
           )}
-
-          {/* Helper note */}
-          <p className="text-[10px] leading-relaxed text-zinc-500 flex items-start gap-1.5 select-none">
-            <ExternalLink className="w-3 h-3 mt-0.5 shrink-0" />
-            <span>
-              Bạn sẽ được chuyển hướng sang trang thanh toán PayOS. Nội dung chuyển khoản (ghi chú) sẽ được tạo ngẫu nhiên để tăng tính bảo mật và tự động hóa xử lý giao dịch.
-            </span>
-          </p>
 
           {/* Submit button */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed select-none"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-semibold text-xs active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed select-none"
           >
             {isSubmitting ? (
               <>

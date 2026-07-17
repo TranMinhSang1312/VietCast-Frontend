@@ -29,8 +29,8 @@ const TYPE_META = {
   [TX_TYPE.TOPUP]: {
     label: "Nạp credit",
     icon: Coins,
-    colorClass: "text-amber-300",
-    signClass: "text-amber-300",
+    colorClass: "text-yellow-300",
+    signClass: "text-yellow-300",
   },
   [TX_TYPE.TRANSLATE]: {
     label: "Dịch thuật",
@@ -106,7 +106,7 @@ export default function CreditUsageHistory() {
   const hasItems = Array.isArray(txns) && txns.length > 0;
 
   return (
-    <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-zinc-950 font-sans text-zinc-100 relative overflow-x-hidden">
+    <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-slate-950 font-sans text-slate-100 relative overflow-x-hidden">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-500/3 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-2xl z-10">
@@ -117,24 +117,11 @@ export default function CreditUsageHistory() {
           <h1 className="text-3xl font-extrabold tracking-tighter text-white">
             Lịch sử sử dụng credit
           </h1>
-          <p className="mt-2.5 text-sm text-zinc-400 max-w-sm mx-auto leading-relaxed">
-            Tất cả biến động credit: nạp, dịch, TTS, render video, hoàn credit. Mới nhất trước.
-          </p>
         </header>
-
-        <div className="mb-6">
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Về trang chính</span>
-          </Link>
-        </div>
 
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-16 text-zinc-500 gap-3 select-none">
-            <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
             <span className="text-sm font-mono tracking-wider">ĐANG TẢI LỊCH SỬ…</span>
           </div>
         )}
@@ -142,9 +129,9 @@ export default function CreditUsageHistory() {
         {!isLoading && error && (
           <div
             role="alert"
-            className="flex items-start gap-3 p-4 rounded-xl bg-red-950/20 border border-red-900/40 text-red-200 mb-6"
+            className="flex items-start gap-3 p-4 rounded-xl bg-rose-950/30 border border-rose-900/40 text-red-200 mb-6"
           >
-            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 text-red-400" />
+            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 text-rose-400" />
             <div className="text-sm leading-relaxed flex-1">
               <div className="font-semibold mb-0.5">Không tải được dữ liệu</div>
               {error}
@@ -152,7 +139,7 @@ export default function CreditUsageHistory() {
             <button
               type="button"
               onClick={() => fetch(true)}
-              className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-900/40 hover:bg-red-900/70 border border-red-700/60 text-xs font-semibold text-red-100 transition active:scale-[0.98] select-none"
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800/60 text-xs font-semibold text-rose-100 transition active:scale-[0.98] select-none"
             >
               <Loader2 className="w-3.5 h-3.5" />
               Thử lại
@@ -161,8 +148,8 @@ export default function CreditUsageHistory() {
         )}
 
         {!isLoading && !error && !hasItems && (
-          <div className="bg-zinc-900/25 border border-zinc-900 rounded-2xl p-10 text-center backdrop-blur-md select-none">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-zinc-950 border border-zinc-850 mb-4">
+          <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-10 text-center backdrop-blur-md select-none">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-950 border border-white/[0.06] mb-4">
               <History className="w-6 h-6 text-zinc-500" />
             </div>
             <h2 className="text-base font-semibold text-zinc-300 mb-1.5">
@@ -188,11 +175,11 @@ export default function CreditUsageHistory() {
               return (
                 <article
                   key={t.id}
-                  className="bg-zinc-900/25 border border-zinc-900 rounded-xl p-4 sm:p-5 backdrop-blur-md"
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-4 sm:p-5 backdrop-blur-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <div className="shrink-0 w-9 h-9 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center">
+                      <div className="shrink-0 w-9 h-9 rounded-lg bg-slate-950 border border-white/[0.06] flex items-center justify-center">
                         <Icon className={`w-4.5 h-4.5 ${meta.colorClass}`} />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -237,7 +224,7 @@ export default function CreditUsageHistory() {
             <button
               type="button"
               onClick={() => fetch(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-850 text-sm text-zinc-400 hover:text-zinc-200 transition active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-sm text-zinc-400 hover:text-zinc-200 transition active:scale-[0.98]"
             >
               <Loader2 className="w-4 h-4" />
               Làm mới

@@ -124,14 +124,14 @@ export default function AdminUsers() {
         <button
           type="button"
           onClick={load}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80 transition"
+          className="inline-flex items-center gap-2 rounded-lg border border-white/[0.06] bg-slate-900/60 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80 transition"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           <span>Làm mới</span>
         </button>
       </header>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-6 space-y-4">
+      <section className="rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4 sm:p-6 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
@@ -139,7 +139,7 @@ export default function AdminUsers() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Tìm theo username..."
-            className="w-full rounded-lg border border-slate-700 bg-slate-900/70 pl-9 pr-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="w-full rounded-lg border border-white/[0.06] bg-slate-900/70 pl-9 pr-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
             maxLength={100}
           />
         </div>
@@ -229,7 +229,7 @@ export default function AdminUsers() {
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 pr-4 text-right text-amber-300">
+                      <td className="py-2.5 pr-4 text-right text-yellow-300">
                         {formatNumber(u.creditBalance)}
                       </td>
                       <td className="py-2.5 pr-4 text-slate-400">{formatRelative(u.createdAt)}</td>
@@ -239,7 +239,7 @@ export default function AdminUsers() {
                             type="button"
                             onClick={() => setCreditTarget(u)}
                             disabled={actionBusy}
-                            className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 hover:bg-amber-500/20 transition disabled:opacity-40"
+                            className="inline-flex items-center gap-1 rounded-md border border-yellow-400/30 bg-yellow-400/10 px-2 py-1 text-xs text-yellow-200 hover:bg-yellow-400/20 transition disabled:opacity-40"
                             title="Cộng credit"
                           >
                             <Coins className="w-3.5 h-3.5" />
@@ -293,7 +293,7 @@ export default function AdminUsers() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800/80 transition"
+                className="inline-flex items-center gap-1 rounded-md border border-white/[0.06] bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800/80 transition"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Trước
@@ -302,7 +302,7 @@ export default function AdminUsers() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800/80 transition"
+                className="inline-flex items-center gap-1 rounded-md border border-white/[0.06] bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800/80 transition"
               >
                 Sau
                 <ChevronRight className="w-4 h-4" />
@@ -356,7 +356,7 @@ export default function AdminUsers() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setUnlockConfirm(null); }}
         >
-          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.06] bg-slate-900 shadow-2xl">
             <div className="px-5 py-4 space-y-3">
               <h2 className="text-base font-semibold text-slate-100">Mở khóa tài khoản?</h2>
               <p className="text-sm text-slate-300">
@@ -368,7 +368,7 @@ export default function AdminUsers() {
                   type="button"
                   onClick={() => setUnlockConfirm(null)}
                   disabled={actionInFlight !== null}
-                  className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition disabled:opacity-40"
+                  className="rounded-lg border border-white/[0.06] bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition disabled:opacity-40"
                 >
                   Hủy
                 </button>

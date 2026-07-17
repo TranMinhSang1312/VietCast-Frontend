@@ -36,6 +36,8 @@ const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 // ---------------------------------------------------------------------------
 const ENDPOINTS = Object.freeze({
   login:       `${API_BASE_URL}/api/v1/auth/login`,
+  register:    `${API_BASE_URL}/api/v1/auth/register`,
+  verifyEmail: `${API_BASE_URL}/api/v1/auth/verify-email`,
   google:      `${API_BASE_URL}/api/v1/auth/google`,
   me:          `${API_BASE_URL}/api/v1/auth/me`,
   // Legacy endpoints we keep calling until the desktop client ships
@@ -56,6 +58,44 @@ export async function login({ emailOrUsername, password }) {
     ENDPOINTS.login,
     { emailOrUsername, password },
     { skipAuth: true }   // the public /login route — no bearer header
+  );
+  return data;
+}
+
+/**
+ * Step 1 of the LOCAL sign-up flow. The server creates the user row,
+ * mints a 6-digit OTP, emails it, and returns `token=null` + a
+ * `message` telling the user to check their inbox. We deliberately
+ * do NOT persist anything to localStorage here — the JWT only lands
+ * after step 2 (`verifyEmail`) succeeds.
+ *
+ * @param {{ email: string, password: string }} body
+ * @returns {Promise<AuthResponseBody>}
+ */
+export async function register({ email, password }) {
+  const { data } = await axios.post(
+    ENDPOINTS.register,
+    { email, password },
+    { skipAuth: true }   // public route — no bearer header
+  );
+  return data;
+}
+
+/**
+ * Step 2 of the LOCAL sign-up flow. Caller passes the OTP exactly
+ * as it appears in the verification email (whitespace trimmed
+ * server-side). On success the server returns a JWT in the same
+ * shape as {@link login} so the AuthContext can persist it
+ * identically.
+ *
+ * @param {{ email: string, otp: string }} body
+ * @returns {Promise<AuthResponseBody>}
+ */
+export async function verifyEmail({ email, otp }) {
+  const { data } = await axios.post(
+    ENDPOINTS.verifyEmail,
+    { email, otp },
+    { skipAuth: true }   // public route — no bearer header
   );
   return data;
 }

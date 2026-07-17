@@ -6,16 +6,17 @@ import {
   Wallet,
   PanelLeftClose,
   PanelLeftOpen,
+  Coins,
 } from "lucide-react";
 
 // Single source of truth for the user-facing sidebar. Adding a new entry
-// here automatically renders a NavLink with active styling — keep
-// `path` aligned with the route defined in App.jsx.
+// here automatically renders a NavLink with active styling.
 const NAV = [
   { id: "dashboard",     label: "Lồng tiếng",    icon: Wand2,   path: "/dashboard"     },
   { id: "video-history", label: "Lịch sử video", icon: Film,    path: "/video-history" },
   { id: "topup",         label: "Lịch sử nạp",   icon: Receipt, path: "/topup-history" },
   { id: "credit",        label: "Lịch sử tiêu",  icon: Wallet,  path: "/credit-usage"  },
+  { id: "pricing",       label: "Phí dịch vụ",   icon: Coins,   path: "/pricing"       },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
@@ -23,26 +24,36 @@ export default function Sidebar({ collapsed, onToggle }) {
     <aside
       className={`hidden md:flex ${
         collapsed ? "md:w-16" : "md:w-60 lg:w-64"
-      } shrink-0 flex-col bg-zinc-900 border-r border-zinc-800 transition-[width] duration-200 ease-in-out`}
+      } shrink-0 flex-col bg-slate-950/90 border-r border-white/[0.06] backdrop-blur-xl transition-[width] duration-200 ease-in-out`}
     >
-      {/* Brand — repeats the logo from the header so the user always
-          has it visible, but kept compact since the header already
-          shows it on small screens. The collapse toggle lives in the
-          header of the brand so it is reachable even when the labels
-          are hidden. */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-zinc-800">
+      {/* Brand area. Hidden when collapsed (the icon-only variant is
+          skipped — a slim chevron at the top still hints at the brand
+          without competing for space with the toggle button. */}
+      <div className="flex items-center justify-between px-4 py-5 border-b border-white/[0.06]">
         {collapsed ? (
-          <span className="text-sm font-bold tracking-wide text-zinc-200 select-none">
-            V
-          </span>
+          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shadow-md shadow-indigo-500/30 select-none">
+            <span className="text-[11px] font-bold text-white">VC</span>
+          </div>
         ) : (
-          <div className="select-none min-w-0">
-            <span className="text-sm font-bold tracking-wide text-zinc-200">
-              VietCast
-            </span>
-            <p className="mt-1 text-[11px] text-zinc-500 uppercase tracking-wider">
-              Studio
-            </p>
+          <div className="flex items-center gap-2.5 select-none min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-4.5 h-4.5 text-white"
+                aria-hidden="true"
+              >
+                <path d="M12 2 14.39 8.26 21 9.27l-5 4.87L17.18 21 12 17.77 6.82 21 8 14.14l-5-4.87 6.61-1.01L12 2Z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <span className="text-sm font-bold tracking-tight text-white">
+                VietCast
+              </span>
+              <p className="mt-0.5 text-[10px] text-slate-500 uppercase tracking-[0.18em] font-mono">
+                Studio
+              </p>
+            </div>
           </div>
         )}
         <button
@@ -50,7 +61,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           onClick={onToggle}
           aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
           title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-          className="inline-flex items-center justify-center rounded-lg p-1.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 transition active:scale-[0.95]"
+          className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-white/[0.06] transition active:scale-[0.95]"
         >
           {collapsed ? (
             <PanelLeftOpen className="w-4 h-4" />
@@ -68,23 +79,35 @@ export default function Sidebar({ collapsed, onToggle }) {
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               [
-                "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition",
+                "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition",
                 collapsed ? "justify-center" : "",
                 isActive
-                  ? "bg-brand-500 text-white shadow-md shadow-brand-500/10"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60",
+                  ? "bg-indigo-500/10 text-white ring-1 ring-indigo-400/30 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
+                  : "text-slate-400 hover:text-white hover:bg-white/[0.04]",
               ].join(" ")
             }
           >
-            <Icon className="w-4 h-4 shrink-0" />
-            {!collapsed && <span className="truncate">{label}</span>}
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`inline-flex items-center justify-center w-7 h-7 rounded-lg shrink-0 transition ${
+                    isActive
+                      ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/30"
+                      : "bg-white/[0.04] text-slate-400 group-hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </span>
+                {!collapsed && <span className="truncate">{label}</span>}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
       {!collapsed && (
-        <div className="px-5 py-3 border-t border-zinc-800">
-          <p className="text-[11px] text-zinc-600">
+        <div className="px-5 py-3 border-t border-white/[0.06]">
+          <p className="text-[11px] text-slate-500 font-mono">
             v1.0 · Bản nội bộ
           </p>
         </div>

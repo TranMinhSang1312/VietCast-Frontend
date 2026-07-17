@@ -17,7 +17,7 @@ function TabFallback() {
   return (
     <div className="min-h-[40vh] w-full flex items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-slate-400">
-        <Loader2 className="w-7 h-7 animate-spin text-brand-500" />
+        <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
         <span className="text-sm">Đang tải…</span>
       </div>
     </div>
@@ -51,7 +51,7 @@ export default function AdminApp() {
               >
                 ← Về app
               </Link>
-              <div className="inline-flex rounded-xl bg-slate-900/60 border border-slate-800 p-1 ml-2">
+              <div className="inline-flex rounded-xl bg-slate-900/60 border border-white/[0.06] p-1 ml-2">
                 {TABS.map((tab) => {
                   const Icon = tab.icon;
                   const active = activeTabId === tab.id;
@@ -61,7 +61,7 @@ export default function AdminApp() {
                       to={tab.path}
                       className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${
                         active
-                          ? "bg-brand-600 text-white shadow shadow-brand-500/30"
+                          ? "bg-indigo-500 text-white shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
                           : "text-slate-300 hover:text-slate-100"
                       }`}
                     >
@@ -74,8 +74,8 @@ export default function AdminApp() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
-                <Coins className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-white/[0.06]">
+                <Coins className="w-4 h-4 text-yellow-300" />
                 <span className="text-sm font-medium text-slate-200">
                   {user?.creditBalance ?? 0} credit
                 </span>

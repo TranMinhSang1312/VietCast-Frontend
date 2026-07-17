@@ -17,13 +17,13 @@ import { formatNumber } from "../../utils/format";
 export default function UserGrowthChart({ points, loading }) {
   if (loading) {
     return (
-      <div className="h-72 w-full rounded-xl border border-slate-800 bg-slate-900/40 animate-pulse" />
+      <div className="h-72 w-full rounded-xl border border-white/[0.06] bg-slate-900/40 animate-pulse" />
     );
   }
 
   if (!points || points.length === 0) {
     return (
-      <div className="h-72 w-full rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-slate-500 text-sm">
+      <div className="h-72 w-full rounded-xl border border-dashed border-white/[0.06] flex items-center justify-center text-slate-500 text-sm">
         Chưa có dữ liệu
       </div>
     );

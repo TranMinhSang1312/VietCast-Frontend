@@ -56,10 +56,10 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-white/[0.06] bg-slate-900 shadow-2xl">
         <header className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-amber-400" />
+            <Coins className="w-5 h-5 text-yellow-300" />
             <h2 className="text-base font-semibold text-slate-100">Cộng credit</h2>
           </div>
           <button
@@ -76,7 +76,7 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
           <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-sm">
             <span className="text-slate-400">User: </span>
             <span className="font-medium text-slate-100">{user.username || user.email}</span>
-            <span className="ml-2 text-amber-300">
+            <span className="ml-2 text-yellow-300">
               (hiện có: {formatVND(user.creditBalance)})
             </span>
           </div>
@@ -94,7 +94,7 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="vd: 50000"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-lg border border-white/[0.06] bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
               required
             />
             {amount !== "" && !amountValid && (
@@ -114,7 +114,7 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
               placeholder="vd: Refund do lỗi upload..."
               rows={3}
               maxLength={500}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-lg border border-white/[0.06] bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
               required
             />
             <div className="mt-1 flex items-center justify-between text-xs">
@@ -137,14 +137,14 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition disabled:opacity-40"
+              className="rounded-lg border border-white/[0.06] bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition disabled:opacity-40"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={!formValid}
-              className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-full bg-yellow-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-yellow-300 shadow-[0_18px_60px_-18px_rgba(250,204,21,0.55)] transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Cộng credit</span>

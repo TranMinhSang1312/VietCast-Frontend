@@ -5,7 +5,13 @@ import axios from "axios";
 // Keep this import here — AuthContext is the first axios-touching code
 // that runs at boot, so we want the interceptors up before any call.
 import "../utils/axiosInterceptor";
-import { login as loginApi, loginWithGoogle as loginWithGoogleApi, fetchProfile } from "../services/auth";
+import {
+  login as loginApi,
+  loginWithGoogle as loginWithGoogleApi,
+  register as registerApi,
+  verifyEmail as verifyEmailApi,
+  fetchProfile,
+} from "../services/auth";
 
 const AuthContext = createContext(null);
 
@@ -26,7 +32,17 @@ function toUserPayload(data) {
     id: data.id ?? data.userId ?? null,
     username: data.username ?? data.email,
     email: data.email ?? null,
+    // Permanent balance — topups, admin grants, and SIGNUP_BONUS rows
+    // that have already been promoted (i.e. moved out of the bonus
+    // pool by the first successful topup). Sum this with
+    // bonusCreditBalance for the "total available" view.
     creditBalance: data.creditBalance ?? 0,
+    // Time-limited SIGNUP_BONUS pool. The header pill renders this
+    // together with the countdown (bonusExpiresAt). When the user
+    // tops up, the backend promotes this value into creditBalance in
+    // a single UPDATE so the field becomes null on the next /me.
+    bonusCreditBalance: data.bonusCreditBalance ?? null,
+    bonusExpiresAt: data.bonusExpiresAt ?? null,
     role: data.role ?? "USER",
   };
 }
@@ -76,6 +92,25 @@ export function AuthProvider({ children }) {
     delete axios.defaults.headers.common.Authorization;
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // Shared "I just got a JWT, write it through" helper used by every
+  // auth path (LOCAL login, Google login, OTP-verify). Defined here —
+  // before login/googleLogin/register — so the useCallback deps below
+  // can reference it without triggering a TDZ ReferenceError at render.
+  // ---------------------------------------------------------------------------
+  const persistAuth = useCallback((data) => {
+    if (!data?.token) {
+      throw new Error("Máy chủ không trả về mã xác thực.");
+    }
+    const userPayload = toUserPayload(data);
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(userPayload));
+    setToken(data.token);
+    setUser(userPayload);
+    axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+    return userPayload;
+  }, []);
+
   /**
    * Re-validate the cached user against the server. Useful on app boot
    * so a stale localStorage snapshot (e.g. creditBalance was spent
@@ -116,27 +151,8 @@ export function AuthProvider({ children }) {
   // ---------------------------------------------------------------------------
   const login = useCallback(async ({ emailOrUsername, password }) => {
     const data = await loginApi({ emailOrUsername, password });
-
-    if (!data.token) {
-      // The server responded 200 but the body has no token. Should
-      // not happen in practice (every successful login path issues a
-      // JWT) but a defensive throw keeps us from shipping the user
-      // into a half-authenticated state.
-      throw new Error("Đăng nhập thất bại, máy chủ không trả về mã xác thực.");
-    }
-
-    const userPayload = toUserPayload(data);
-
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(userPayload));
-
-    setToken(data.token);
-    setUser(userPayload);
-
-    axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
-
-    return userPayload;
-  }, []);
+    return persistAuth(data);
+  }, [persistAuth]);
 
   // ---------------------------------------------------------------------------
   // Google Sign-In — the idToken comes straight from
@@ -153,23 +169,46 @@ export function AuthProvider({ children }) {
     }
 
     const data = await loginWithGoogleApi({ idToken });
+    return persistAuth(data);
+  }, [persistAuth]);
 
-    if (!data.token) {
-      throw new Error("Đăng nhập Google thất bại, máy chủ không trả về mã xác thực.");
-    }
+  // ---------------------------------------------------------------------------
+  // LOCAL sign-up is a TWO-STEP handshake with the backend:
+  //   step 1 — register({ email, password }) → server creates the user,
+  //            mints an OTP, emails it. Returns `token=null` and a
+  //            Vietnamese "check your email" message.
+  //   step 2 — verifyEmail({ email, otp }) → server flips `isVerified=true`,
+  //            burns the OTP, returns the JWT.
+  //
+  // The caller (Login.jsx) drives the steps; we expose two separate
+  // functions so the UI can stay clean. `persistAuth()` is shared by
+  // every path that ends in a JWT so we don't drift on which keys get
+  // written to localStorage.
+  // ---------------------------------------------------------------------------
 
-    const userPayload = toUserPayload(data);
-
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(userPayload));
-
-    setToken(data.token);
-    setUser(userPayload);
-
-    axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
-
-    return userPayload;
+  /**
+   * Step 1 — register the user. Throws if the email is already used
+   * or if the cooldown is active (server-side enforcement, surfaced
+   * verbatim to the UI).
+   *
+   * @param {{ email: string, password: string }} body
+   * @returns {Promise<AuthResponseBody>} the response body (token is null)
+   */
+  const register = useCallback(async ({ email, password }) => {
+    return await registerApi({ email, password });
   }, []);
+
+  /**
+   * Step 2 — submit the OTP from the verification email. On success
+   * the user is fully authenticated and the JWT lands in localStorage.
+   *
+   * @param {{ email: string, otp: string }} body
+   * @returns {Promise<UserPayload>}
+   */
+  const verifyEmail = useCallback(async ({ email, otp }) => {
+    const data = await verifyEmailApi({ email, otp });
+    return persistAuth(data);
+  }, [persistAuth]);
 
   const logout = useCallback(() => {
     clearAuth();
@@ -184,6 +223,29 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  /**
+   * Merge a fresh {@link fetchProfile} result into the cached user so
+   * the header pill reflects bonus / expiry changes without a full
+   * logout. Called after a topup (the bonus gets promoted to the
+   * permanent column by the backend) and after the renderer is told
+   * the bonus expired.
+   */
+  const syncProfile = useCallback(async () => {
+    if (!token) return null;
+    try {
+      const data = await fetchProfile();
+      const updated = toUserPayload(data);
+      setUser(updated);
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    } catch (err) {
+      if (err?.status === 401) {
+        clearAuth();
+      }
+      return null;
+    }
+  }, [token, clearAuth]);
+
   const value = useMemo(
     () => ({
       token,
@@ -191,12 +253,15 @@ export function AuthProvider({ children }) {
       isAuthenticated: !!token,
       isLoading,
       login,
+      register,
+      verifyEmail,
       googleLogin,
       logout,
       updateCreditBalance,
       refreshProfile,
+      syncProfile,
     }),
-    [token, user, isLoading, login, googleLogin, logout, updateCreditBalance, refreshProfile]
+    [token, user, isLoading, login, register, verifyEmail, googleLogin, logout, updateCreditBalance, refreshProfile, syncProfile]
   );
 
   return (

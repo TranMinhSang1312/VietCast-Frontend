@@ -28,7 +28,7 @@ export default function PaymentCancel() {
     <div className="min-h-screen w-full flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/40 p-8 text-center">
         <XCircle
-          className="w-16 h-16 mx-auto text-amber-400"
+          className="w-16 h-16 mx-auto text-yellow-300"
           strokeWidth={1.5}
         />
         <h1 className="mt-5 text-2xl font-bold text-slate-100">

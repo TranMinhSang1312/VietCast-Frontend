@@ -47,6 +47,50 @@ export function formatRelative(input) {
 }
 
 /**
+ * Format a credit amount with thousands separators and a fixed 0-fraction
+ * digit. Falls back to "0" for nullish / non-finite values.
+ */
+export function formatCredit(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "0";
+  const num = Number(value);
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
+/**
+ * Human-readable countdown between two instants. Used by the SIGNUP_BONUS
+ * banner in the workspace header so the user can see exactly how much
+ * time is left on their time-limited welcome reward.
+ *
+ * <p>Returns null when the deadline has already passed (caller should
+ * treat null as "no live bonus").
+ *
+ * @param {string|Date|null|undefined} deadline
+ * @returns {string|null}
+ */
+export function formatCountdown(deadline) {
+  if (!deadline) return null;
+  const d = deadline instanceof Date ? deadline : new Date(deadline);
+  if (Number.isNaN(d.getTime())) return null;
+  const diffMs = d.getTime() - Date.now();
+  if (diffMs <= 0) return null;
+
+  const totalMin = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMin / (60 * 24));
+  const hours = Math.floor((totalMin % (60 * 24)) / 60);
+  const minutes = totalMin % 60;
+
+  if (days >= 1) {
+    return `${days} ngày ${hours} giờ`;
+  }
+  if (hours >= 1) {
+    return `${hours} giờ ${minutes} phút`;
+  }
+  return `${Math.max(1, minutes)} phút`;
+}
+
+/**
  * Stable colour palette for up to N series in chart legends. Used by the
  * recharts wrappers below so a 5-type revenue chart always renders with
  * the same colours per type across reloads.

@@ -85,7 +85,7 @@ export default function LockUserModal({ user, onClose, onSuccess }) {
               placeholder="vd: Chargeback pending, vi phạm điều khoản..."
               rows={3}
               maxLength={500}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full rounded-lg border border-white/[0.06] bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
               required
             />
             <div className="mt-1 flex items-center justify-between text-xs">
@@ -106,7 +106,7 @@ export default function LockUserModal({ user, onClose, onSuccess }) {
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition disabled:opacity-40"
+              className="rounded-lg border border-white/[0.06] bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition disabled:opacity-40"
             >
               Hủy
             </button>

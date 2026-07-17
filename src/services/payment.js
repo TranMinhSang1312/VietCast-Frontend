@@ -12,7 +12,7 @@
 // interceptor in utils/axiosInterceptor.js).
 //
 // Rate math note:
-//   The backend hardcodes 1 000 VND = 1 credit (see
+//   The backend hardcodes 1 VND = 1 credit (see
 //   `PaymentService.VND_PER_CREDIT` on the Java side). We mirror the
 //   same ratio on the UI so the displayed value is honest at the
 //   moment of selection. If pricing diverges, this constant and the
@@ -24,8 +24,8 @@ import { API_BASE_URL_PROVIDER } from "../config";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 
-/** 1 000 VND = 1 credit. Mirrors PaymentService.VND_PER_CREDIT. */
-export const VND_PER_CREDIT = 1_000;
+/** 1 VND = 1 credit (1:1). Mirrors PaymentService.VND_PER_CREDIT. */
+export const VND_PER_CREDIT = 1;
 
 const ENDPOINTS = Object.freeze({
   create: `${API_BASE_URL}/api/v1/payment/create`,
@@ -107,9 +107,10 @@ export function formatVnd(vnd) {
 }
 
 /**
- * Convert VND → credit using the configured rate. Floors so a 9 999
- * VND payment does NOT round up to 10 credits — the user is
- * overcharged the surplus and we want to flag it instead of swallow.
+ /**
+ * Convert VND → credit using the configured rate. With the 1:1 rate
+ * this is a no-op identity, but the helper stays so the rate is the
+ * one knob the rest of the UI flips.
  *
  * @param {number} vnd
  * @returns {number}

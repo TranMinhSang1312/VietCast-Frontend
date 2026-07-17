@@ -48,7 +48,7 @@ export default function PeriodSelector({ value, onChange }) {
             const preset = PRESETS.find((p) => p.id === e.target.value);
             if (preset) handleSelect(preset);
           }}
-          className="appearance-none rounded-lg border border-slate-700 bg-slate-900/70 pl-3 pr-9 py-2 text-sm text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          className="appearance-none rounded-lg border border-white/[0.06] bg-slate-900/70 pl-3 pr-9 py-2 text-sm text-slate-100 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
         >
           {PRESETS.map((p) => (
             <option key={p.id} value={p.id}>{p.label}</option>

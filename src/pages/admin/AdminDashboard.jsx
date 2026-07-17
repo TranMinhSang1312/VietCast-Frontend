@@ -115,7 +115,7 @@ export default function AdminDashboard() {
         <button
           type="button"
           onClick={handleRefresh}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80 transition"
+          className="inline-flex items-center gap-2 rounded-lg border border-white/[0.06] bg-slate-900/60 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80 transition"
         >
           <RefreshCw className={`w-4 h-4 ${(statsLoading || seriesLoading) ? "animate-spin" : ""}`} />
           <span>Làm mới</span>
@@ -158,10 +158,10 @@ export default function AdminDashboard() {
       </section>
 
       {/* Range selector + charts */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 sm:p-6 space-y-5">
+      <section className="rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4 sm:p-6 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="inline-flex items-center gap-2 text-slate-300">
-            <TrendingUp className="w-4 h-4 text-brand-500" />
+            <TrendingUp className="w-4 h-4 text-indigo-400" />
             <h2 className="text-base font-semibold">Thống kê theo thời gian</h2>
           </div>
           <PeriodSelector value={range} onChange={handleRangeChange} />
@@ -191,14 +191,14 @@ export default function AdminDashboard() {
 
 function KpiCard({ icon, title, value, tone = "cyan" }) {
   const toneClass = {
-    amber:   "text-amber-300 bg-amber-500/10 border-amber-500/30",
+    amber:   "text-yellow-300 bg-yellow-400/10 border-yellow-400/30",
     cyan:    "text-cyan-300 bg-cyan-500/10 border-cyan-500/30",
     violet:  "text-violet-300 bg-violet-500/10 border-violet-500/30",
     emerald: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30",
   }[tone] || "text-cyan-300 bg-cyan-500/10 border-cyan-500/30";
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 flex items-start gap-3">
+    <div className="rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4 flex items-start gap-3">
       <div className={`rounded-lg border p-2 ${toneClass}`}>{icon}</div>
       <div className="min-w-0">
         <div className="text-xs uppercase tracking-wide text-slate-400">{title}</div>

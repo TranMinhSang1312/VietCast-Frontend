@@ -175,12 +175,12 @@ export default function PaymentSuccess() {
           />
         ) : error ? (
           <XCircle
-            className="w-16 h-16 mx-auto text-red-400"
+            className="w-16 h-16 mx-auto text-rose-400"
             strokeWidth={1.5}
           />
         ) : (
           <Loader2
-            className="w-16 h-16 mx-auto text-brand-400 animate-spin"
+            className="w-16 h-16 mx-auto text-indigo-400 animate-spin"
             strokeWidth={1.5}
           />
         )}
@@ -199,7 +199,7 @@ export default function PaymentSuccess() {
           {credited ? (
             <>
               Đã cộng{" "}
-              <span className="font-semibold text-amber-300">
+              <span className="font-semibold text-yellow-300">
                 {creditedAmount} credit
               </span>
               . Số dư hiện tại:{" "}
@@ -234,7 +234,7 @@ export default function PaymentSuccess() {
           <button
             type="button"
             onClick={() => navigate("/dashboard", { replace: true })}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 transition"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 text-white font-medium shadow-[0_18px_60px_-18px_rgba(99,102,241,0.55)] hover:shadow-[0_18px_60px_-18px_rgba(99,102,241,0.7)] transition"
           >
             <span>Về trang chính</span>
             <ArrowRight className="w-4 h-4" />
@@ -277,7 +277,7 @@ export default function PaymentSuccess() {
                     ? "text-emerald-300"
                     : confirmOutcome === "ALREADY_TERMINAL"
                       ? "text-slate-300"
-                      : "text-amber-300"
+                      : "text-yellow-300"
                 }`}
               >
                 {confirmLabel}

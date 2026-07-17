@@ -197,11 +197,11 @@ export default function WatermarkRemover({
         if (e.target === e.currentTarget && onCancel) onCancel();
       }}
     >
-      <div className="w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-3xl bg-slate-950 ring-1 ring-white/[0.06] border border-white/[0.06] rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-6 py-4.5 border-b border-white/[0.06]">
           <div className="flex items-center gap-2.5">
-            <Eraser className="w-5 h-5 text-brand-500" />
+            <Eraser className="w-5 h-5 text-indigo-400" />
             <h2
               id="watermark-title"
               className="text-lg font-bold text-zinc-100"
@@ -213,7 +213,7 @@ export default function WatermarkRemover({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition active:scale-[0.98]"
+              className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-white/[0.06] transition active:scale-[0.98]"
               aria-label="Đóng"
             >
               <X className="w-5 h-5" />
@@ -228,19 +228,19 @@ export default function WatermarkRemover({
           </p>
 
           <div
-            className="relative w-full bg-black rounded-xl overflow-hidden flex items-center justify-center border border-zinc-850"
+            className="relative w-full bg-black rounded-xl overflow-hidden flex items-center justify-center border border-white/[0.06]"
             style={{ minHeight: 360 }}
           >
             {isLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 text-sm font-mono gap-3 bg-zinc-950/80">
-                <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 text-sm font-mono gap-3 bg-slate-950/80">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
                 <span>Đang trích xuất khung hình từ video (giây thứ 10)...</span>
               </div>
             )}
 
             {error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-red-400 text-sm font-medium gap-3 bg-zinc-950/80">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-rose-400 text-sm font-medium gap-3 bg-slate-950/80">
+                <AlertTriangle className="w-8 h-8 text-rose-400" />
                 <span className="max-w-md">{error}</span>
               </div>
             )}
@@ -264,11 +264,11 @@ export default function WatermarkRemover({
           </div>
 
           {/* Live preview */}
-          <div className="rounded-xl bg-zinc-950 border border-zinc-850 px-4 py-3">
-            <div className="text-xs font-semibold text-zinc-500 mb-1 font-mono uppercase tracking-wider">
+          <div className="rounded-xl bg-slate-950 border border-white/[0.06] px-4 py-3">
+            <div className="text-xs font-semibold text-slate-500 mb-1 font-mono uppercase tracking-wider">
               Tọa độ (sau khi quy đổi về video gốc)
             </div>
-            <div className="font-mono text-sm text-zinc-200">
+            <div className="font-mono text-sm text-slate-200">
               {(() => {
                 try {
                   if (
@@ -303,7 +303,7 @@ export default function WatermarkRemover({
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-semibold transition active:scale-[0.98]"
+                className="px-4.5 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-sm font-semibold transition active:scale-[0.98]"
               >
                 Hủy
               </button>
@@ -312,7 +312,7 @@ export default function WatermarkRemover({
               type="button"
               disabled={isLoading || error}
               onClick={handleConfirm}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-lg shadow-brand-500/10 transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-semibold shadow-lg shadow-emerald-500/10 transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Eraser className="w-4 h-4" />
               <span>Xác nhận</span>
