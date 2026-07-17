@@ -42,6 +42,7 @@ export default function PaymentSuccess() {
   // button as a fallback when the webhook never arrives (dev localhost).
   const [confirming, setConfirming] = useState(false);
   const [confirmOutcome, setConfirmOutcome] = useState(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   // Guard against double-mount in React 19 strict mode firing two
   // polling intervals at once.
   const stoppedRef = useRef(false);
@@ -99,7 +100,32 @@ export default function PaymentSuccess() {
     // state changes. eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const credited = creditAfter !== null && creditBefore !== null && creditAfter > creditBefore;
+  useEffect(() => {
+    if (!orderCode) return;
+    let cancelled = false;
+
+    async function autoConfirm() {
+      try {
+        const res = await confirmPayment(orderCode);
+        if (cancelled) return;
+        if (res.outcome === "JUST_PAID" || res.outcome === "ALREADY_TERMINAL") {
+          setIsConfirmed(true);
+          stoppedRef.current = true;
+          await refreshProfile();
+        }
+      } catch (e) {
+        console.warn("Auto-confirm failed on mount:", e);
+      }
+    }
+    autoConfirm();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderCode]);
+
+  const credited = ((creditAfter !== null && creditBefore !== null && creditAfter > creditBefore) || isConfirmed);
   const creditedAmount =
     creditAfter !== null && creditBefore !== null
       ? Math.max(0, creditAfter - creditBefore)
@@ -156,6 +182,7 @@ export default function PaymentSuccess() {
           setCreditBefore((prev) => (prev == null ? finalBalance : prev));
           setCreditAfter(finalBalance);
         }
+        setIsConfirmed(true);
         stoppedRef.current = true;
       }
     } catch {
