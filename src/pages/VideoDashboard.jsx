@@ -75,17 +75,27 @@ function normalizePreviewUrl(raw) {
 
 export default function VideoDashboard() {
   const { updateCreditBalance } = useAuth();
-  const [url, setUrl] = useState("");
-  const [audioMode, setAudioMode] = useState("mix");
-  const [voice, setVoice] = useState("vi-VN-NamMinhNeural");
-  const [logoCoordinates, setLogoCoordinates] = useState("");
-  const [subtitleMask, setSubtitleMask] = useState("");
+  const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
+  const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
+  const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
+  const [logoCoordinates, setLogoCoordinates] = useState(() => localStorage.getItem("vc_logoCoordinates") || "");
+  const [subtitleMask, setSubtitleMask] = useState(() => localStorage.getItem("vc_subtitleMask") || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vc_active_task");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(() => {
+    const saved = localStorage.getItem("vc_active_progress");
+    return saved ? Number(saved) : 0;
+  });
 
   // ----- Cost preview state -----
   // `costPreview` is null until the user pastes a valid URL and the
@@ -111,6 +121,38 @@ export default function VideoDashboard() {
 
   const pollIntervalRef = useRef(null);
   const usageLoggedTaskIdRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem("vc_url", url);
+  }, [url]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_audioMode", audioMode);
+  }, [audioMode]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_voice", voice);
+  }, [voice]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_logoCoordinates", logoCoordinates);
+  }, [logoCoordinates]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_subtitleMask", subtitleMask);
+  }, [subtitleMask]);
+
+  useEffect(() => {
+    if (result) {
+      localStorage.setItem("vc_active_task", JSON.stringify(result));
+    } else {
+      localStorage.removeItem("vc_active_task");
+    }
+  }, [result]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_active_progress", String(progress));
+  }, [progress]);
 
   const clearPollInterval = useCallback(() => {
     if (pollIntervalRef.current) {
