@@ -43,6 +43,7 @@ export default function PaymentSuccess() {
   const [confirming, setConfirming] = useState(false);
   const [confirmOutcome, setConfirmOutcome] = useState(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [addedCredit, setAddedCredit] = useState(null);
   // Guard against double-mount in React 19 strict mode firing two
   // polling intervals at once.
   const stoppedRef = useRef(false);
@@ -110,6 +111,9 @@ export default function PaymentSuccess() {
         if (cancelled) return;
         if (res.outcome === "JUST_PAID" || res.outcome === "ALREADY_TERMINAL") {
           setIsConfirmed(true);
+          if (res.creditAmount) {
+            setAddedCredit(res.creditAmount);
+          }
           stoppedRef.current = true;
           await refreshProfile();
         }
@@ -127,9 +131,11 @@ export default function PaymentSuccess() {
 
   const credited = ((creditAfter !== null && creditBefore !== null && creditAfter > creditBefore) || isConfirmed);
   const creditedAmount =
-    creditAfter !== null && creditBefore !== null
-      ? Math.max(0, creditAfter - creditBefore)
-      : 0;
+    addedCredit !== null
+      ? addedCredit
+      : (creditAfter !== null && creditBefore !== null
+          ? Math.max(0, creditAfter - creditBefore)
+          : 0);
   const stillWaiting = !stoppedRef.current && !credited && !error && creditBefore !== null;
 
   // Translate a ConfirmOutcome string from the backend into a friendly
@@ -181,6 +187,9 @@ export default function PaymentSuccess() {
           // path, which is correct — credit landed on a prior flow).
           setCreditBefore((prev) => (prev == null ? finalBalance : prev));
           setCreditAfter(finalBalance);
+        }
+        if (res.creditAmount) {
+          setAddedCredit(res.creditAmount);
         }
         setIsConfirmed(true);
         stoppedRef.current = true;
