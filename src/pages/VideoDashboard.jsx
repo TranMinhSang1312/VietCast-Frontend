@@ -1112,15 +1112,23 @@ const ResultPanel = memo(function ResultPanel({
         {/* Video Player */}
         <div className="rounded-xl overflow-hidden bg-black border border-white/[0.06] aspect-video relative">
           {videoSrc && result.status === "COMPLETED" ? (
-            <video
-              controls
-              preload="none"
-              poster=""
-              src={videoSrc}
-              onLoadedData={onVideoReady}
-              onError={onVideoError}
-              className={`w-full h-full object-contain ${videoReady ? "block" : "hidden"}`}
-            />
+            <>
+              <video
+                controls
+                preload="metadata"
+                poster=""
+                src={videoSrc}
+                onLoadedData={onVideoReady}
+                onError={onVideoError}
+                className={`w-full h-full object-contain ${videoReady ? "block" : "hidden"}`}
+              />
+              {!videoReady && !videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-3 select-none">
+                  <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+                  <span className="text-xs text-zinc-500 font-mono tracking-wider">ĐANG TẢI BẢN XEM TRƯỚC...</span>
+                </div>
+              )}
+            </>
           ) : (
             <VideoPlaceholder message={placeholderMessage} />
           )}
