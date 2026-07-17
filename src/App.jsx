@@ -41,7 +41,27 @@ function TabFallback() {
 function AppShell() {
   const [isTopupOpen, setIsTopupOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [topupPrefill, setTopupPrefill] = useState(null);
   const { user, logout, syncProfile } = useAuth();
+
+  // Cross-component channel for opening the topup modal from inside
+  // any tab (e.g. VideoDashboard's "Insufficient credit" warning).
+  // We use a CustomEvent rather than a React Context because:
+  //   - the dashboard tab is lazy-loaded, so a shared context would
+  //     force-evaluate TopupModal's mount code on every navigation;
+  //   - the dispatch is fire-and-forget — the modal does not need
+  //     a synchronous response, so a DOM event is the right tool;
+  //   - the prefill amount flows through `event.detail` so the modal
+  //     can pre-fill the credit input on open.
+  useEffect(() => {
+    const onOpenTopup = (ev) => {
+      const amount = ev?.detail?.prefillAmount;
+      setTopupPrefill(typeof amount === "number" && amount > 0 ? amount : null);
+      setIsTopupOpen(true);
+    };
+    window.addEventListener("vietcast:open-topup", onOpenTopup);
+    return () => window.removeEventListener("vietcast:open-topup", onOpenTopup);
+  }, []);
 
   // SIGNUP_BONUS pill: refresh the profile every 60s so an expired
   // bonus disappears within a minute of its deadline, even when the
@@ -132,7 +152,11 @@ function AppShell() {
 
       <TopupModal
         isOpen={isTopupOpen}
-        onClose={() => setIsTopupOpen(false)}
+        onClose={() => {
+          setIsTopupOpen(false);
+          setTopupPrefill(null);
+        }}
+        prefillAmount={topupPrefill}
       />
     </div>
   );

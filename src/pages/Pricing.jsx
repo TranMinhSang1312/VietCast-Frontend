@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Coins,
-  Subtitles,
   Mic,
   VolumeX,
   CheckCircle2,
@@ -20,15 +19,23 @@ import { VND_PER_CREDIT, formatVnd } from "../services/payment";
 import { formatCredit, formatCountdown } from "../utils/format";
 
 // Source of truth for the numbers shown here:
-//   - CreditService.java (TRANSLATE_COST, VIDEO_COST) on the Java side.
-//   - VideoController.java applies the original / mute flat surcharge
-//     (1000 credit) on top of the per-minute rate.
+//   - CreditService.java (VIDEO_COST, VIDEO_MAX_MINUTES, VIDEO_MIN_PRICE)
+//     on the Java side.
+//   - VideoController.java applies the per-minute rate uniformly across
+//     all four audio modes (dub / mix / original / mute).
 //   - PaymentService.java owns VND_PER_CREDIT (the topup rate).
 // If pricing changes, only these constants and the controllers move.
+//
+// Historical note: previous copy listed a flat 1 000-credit rate for
+// "original / mute" and a per-cue rate for manual translate. Both have
+// been retired — flat-billed modes were a margin hole (they cost the
+// same regardless of a 60-min vs. a 5-min clip) and per-cue manual
+// translate returned ~5% of cost. The pricing model is now uniform:
+// ceil(duration / 60) × 800 credit, capped at 90 minutes.
 
-const RATE_TRANSLATE_PER_CUE = 1;
-const RATE_DUB_PER_MINUTE = 500;
-const RATE_FLAT_MODES = 1000;
+const RATE_PER_MINUTE = 800;
+const MAX_MINUTES = 90;
+const MIN_MINUTES = 1;
 
 const PRESET_AMOUNTS = [100_000, 200_000, 500_000, 1_000_000, 2_000_000];
 
@@ -182,9 +189,9 @@ export default function Pricing() {
 
               <ul className="flex flex-col gap-3 mt-2">
                 {[
-                  "Phí tính theo giây, làm tròn đến credit gần nhất",
-                  "Tự động hoàn phần thừa khi video ngắn hơn 1 phút",
-                  "Không giới hạn thời lượng cho chế độ giữ tiếng gốc",
+                  "Phí tính đồng nhất theo phút cho mọi chế độ (lồng tiếng, giữ tiếng gốc, video câm)",
+                  "Đặt cọc trước 1 phút, hoàn phần thừa khi video ngắn hơn ước tính",
+                  "Giới hạn " + MAX_MINUTES + " phút / lần — video dài hơn vui lòng cắt trước khi xử lý",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2.5 text-sm text-slate-300">
                     <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
@@ -240,14 +247,14 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-2">
                   <span className="text-6xl font-extrabold tracking-[-0.04em] text-white">
-                    {RATE_DUB_PER_MINUTE.toLocaleString("vi-VN")}
+                    {RATE_PER_MINUTE.toLocaleString("vi-VN")}
                   </span>
                   <span className="text-base font-medium text-slate-400">
                     credit / phút
                   </span>
                 </div>
                 <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-                  Tính chi tiết theo từng giây. Đặt cọc trước 1 phút, hoàn
+                  Tính chi tiết theo từng phút. Đặt cọc trước 1 phút, hoàn
                   trả phần thừa hoặc trừ thêm phần chênh lệch khi render xong.
                 </p>
               </div>
@@ -270,8 +277,17 @@ export default function Pricing() {
               </div>
 
               <div className="relative flex flex-col gap-3 rounded-2xl border border-white/[0.05] bg-slate-950/40 p-4">
-                <DetailRow icon={Clock} label="Đơn giá" value={`${RATE_DUB_PER_MINUTE} credit / phút`} />
-                <DetailRow icon={Wallet} label="Số dư tối thiểu để bắt đầu" value={credit(RATE_DUB_PER_MINUTE)} />
+                <DetailRow icon={Clock} label="Đơn giá" value={`${RATE_PER_MINUTE.toLocaleString("vi-VN")} credit / phút`} />
+                <DetailRow
+                  icon={Wallet}
+                  label="Số dư tối thiểu để bắt đầu"
+                  value={credit(RATE_PER_MINUTE * MIN_MINUTES)}
+                />
+                <DetailRow
+                  icon={ShieldCheck}
+                  label="Giới hạn thời lượng"
+                  value={`${MAX_MINUTES} phút / lần render`}
+                />
                 <DetailRow
                   icon={RefreshCcw}
                   label="Cơ chế thu phí"
@@ -295,7 +311,12 @@ export default function Pricing() {
               </div>
             </article>
 
-            {/* Mode 1: flat (original / mute). Smaller, sits top-right. */}
+            {/* Mode 1 (small card): how pricing applies to the flat-billed modes.
+                We dropped the literal "1 000 credit / video" copy because
+                the model is now uniform (per-minute for every mode). The
+                card stays so users who picked "giữ tiếng gốc" before
+                have a confirmation that those modes still exist and still
+                use the per-minute rate. */}
             <article className={`${SURFACE} relative p-6 flex flex-col gap-5 hover:border-white/[0.12] transition`}>
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-slate-950 ring-1 ring-white/[0.08] flex items-center justify-center">
@@ -306,7 +327,7 @@ export default function Pricing() {
                     Giữ tiếng gốc / Video câm
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Phí cố định, không phụ thuộc thời lượng
+                    Cùng đơn giá {RATE_PER_MINUTE.toLocaleString("vi-VN")} credit / phút
                   </p>
                 </div>
               </div>
@@ -314,10 +335,10 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold tracking-[-0.03em] text-white">
-                    {RATE_FLAT_MODES.toLocaleString("vi-VN")}
+                    {RATE_PER_MINUTE.toLocaleString("vi-VN")}
                   </span>
                   <span className="text-sm font-medium text-slate-400">
-                    credit / video
+                    credit / phút
                   </span>
                 </div>
               </div>
@@ -325,28 +346,33 @@ export default function Pricing() {
               <ul className="relative flex flex-col gap-2 text-sm text-slate-300">
                 <Bullet text="Giữ nguyên audio gốc của video" />
                 <Bullet text="Tắt hoàn toàn tiếng, xuất video câm" />
-                <Bullet text="Không giới hạn thời lượng video" />
-                <Bullet text="Hoàn đủ 1.000 credit nếu job lỗi" />
+                <Bullet text={`Giới hạn ${MAX_MINUTES} phút / lần render`} />
+                <Bullet text="Hoàn đủ phần dư khi video ngắn hơn ước tính" />
               </ul>
 
               <div className="relative mt-auto pt-2 text-[11px] text-slate-500">
                 Cần tối thiểu{" "}
-                <span className="font-mono text-slate-300">{credit(RATE_FLAT_MODES)}</span> trong tài khoản.
+                <span className="font-mono text-slate-300">{credit(RATE_PER_MINUTE)}</span> trong tài khoản.
               </div>
             </article>
 
-            {/* Mode 3: per-cue manual translate. Smaller, sits bottom-right. */}
+            {/* Mode 3 (small card): cap + min — replaces the deprecated
+                "Dịch phụ đề thủ công" card which has been retired on
+                the backend (see BatchTranslateController). Keeping a
+                slot here so the page layout still has 3 cards on the
+                right column; the content is now a guard-rail summary
+                so users understand the cap and minimum charge. */}
             <article className={`${SURFACE} relative p-6 flex flex-col gap-5 hover:border-white/[0.12] transition`}>
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-slate-950 ring-1 ring-white/[0.08] flex items-center justify-center">
-                  <Subtitles className="w-5 h-5 text-slate-300" />
+                  <Clock className="w-5 h-5 text-slate-300" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-base font-bold text-white leading-tight">
-                    Dịch phụ đề thủ công
+                    Giới hạn &amp; quy tắc
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Bấm "Dịch lại" trong trang chỉnh sửa
+                    Áp dụng cho mọi chế độ
                   </p>
                 </div>
               </div>
@@ -354,24 +380,24 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold tracking-[-0.03em] text-white">
-                    {RATE_TRANSLATE_PER_CUE}
+                    {MAX_MINUTES}
                   </span>
                   <span className="text-sm font-medium text-slate-400">
-                    credit / cue
+                    phút tối đa / lần
                   </span>
                 </div>
               </div>
 
               <ul className="relative flex flex-col gap-2 text-sm text-slate-300">
-                <Bullet text="Tính theo số cue thực gửi dịch" />
-                <Bullet text="Không cần chạy lại toàn bộ video" />
-                <Bullet text="Phù hợp sửa vài dòng lẻ" />
-                <Bullet text="Miễn phí khi đi kèm lồng tiếng" />
+                <Bullet text={`Tối đa ${MAX_MINUTES} phút / video — video dài hơn từ chối ngay từ bước nhập`} />
+                <Bullet text="Tối thiểu 1 phút, làm tròn lên theo ceil" />
+                <Bullet text="Hoàn tự động khi tác vụ lỗi" />
+                <Bullet text="Dịch phụ đề đi kèm hoàn toàn miễn phí" />
               </ul>
 
               <div className="relative mt-auto pt-2 text-[11px] text-slate-500">
                 Cần tối thiểu{" "}
-                <span className="font-mono text-slate-300">{credit(RATE_TRANSLATE_PER_CUE)}</span> trong tài khoản.
+                <span className="font-mono text-slate-300">{credit(RATE_PER_MINUTE)}</span> để bắt đầu.
               </div>
             </article>
           </div>
@@ -385,9 +411,8 @@ export default function Pricing() {
             body={
               <>
                 Hệ thống kiểm tra số dư trước khi bắt đầu job. Bạn cần có{" "}
-                <strong className="text-slate-200">đúng số credit tối thiểu</strong>{" "}
-                cho từng chế độ (1.000 cho mode cố định, 500 cho mỗi phút
-                lồng tiếng đầu tiên).
+                <strong className="text-slate-200">ít nhất {credit(RATE_PER_MINUTE)}</strong>{" "}
+                — tương ứng 1 phút render đầu tiên ở mọi chế độ.
               </>
             }
           />
@@ -408,7 +433,7 @@ export default function Pricing() {
               <>
                 Mỗi giao dịch trừ hoặc hoàn credit đều có mã tham chiếu (job id)
                 để đối chiếu. Tỉ lệ quy đổi cố định {formatVnd(VND_PER_CREDIT)}{" "}
-                VND = 1 credit.
+                VND = 1 credit. Mọi chế độ đều có giới hạn {MAX_MINUTES} phút / lần.
               </>
             }
           />
@@ -454,9 +479,9 @@ export default function Pricing() {
                       {c.toLocaleString("vi-VN")} credit
                     </td>
                     <td className="px-5 py-3 text-right text-xs text-slate-500 hidden sm:table-cell">
-                      ≈ {Math.floor(c / RATE_FLAT_MODES)} video (giữ tiếng/câm){" "}
+                      ≈ {Math.floor(c / RATE_PER_MINUTE)} phút render{" "}
                       <span className="text-slate-700">·</span>{" "}
-                      {Math.floor(c / RATE_DUB_PER_MINUTE)} phút lồng tiếng
+                      {Math.floor(c / (RATE_PER_MINUTE * MAX_MINUTES))} video tối đa ({MAX_MINUTES}p)
                     </td>
                   </tr>
                 ))}
@@ -470,52 +495,60 @@ export default function Pricing() {
           <h2 className="text-lg font-bold text-white mb-5">Câu hỏi thường gặp</h2>
           <div className="flex flex-col gap-2.5">
             <Faq
-              q="Vì sao video 30 giây và video 30 phút có giá khác nhau tuỳ chế độ?"
+              q={"Vì sao mọi chế độ đều tính cùng một đơn giá " + RATE_PER_MINUTE + " credit / phút?"}
               a={
                 <>
-                  Với chế độ "Giữ tiếng gốc" hoặc "Video câm", hệ thống tính phí
-                  cố định 1.000 credit / video bất kể thời lượng. Với chế độ
-                  "Lồng tiếng", phí là 500 credit cho mỗi phút (tính theo từng
-                  giây), nên video dài sẽ tốn nhiều credit hơn theo đúng thời
-                  lượng thực tế.
+                  Trước đây hệ thống có giá khác nhau giữa "Lồng tiếng" (500
+                  credit/phút) và "Giữ tiếng gốc / Video câm" (1 000 credit
+                  cố định). Mức 1 000 credit cố định khiến hệ thống chịu lỗ
+                  nghiêm trọng trên các video dài (chi phí xử lý vẫn tăng
+                  theo phút nhưng giá thu không đổi). Từ phiên bản mới, mọi
+                  chế độ đều dùng công thức <strong className="text-slate-200">ceil(thời lượng / 60) × {RATE_PER_MINUTE} credit</strong>,
+                  giúp bạn dễ dự đoán chi phí và đảm bảo hệ thống có đủ
+                  nguồn lực vận hành để phục vụ bạn lâu dài.
                 </>
               }
               open={openFaq === 0}
               onToggle={() => setOpenFaq(openFaq === 0 ? -1 : 0)}
             />
             <Faq
-              q="Đặt cọc trước 1 phút là sao? Có bị mất tiền oan không?"
+              q={"Đặt cọc trước 1 phút là sao? Có bị mất tiền oan không?"}
               a={
                 <>
-                  Khi bấm lồng tiếng, hệ thống trừ trước 500 credit tương ứng 1
-                  phút đầu. Sau khi video render xong, hệ thống tính lại theo
-                  thời lượng thật: video dưới 1 phút sẽ được hoàn phần thừa, video
-                  trên 1 phút sẽ trừ thêm phần chênh lệch. Nếu job thất bại, bạn
-                  được hoàn đủ tiền cọc.
+                  Khi bấm lồng tiếng, hệ thống trừ trước {RATE_PER_MINUTE}{" "}
+                  credit tương ứng 1 phút đầu. Sau khi video render xong, hệ
+                  thống tính lại theo thời lượng thật: video dưới 1 phút sẽ
+                  được hoàn phần thừa, video trên 1 phút sẽ trừ thêm phần
+                  chênh lệch. Nếu job thất bại, bạn được hoàn đủ tiền cọc.
                 </>
               }
               open={openFaq === 1}
               onToggle={() => setOpenFaq(openFaq === 1 ? -1 : 1)}
             />
             <Faq
-              q="Khi chạy lồng tiếng có bị tính thêm phí dịch phụ đề không?"
+              q={"Khi chạy lồng tiếng có bị tính thêm phí dịch phụ đề không?"}
               a={
                 <>
                   Không. Phí lồng tiếng đã bao trọn gói dịch phụ đề. Hệ thống tự
-                  dịch phụ đề phục vụ cho việc lồng tiếng, bạn không bị tính
-                  thêm 1 credit / cue cho phần dịch tự động đó.
+                  động dịch phụ đề phục vụ cho việc lồng tiếng và không thu
+                  thêm phí dịch — bạn chỉ trả theo đơn giá {RATE_PER_MINUTE}{" "}
+                  credit / phút video.
                 </>
               }
               open={openFaq === 2}
               onToggle={() => setOpenFaq(openFaq === 2 ? -1 : 2)}
             />
             <Faq
-              q="Dịch thủ công từng dòng thì phí tính sao?"
+              q={"Vì sao có giới hạn " + MAX_MINUTES + " phút / lần render?"}
               a={
                 <>
-                  Mỗi lần bấm "Dịch lại" trên giao diện chỉnh sửa phụ đề, hệ
-                  thống đếm số cue bạn gửi dịch và trừ đúng 1 credit cho mỗi cue.
-                  Dịch 5 cue = 5 credit, dịch 20 cue = 20 credit.
+                  Video dài sẽ chiếm dụng toàn bộ worker trong nhiều giờ, làm
+                  hàng đợi ùn tắt cho người dùng khác. Giới hạn {MAX_MINUTES}{" "}
+                  phút giúp hệ thống cân bằng tải và giữ giá cho mọi người ở
+                  mức hợp lý. Video dài hơn vui lòng cắt thành nhiều phần
+                  bằng công cụ yêu thích (CapCut, FFmpeg, …) rồi submit từng
+                  phần — bạn vẫn được tính giá {RATE_PER_MINUTE} credit / phút
+                  cho mỗi phần.
                 </>
               }
               open={openFaq === 3}

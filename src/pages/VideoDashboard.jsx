@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, Wand2, Mic, Subtitles, CheckCircle2, Download, AlertCircle, Film, Languages } from "lucide-react";
+import { Loader2, Wand2, Mic, Subtitles, CheckCircle2, Download, AlertCircle, Film, Languages, Coins } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
@@ -58,6 +58,21 @@ function extractUrl(raw) {
   return null;
 }
 
+/**
+ * Mirror of the backend {@code normalizeVideoUrl}: drop the YouTube
+ * share-tracker {@code si=...} parameter so two requests with /watch?v=X
+ * and /watch?v=X&si=Y produce the same preview / dedup key.
+ */
+function normalizePreviewUrl(raw) {
+  if (!raw) return raw;
+  const trimmed = raw.trim();
+  const lower = trimmed.toLowerCase();
+  const isYoutube = lower.includes("youtube.com") || lower.includes("youtu.be");
+  if (!isYoutube) return trimmed;
+  const stripped = trimmed.replace(/([?&])si=[A-Za-z0-9_-]+/g, "");
+  return stripped.replace(/[?&]$/, "");
+}
+
 export default function VideoDashboard() {
   const { updateCreditBalance } = useAuth();
   const [url, setUrl] = useState("");
@@ -71,7 +86,25 @@ export default function VideoDashboard() {
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [progress, setProgress] = useState(0);
-  
+
+  // ----- Cost preview state -----
+  // `costPreview` is null until the user pastes a valid URL and the
+  // debounced preview call returns. It carries the breakdown the
+  // server computed so the renderer can:
+  //   - display "40 phút × 500 = 20 000 credit" inline below the
+  //     input box
+  //   - disable the submit button when sufficient=false
+  //   - populate the "Nạp thêm ngay" deep-link with the missing amount
+  // `costPreviewLoading` is true while the debounced call is in
+  // flight, used to render a small spinner inside the URL field.
+  const [costPreview, setCostPreview] = useState(null);
+  const [costPreviewLoading, setCostPreviewLoading] = useState(false);
+  // `showCreditWarning` flips on when the user clicks the disabled
+  // submit button (or when balance changed underneath them) so we can
+  // pop the warning dialog with the missing-credits number.
+  const [showCreditWarning, setShowCreditWarning] = useState(false);
+  const [topupPrefill, setTopupPrefill] = useState(null);
+
   // Crop modal states
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [cropType, setCropType] = useState("logo"); // "logo" | "subtitle"
@@ -127,8 +160,64 @@ export default function VideoDashboard() {
     setVideoReady(false);
     setVideoError(false);
     setProgress(0);
+    setCostPreview(null);
+    setCostPreviewLoading(false);
+    setShowCreditWarning(false);
+    setTopupPrefill(null);
     clearPollInterval();
   }, [clearPollInterval]);
+
+  // Debounced fetch of the cost preview whenever the URL or audioMode
+  // change. We deliberately keep audioMode in the dependency list so
+  // toggling "Lồng tiếng AI" → "Giữ tiếng gốc" recomputes without the
+  // user having to re-paste the URL.
+  //
+  // Latency model: typing the last char of a YouTube URL fires the
+  // effect; the 600ms debounce absorbs "still typing" keystrokes. Worst
+  // case is one round-trip per settled URL = ~10s when yt-dlp times
+  // out (matches the server timeout). We surface that with a spinner
+  // inside the input area so the user knows we're working.
+  //
+  // AbortController cancels an in-flight request when the URL changes
+  // again or the component unmounts, so the latest settled URL wins.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const cleanUrl = extractUrl(url);
+      if (!cleanUrl) {
+        setCostPreview(null);
+        setCostPreviewLoading(false);
+        return;
+      }
+      const canonical = normalizePreviewUrl(cleanUrl);
+      const controller = new AbortController();
+      setCostPreviewLoading(true);
+      axios
+        .get(`${API_BASE_URL}/api/v1/videos/preview-cost`, {
+          params: { url: canonical, audioMode },
+          signal: controller.signal,
+          timeout: 15000,
+        })
+        .then((res) => {
+          setCostPreview(res.data);
+        })
+        .catch((err) => {
+          if (axios.isCancel(err)) return;
+          // Surface as a soft warning rather than throwing — the user
+          // can still attempt submit, at which point the backend
+          // re-does the check.
+          setCostPreview(null);
+        })
+        .finally(() => {
+          setCostPreviewLoading(false);
+        });
+      // Cancel on cleanup so a fast-typing user does not pile up
+      // stale requests behind the latest one.
+      return () => controller.abort();
+    }, 600);
+    return () => clearTimeout(handle);
+    // handleUrlChange / handleModeChange in deps so the effect re-runs
+    // when the user picks a different mode without re-typing.
+  }, [url, audioMode]);
 
   const refreshUserCredit = useCallback(async () => {
     try {
@@ -154,6 +243,22 @@ export default function VideoDashboard() {
       const cleanUrl = extractUrl(raw);
       if (!cleanUrl) {
         setError("Không tìm thấy đường dẫn video hợp lệ trong nội dung bạn dán.");
+        return;
+      }
+
+      // Pre-flight balance guard.
+      // The cost preview has been refreshing on every URL change
+      // (debounced 600ms). If it has come back as `sufficient=false`
+      // we MUST block the submit:
+      //   - a 40-minute clip routed into the queue burns an engine
+      //     worker slot for 10+ minutes,
+      //   - the engine reports a longer or equal duration at the end,
+      //   - the post-hoc charge then throws InsufficientCreditException
+      //     and the user effectively gets a free render.
+      // The backend re-checks on POST /process — this is purely UX.
+      if (costPreview && costPreview.sufficient === false) {
+        setTopupPrefill(costPreview.missingCredits);
+        setShowCreditWarning(true);
         return;
       }
 
@@ -183,7 +288,17 @@ export default function VideoDashboard() {
         const status = err?.response?.status || err?.status;
         const code = err?.response?.data?.code || err?.code;
         const backendMessage = err?.response?.data?.message;
-        if (status === 402 || status === 403 || code === "INSUFFICIENT_CREDIT") {
+        if (code === "VIDEO_TOO_LONG" || status === 413) {
+          // Cap enforcement surface. The preview may have failed
+          // (yt-dlp timeout) so the user saw no banner, but /process
+          // resolves the duration fresh and rejects here. Show the
+          // backend's message verbatim so the user sees the actual
+          // length + cap.
+          setError(
+            backendMessage ||
+              "Video vượt quá giới hạn 90 phút. Vui lòng cắt video trước khi xử lý."
+          );
+        } else if (status === 402 || status === 403 || code === "INSUFFICIENT_CREDIT") {
           try {
             const { data } = await axios.get(`${API_BASE_URL}/api/auth/me`);
             if (data && typeof data.creditBalance === "number") {
@@ -361,6 +476,99 @@ export default function VideoDashboard() {
                   disabled={isLoading || isProcessing}
                   className="w-full px-4 py-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-zinc-100 placeholder:text-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed text-base font-mono"
                 />
+
+                {/* ----- Cost preview panel -----
+                    Renders inline below the URL field the moment the
+                    debounced preview call returns. Three states:
+                      (1) costPreviewLoading=true → spinner + "Đang tính..."
+                      (2) costPreview null (failed) → nothing — the
+                          user can still submit, the server re-checks.
+                      (3) costPreview.sufficient=true → green-ish
+                          breakdown: "X phút × Y credit = Z credit"
+                      (4) costPreview.sufficient=false → red-ish
+                          breakdown + the "Không đủ credit" caption
+                          that links into the topup modal.
+                    We surface the breakdown BEFORE the user can click
+                    submit, so a 40-p clip with 1000 credit shows the
+                    red breakdown immediately rather than waiting for
+                    /process to 403 them after the engine has already
+                    started chewing on it. */}
+                {costPreviewLoading && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang tính chi phí xử lý video...</span>
+                  </div>
+                )}
+                {!costPreviewLoading && costPreview && (() => {
+                  // Three mutually-exclusive visual states:
+                  //   ① overCap=true              → red banner, no pricing shown
+                  //   ② overCap=false, !sufficient → red pricing + topup CTA
+                  //   ③ overCap=false,  sufficient → green pricing
+                  //
+                  // The old "flatBilled" branch is dead under the uniform
+                  // pricing model (backend always serialises flatBilled=false
+                  // now) but the field still exists on the wire for
+                  // compatibility — we ignore it here.
+                  const overCap = costPreview.overCap === true;
+                  const sufficient = costPreview.sufficient === true;
+                  let themeClass;
+                  if (overCap) {
+                    themeClass = "bg-amber-500/5 border-amber-500/30 text-amber-100";
+                  } else if (sufficient) {
+                    themeClass = "bg-emerald-500/5 border-emerald-500/20 text-emerald-200";
+                  } else {
+                    themeClass = "bg-rose-500/5 border-rose-500/30 text-rose-200";
+                  }
+                  return (
+                    <div className={"mt-2 rounded-lg border px-3 py-2.5 text-xs " + themeClass}>
+                      {overCap ? (
+                        // Refusal banner — no pricing math shown because
+                        // the user can't fix this with credits, only with
+                        // a shorter video.
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <span className="font-semibold flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Vượt quá {costPreview.maxMinutes ?? 90} phút
+                          </span>
+                          <span className="font-mono text-[11px]">
+                            Video: ~{costPreview.estimatedMinutes} phút
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <span className="font-semibold">
+                            {costPreview.estimatedMinutes
+                              ? `~${costPreview.estimatedMinutes} phút × ${Math.round(costPreview.perMinuteRate).toLocaleString("vi-VN")} = ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
+                              : `Ước tính: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`}
+                          </span>
+                          <span className="font-mono text-[11px]">
+                            Bạn có: {Math.round(costPreview.currentBalance).toLocaleString("vi-VN")}
+                          </span>
+                        </div>
+                      )}
+                      {costPreview.hint && (
+                        <p className="mt-1 text-[11px] opacity-80">{costPreview.hint}</p>
+                      )}
+                      {!sufficient && !overCap && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTopupPrefill(costPreview.missingCredits);
+                              setShowCreditWarning(true);
+                            }}
+                            className="px-3 py-1.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-100 text-xs font-semibold hover:bg-rose-500/30 active:scale-[0.98] transition"
+                          >
+                            Nạp thêm {Math.round(costPreview.missingCredits).toLocaleString("vi-VN")} credit ngay
+                          </button>
+                          <span className="text-[11px] opacity-70">
+                            hoặc chọn video ngắn hơn.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Advanced Crop Tools (Logo & Subtitles) */}
@@ -501,25 +709,79 @@ export default function VideoDashboard() {
               )}
 
               {/* Submit Action */}
-              {!isProcessing && (
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed select-none"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Đang phân tích...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-5 h-5" />
-                      <span>Bắt đầu xử lý video</span>
-                    </>
-                  )}
-                </button>
-              )}
+              {!isProcessing && (() => {
+                // Compute "is this button allowed to start the submit"
+                // here so it stays co-located with the rendering, but
+                // we keep the breakdown above as the user-visible
+                // source of truth.
+                const previewFailedBalance =
+                  costPreview && costPreview.sufficient === false;
+                const isDisabled =
+                  isLoading ||
+                  previewFailedBalance ||
+                  costPreviewLoading;
+                return (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={isDisabled}
+                      title={
+                        previewFailedBalance
+                          ? "Bạn không đủ credit. Vui lòng nạp thêm trước khi bắt đầu."
+                          : costPreviewLoading
+                          ? "Đang tính chi phí..."
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        // Click on a disabled button is a no-op for
+                        // most browsers, but the safety-net path is
+                        // to flip the warning dialog open if the
+                        // user clicks anyway (e.g. via Enter key).
+                        if (previewFailedBalance) {
+                          e.preventDefault();
+                          setTopupPrefill(costPreview.missingCredits);
+                          setShowCreditWarning(true);
+                        }
+                      }}
+                      className={
+                        "w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-slate-950 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition select-none " +
+                        (previewFailedBalance
+                          ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                          : "bg-emerald-400 hover:bg-emerald-300")
+                      }
+                    >
+                      {isLoading || costPreviewLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>{costPreviewLoading && !isLoading ? "Đang tính chi phí..." : "Đang phân tích..."}</span>
+                        </>
+                      ) : previewFailedBalance ? (
+                        <>
+                          <AlertCircle className="w-5 h-5" />
+                          <span>Không đủ credit để bắt đầu</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-5 h-5" />
+                          <span>Bắt đầu xử lý video</span>
+                        </>
+                      )}
+                    </button>
+                    {previewFailedBalance && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTopupPrefill(costPreview.missingCredits);
+                          setShowCreditWarning(true);
+                        }}
+                        className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-rose-100 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition"
+                      >
+                        Nạp thêm {Math.round(costPreview.missingCredits).toLocaleString("vi-VN")} credit ngay
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Error */}
               {error && (
@@ -588,6 +850,110 @@ export default function VideoDashboard() {
           }}
           onCancel={() => setIsCropOpen(false)}
         />
+      )}
+
+      {/* Insufficient-credit warning popup.
+          Triggered when the user tries to submit a render whose cost
+          (computed by GET /preview-cost) exceeds their balance. The
+          modal gives two actions:
+            (1) Open the topup modal with the exact missing-credit
+                amount pre-filled — the AppShell is listening for
+                'vietcast:open-topup' on window, so we dispatch rather
+                than thread a context through nested lazy chunks.
+            (2) Dismiss + edit the URL. We deliberately do NOT auto-
+                redirect because the user may have multiple tabs that
+                started a draft simultaneously. */}
+      {showCreditWarning && costPreview && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="credit-warning-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCreditWarning(false);
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-rose-500/30 shadow-2xl p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-300 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 id="credit-warning-title" className="text-base font-semibold text-rose-100">
+                  Không đủ credit để xử lý video này
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Hệ thống sẽ không gửi video vào hàng đợi để tránh lãng phí tài nguyên engine.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreditWarning(false)}
+                className="text-slate-500 hover:text-white p-1 -m-1"
+                aria-label="Đóng"
+              >
+                <span className="sr-only">Đóng</span>
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 6l12 12M6 18L18 6" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-slate-950 border border-white/[0.06] p-4 mb-4 text-sm space-y-2">
+              {costPreview.estimatedMinutes && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Thời lượng ước tính:</span>
+                  <span className="font-semibold text-zinc-200">~{costPreview.estimatedMinutes} phút</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-400">Cần thanh toán:</span>
+                <span className="font-semibold text-zinc-200">
+                  {Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Hiện có:</span>
+                <span className="font-semibold text-emerald-300">
+                  {Math.round(costPreview.currentBalance).toLocaleString("vi-VN")} credit
+                </span>
+              </div>
+              <div className="border-t border-white/[0.06] pt-2 flex justify-between">
+                <span className="text-rose-200 font-semibold">Thiếu:</span>
+                <span className="font-mono text-rose-200 font-bold">
+                  {Math.round(costPreview.missingCredits).toLocaleString("vi-VN")} credit
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Open the global topup modal with the missing amount
+                  // pre-filled. AppShell handles the event.
+                  window.dispatchEvent(
+                    new CustomEvent("vietcast:open-topup", {
+                      detail: { prefillAmount: costPreview.missingCredits },
+                    })
+                  );
+                  setShowCreditWarning(false);
+                }}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-semibold active:scale-[0.98] transition"
+              >
+                <Coins className="w-4 h-4" />
+                <span>Nạp {Math.round(costPreview.missingCredits).toLocaleString("vi-VN")} credit ngay</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreditWarning(false)}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold active:scale-[0.98] transition"
+              >
+                Đổi video khác
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

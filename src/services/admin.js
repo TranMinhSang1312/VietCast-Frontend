@@ -21,6 +21,8 @@ const ENDPOINTS = Object.freeze({
   stats:           `${API_BASE_URL}/api/v1/admin/dashboard/stats`,
   revenueSeries:   `${API_BASE_URL}/api/v1/admin/revenue-series`,
   userGrowth:      `${API_BASE_URL}/api/v1/admin/user-growth`,
+  costSummary:     `${API_BASE_URL}/api/v1/admin/costs/summary`,
+  costLowMargin:   `${API_BASE_URL}/api/v1/admin/costs/low-margin`,
   users:           `${API_BASE_URL}/api/v1/admin/users`,
   grantCredit:     (id) => `${API_BASE_URL}/api/v1/admin/users/${id}/credit`,
   lockUser:        (id) => `${API_BASE_URL}/api/v1/admin/users/${id}/lock`,
@@ -102,5 +104,40 @@ export async function lockUser(userId, { reason }) {
  */
 export async function unlockUser(userId) {
   const { data } = await axios.post(ENDPOINTS.unlockUser(userId));
+  return data;
+}
+
+/**
+ * Windowed cost + revenue + margin rollup for the cost widget on the
+ * admin dashboard. Returns the parsed body of {@code GET /costs/summary}.
+ *
+ * @param {{ windowDays?: number }} opts
+ * @returns {Promise<{
+ *   from: string, to: string,
+ *   totalCostUsd: number, totalRevenueUsd: number, totalMarginUsd: number,
+ *   avgMarginUsd: number, marginPct: number|null,
+ *   jobCount: number, totalDurationSeconds: number, failedCount: number,
+ *   byMode: Array<{ audioMode: string, jobCount: number,
+ *                   totalCostUsd: number, totalRevenueUsd: number,
+ *                   totalMarginUsd: number }>
+ * }>}
+ */
+export async function fetchCostSummary({ windowDays = 30 } = {}) {
+  const { data } = await axios.get(ENDPOINTS.costSummary, {
+    params: { windowDays },
+  });
+  return data;
+}
+
+/**
+ * Loss-leader list — every render whose margin is below the server's
+ * threshold. Backs the "Jobs có margin thấp" widget.
+ *
+ * @param {{ limit?: number }} opts
+ */
+export async function fetchLowMarginJobs({ limit = 50 } = {}) {
+  const { data } = await axios.get(ENDPOINTS.costLowMargin, {
+    params: { limit },
+  });
   return data;
 }

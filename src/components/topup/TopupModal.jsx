@@ -17,7 +17,7 @@ const PRESETS = Object.freeze([
 const MIN_AMOUNT = 10_000;
 const MAX_AMOUNT = 100_000_000;
 
-export default function TopupModal({ isOpen, onClose, onSuccess }) {
+export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }) {
   const [presetVnd, setPresetVnd] = useState(PRESETS[1].vnd); // 50k default
   const [customStr, setCustomStr] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,16 +26,29 @@ export default function TopupModal({ isOpen, onClose, onSuccess }) {
   useEffect(() => {
     if (isOpen) {
       setError(null);
-      setCustomStr("");
       setIsSubmitting(false);
+      // Populate the credit field with the missing-credits amount the
+      // caller passed in (see the "Insufficient credit" warning in
+      // VideoDashboard). The default is the credits delta; the user can
+      // still pick a preset or change the custom value before submit.
+      // We do NOT snap to a preset — the caller probably wants this
+      // exact number, so we leave the input in custom mode.
+      if (prefillAmount && prefillAmount > 0) {
+        setCustomStr(String(Math.ceil(prefillAmount)));
+        setPresetVnd(null);
+      } else {
+        setCustomStr("");
+        setPresetVnd(PRESETS[1].vnd);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, prefillAmount]);
 
   if (!isOpen) return null;
 
   const effectiveVnd = (() => {
     const parsed = parseInt(customStr.replaceAll(".", ""), 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : presetVnd;
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    return Number.isFinite(presetVnd) ? presetVnd : 0;
   })();
   const effectiveCredits = effectiveVnd;
   const isCustom = customStr !== "";
