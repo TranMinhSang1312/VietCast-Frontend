@@ -537,9 +537,11 @@ export default function VideoDashboard() {
                       ) : (
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <span className="font-semibold">
-                            {costPreview.estimatedMinutes
-                              ? `~${costPreview.estimatedMinutes} phút × ${Math.round(costPreview.perMinuteRate).toLocaleString("vi-VN")} = ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
-                              : `Ước tính: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`}
+                            {costPreview.flatBilled
+                              ? `Chi phí cố định: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
+                              : costPreview.durationSeconds
+                                ? `Thời lượng: ${costPreview.durationSeconds} giây — Chi phí: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
+                                : `Ước tính: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`}
                           </span>
                           <span className="font-mono text-[11px]">
                             Bạn có: {Math.round(costPreview.currentBalance).toLocaleString("vi-VN")}

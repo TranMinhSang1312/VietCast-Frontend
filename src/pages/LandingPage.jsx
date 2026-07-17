@@ -206,22 +206,22 @@ export default function LandingPage() {
           <FeatureCard
             icon={VolumeX}
             title="Giữ tiếng gốc / Video câm"
-            body="Phí cố định 1.000 credit cho mọi video, không phụ thuộc thời lượng. Phù hợp khi bạn chỉ cần xử lý nhanh."
+            body="Phí cố định 200 credit cho mỗi video. Tải video giữ nguyên âm thanh hoặc xuất video không tiếng (câm)."
             accent="slate"
             className="md:col-span-4"
           />
           <FeatureCard
             icon={Mic}
             title="Lồng tiếng AI"
-            body="500 credit / phút. Đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ."
+            body="800 credit / phút. Lồng tiếng đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ."
             accent="indigo"
             highlight
             className="md:col-span-5"
           />
           <FeatureCard
             icon={Subtitles}
-            title="Dịch thủ công"
-            body="1 credit / cue. Bấm Dịch lại trong trang chỉnh sửa, không cần chạy lại cả video."
+            title="Dịch phụ đề"
+            body="1 credit / dòng phụ đề. Dịch lại trực tiếp từng dòng trong trang chỉnh sửa mà không cần chạy lại video."
             accent="slate"
             className="md:col-span-3"
           />

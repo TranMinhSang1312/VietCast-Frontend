@@ -34,6 +34,7 @@ import { formatCredit, formatCountdown } from "../utils/format";
 // ceil(duration / 60) × 800 credit, capped at 90 minutes.
 
 const RATE_PER_MINUTE = 800;
+const FLAT_VIDEO_COST = 200;
 const MAX_MINUTES = 90;
 const MIN_MINUTES = 1;
 
@@ -254,8 +255,7 @@ export default function Pricing() {
                   </span>
                 </div>
                 <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-                  Tính chi tiết theo từng phút. Đặt cọc trước 1 phút, hoàn
-                  trả phần thừa hoặc trừ thêm phần chênh lệch khi render xong.
+                  Phí dịch vụ tính theo thời gian thực (từng giây video). Hệ thống đặt cọc trước 1 phút lồng tiếng, sau khi hoàn thành sẽ tự động trả lại phần dư lập tức.
                 </p>
               </div>
 
@@ -291,7 +291,7 @@ export default function Pricing() {
                 <DetailRow
                   icon={RefreshCcw}
                   label="Cơ chế thu phí"
-                  value="Đặt cọc 1 phút, hoàn thừa / trừ thêm sau render"
+                  value="Tính theo giây thực tế, tự động hoàn trả credit dư"
                   accent="text-emerald-300"
                 />
               </div>
@@ -309,15 +309,7 @@ export default function Pricing() {
                   Render ngay
                 </button>
               </div>
-            </article>
-
-            {/* Mode 1 (small card): how pricing applies to the flat-billed modes.
-                We dropped the literal "1 000 credit / video" copy because
-                the model is now uniform (per-minute for every mode). The
-                card stays so users who picked "giữ tiếng gốc" before
-                have a confirmation that those modes still exist and still
-                use the per-minute rate. */}
-            <article className={`${SURFACE} relative p-6 flex flex-col gap-5 hover:border-white/[0.12] transition`}>
+            </article>             <article className={`${SURFACE} relative p-6 flex flex-col gap-5 hover:border-white/[0.12] transition`}>
               <div className="relative flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-slate-950 ring-1 ring-white/[0.08] flex items-center justify-center">
                   <VolumeX className="w-5 h-5 text-slate-300" />
@@ -327,7 +319,7 @@ export default function Pricing() {
                     Giữ tiếng gốc / Video câm
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Cùng đơn giá {RATE_PER_MINUTE.toLocaleString("vi-VN")} credit / phút
+                    Phí cố định trọn gói cho mỗi video
                   </p>
                 </div>
               </div>
@@ -335,24 +327,24 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold tracking-[-0.03em] text-white">
-                    {RATE_PER_MINUTE.toLocaleString("vi-VN")}
+                    {FLAT_VIDEO_COST.toLocaleString("vi-VN")}
                   </span>
                   <span className="text-sm font-medium text-slate-400">
-                    credit / phút
+                    credit / video
                   </span>
                 </div>
               </div>
 
               <ul className="relative flex flex-col gap-2 text-sm text-slate-300">
-                <Bullet text="Giữ nguyên audio gốc của video" />
-                <Bullet text="Tắt hoàn toàn tiếng, xuất video câm" />
-                <Bullet text={`Giới hạn ${MAX_MINUTES} phút / lần render`} />
-                <Bullet text="Hoàn đủ phần dư khi video ngắn hơn ước tính" />
+                <Bullet text="Tải và giữ nguyên âm thanh gốc của video" />
+                <Bullet text="Loại bỏ âm thanh để xuất video câm" />
+                <Bullet text="Không giới hạn thời lượng video" />
+                <Bullet text="Tự động hoàn tiền 100% khi xử lý thất bại" />
               </ul>
 
               <div className="relative mt-auto pt-2 text-[11px] text-slate-500">
                 Cần tối thiểu{" "}
-                <span className="font-mono text-slate-300">{credit(RATE_PER_MINUTE)}</span> trong tài khoản.
+                <span className="font-mono text-slate-300">{credit(FLAT_VIDEO_COST)}</span> trong tài khoản.
               </div>
             </article>
 
@@ -389,15 +381,15 @@ export default function Pricing() {
               </div>
 
               <ul className="relative flex flex-col gap-2 text-sm text-slate-300">
-                <Bullet text={`Tối đa ${MAX_MINUTES} phút / video — video dài hơn từ chối ngay từ bước nhập`} />
-                <Bullet text="Tối thiểu 1 phút, làm tròn lên theo ceil" />
-                <Bullet text="Hoàn tự động khi tác vụ lỗi" />
+                <Bullet text={`Tối đa ${MAX_MINUTES} phút cho mỗi video tải lên`} />
+                <Bullet text="Tính phí chính xác theo từng giây video (không làm tròn phút)" />
+                <Bullet text="Tự động hoàn tiền 100% khi xử lý thất bại" />
                 <Bullet text="Dịch phụ đề đi kèm hoàn toàn miễn phí" />
               </ul>
 
               <div className="relative mt-auto pt-2 text-[11px] text-slate-500">
                 Cần tối thiểu{" "}
-                <span className="font-mono text-slate-300">{credit(RATE_PER_MINUTE)}</span> để bắt đầu.
+                <span className="font-mono text-slate-300">{credit(FLAT_VIDEO_COST)}</span> để bắt đầu.
               </div>
             </article>
           </div>
@@ -410,9 +402,9 @@ export default function Pricing() {
             title="Đặt cọc trước"
             body={
               <>
-                Hệ thống kiểm tra số dư trước khi bắt đầu job. Bạn cần có{" "}
-                <strong className="text-slate-200">ít nhất {credit(RATE_PER_MINUTE)}</strong>{" "}
-                — tương ứng 1 phút render đầu tiên ở mọi chế độ.
+                Hệ thống kiểm tra số dư trước khi xử lý. Bạn cần có{" "}
+                <strong className="text-slate-200">ít nhất {credit(FLAT_VIDEO_COST)}</strong>{" "}
+                để bắt đầu thực hiện tác vụ trên hệ thống.
               </>
             }
           />
