@@ -199,6 +199,11 @@ function App() {
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/cancel" element={<PaymentCancel />} />
 
+          {/* Pricing is a public marketing page — anonymous visitors should
+              see it without being bounced to /login. Authenticated users
+              also land here (it's the same component either way). */}
+          <Route path="/pricing" element={<Pricing />} />
+
           <Route
             element={
               isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />
@@ -208,7 +213,6 @@ function App() {
             <Route path="/video-history" element={<VideoHistory />} />
             <Route path="/topup-history" element={<TopupHistory />} />
             <Route path="/credit-usage"  element={<CreditUsageHistory />} />
-            <Route path="/pricing"       element={<Pricing />} />
 
             <Route
               path="/admin/*"

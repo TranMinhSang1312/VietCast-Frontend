@@ -91,7 +91,7 @@ export default function LandingPage() {
               Miễn phí file SRT cho mỗi tác vụ
             </div>
 
-            <h1 className="text-5xl sm:text-7xl font-extrabold tracking-[-0.04em] text-white leading-[1.02]">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-[-0.03em] sm:tracking-[-0.04em] text-white leading-[1.02]">
               Lồng tiếng AI. <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-violet-300 to-fuchsia-300">
                 Video của bạn,
@@ -112,7 +112,7 @@ export default function LandingPage() {
                 Render ngay
               </MagneticPrimary>
               <Link
-                to="/login"
+                to="/pricing"
                 className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] px-6 py-3.5 text-sm font-semibold text-slate-200 transition active:scale-[0.98]"
               >
                 Xem bảng phí

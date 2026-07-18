@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Coins,
   Mic,
@@ -13,6 +14,7 @@ import {
   Sparkles,
   Zap,
   Gift,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { VND_PER_CREDIT, formatVnd } from "../services/payment";
@@ -105,14 +107,56 @@ export default function Pricing() {
   );
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center px-4 py-16 sm:py-24 bg-slate-950 font-sans text-zinc-100 relative overflow-x-hidden">
+    <div className="w-full min-h-screen flex flex-col items-center bg-slate-950 font-sans text-zinc-100 relative overflow-x-hidden">
       {/* Ambient mesh: deep midnight base with a single indigo glow.
           Lower density than the rest of the app so the cards stay the hero. */}
       <div className="absolute top-[-20%] right-[-10%] w-[720px] h-[720px] bg-indigo-600/10 rounded-full blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[-25%] left-[-15%] w-[520px] h-[520px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.06),transparent_55%)] pointer-events-none" />
 
-      <div className="w-full max-w-7xl z-10">
+      {/* Top nav */}
+      <header className="w-full z-10 px-6 sm:px-10 pt-7">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 select-none">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-white">
+              VietCast
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            {user ? (
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] px-5 py-2.5 text-xs font-semibold text-slate-200 transition active:scale-[0.98]"
+              >
+                Vào Dashboard
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="hidden sm:inline-flex items-center text-sm font-medium text-slate-400 hover:text-white transition"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 px-5 py-2.5 text-xs font-bold transition active:scale-[0.98]"
+                >
+                  Bắt đầu miễn phí
+                  <ArrowRight className="w-3 h-3" strokeWidth={3} />
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="w-full max-w-7xl z-10 px-6 sm:px-10 pt-16 sm:pt-24 pb-24">
         {/* Header */}
         <header className="flex flex-col items-center text-center pb-12 mb-14 select-none">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-300">
@@ -562,7 +606,7 @@ export default function Pricing() {
             />
           </div>
         </section>
-      </div>
+      </main>
     </div>
   );
 }

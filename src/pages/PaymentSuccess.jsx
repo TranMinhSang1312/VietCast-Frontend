@@ -322,7 +322,7 @@ export default function PaymentSuccess() {
           </div>
         )}
 
-        {!credited && !error && (
+        {!credited && !error && attempts > 0 && (
           <p className="mt-4 text-xs text-slate-500 flex items-center justify-center gap-1.5">
             <Coins className="w-3.5 h-3.5" />
             <span>Đã thử {attempts} lần ({Math.round(attempts * POLL_INTERVAL_MS / 1000)}s)</span>
