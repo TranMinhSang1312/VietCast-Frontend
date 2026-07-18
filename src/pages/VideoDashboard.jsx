@@ -192,22 +192,60 @@ export default function VideoDashboard() {
     [result, audioMode, error, resetResultState],
   );
 
-  const handleReset = useCallback(() => {
-    setUrl("");
-    setAudioMode("mix");
-    setLogoCoordinates("");
-    setSubtitleMask("");
-    setResult(null);
-    setError(null);
-    setVideoReady(false);
-    setVideoError(false);
-    setProgress(0);
-    setCostPreview(null);
-    setCostPreviewLoading(false);
-    setShowCreditWarning(false);
-    setTopupPrefill(null);
-    clearPollInterval();
-  }, [clearPollInterval]);
+const handleReset = useCallback(() => {
+        setUrl("");
+        setAudioMode("mix");
+        setLogoCoordinates("");
+        setSubtitleMask("");
+        setResult(null);
+        setError(null);
+        setVideoReady(false);
+        setVideoError(false);
+        setProgress(0);
+        setCostPreview(null);
+        setCostPreviewLoading(false);
+        setShowCreditWarning(false);
+        setTopupPrefill(null);
+        clearPollInterval();
+    }, [clearPollInterval]);
+
+    // Force-download via the backend's presigned-R2 endpoint. We do NOT
+    // link straight to the public R2 URL because (a) browsers ignore
+    // `download` on cross-origin links and (b) R2 serves the file with
+    // `inline` disposition by default — clicking would auto-play the
+    // MP4 in a new tab instead of saving it.
+    const handleDownload = useCallback(async (taskId, type) => {
+        if (!taskId) return;
+        try {
+            const resp = await axios.get(
+                `${API_BASE_URL}/api/v1/videos/${taskId}/download`,
+                { params: { type } }
+            );
+            const { downloadUrl, filename } = resp.data || {};
+            if (!downloadUrl) {
+                throw new Error("Backend did not return a downloadUrl");
+            }
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            if (filename) a.download = filename;
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            // 422 UNSUPPORTED_URL means the row predates this column —
+            // fall back to opening the public URL so the user can still
+            // get the file inline.
+            const code = err.response?.data?.code;
+            const fallback = type === "srt" ? result?.srtUrl : result?.videoUrl;
+            if (code === "UNSUPPORTED_URL" && fallback) {
+                window.open(fallback, "_blank", "noopener");
+            } else {
+                console.error("[download] failed", err);
+                setError(err.response?.data?.message || err.message || "Không thể tải file. Vui lòng thử lại.");
+            }
+        }
+    }, [result]);
 
   // Debounced fetch of the cost preview whenever the URL or audioMode
   // change. We deliberately keep audioMode in the dependency list so
@@ -858,6 +896,7 @@ export default function VideoDashboard() {
                 onVideoReady={() => setVideoReady(true)}
                 onVideoError={() => setVideoError(true)}
                 onSetError={setError}
+                onDownload={handleDownload}
               />
             ) : (
               <div className="h-full min-h-[300px] border border-dashed border-white/[0.08] rounded-2xl flex flex-col items-center justify-center p-8 text-center bg-white/[0.025] backdrop-blur-md select-none">
@@ -1062,6 +1101,7 @@ const ResultPanel = memo(function ResultPanel({
   onVideoReady,
   onVideoError,
   onSetError,
+  onDownload,
 }) {
   return (
     <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-6 flex flex-col h-full justify-between">
@@ -1164,28 +1204,24 @@ const ResultPanel = memo(function ResultPanel({
 
         <div className="flex gap-2.5">
           {result.srtUrl && (
-            <a
-              href={result.srtUrl}
-              download={`phude_viet_${result.taskId}.srt`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-slate-200 text-sm font-semibold active:scale-[0.98] transition"
+            <button
+              type="button"
+              onClick={() => onDownload(result.taskId, "srt")}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-slate-200 text-sm font-semibold active:scale-[0.98] transition cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Tải Phụ đề</span>
-            </a>
+            </button>
           )}
           {result.videoUrl && result.status === "COMPLETED" && (
-            <a
-              href={result.videoUrl}
-              download={`VietCast_${result.taskId}.mp4`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-semibold shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition"
+            <button
+              type="button"
+              onClick={() => onDownload(result.taskId, "video")}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-semibold shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Tải Video</span>
-            </a>
+            </button>
           )}
         </div>
       </div>

@@ -98,6 +98,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const isFailed = status === "FAILED";
     const isProcessing = status === "PROCESSING";
     const [isRetrying, setIsRetrying] = useState(false);
+    const [downloadingType, setDownloadingType] = useState(null); // 'video' | 'srt' | null
 
     const isStuck = useMemo(() => {
         if (!isProcessing || !video.createdAt) return false;
@@ -125,6 +126,50 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             // Error is handled by parent
         } finally {
             setIsRetrying(false);
+        }
+    };
+
+    // Force-download via the backend's presigned-R2 endpoint. We do
+    // NOT link straight to the public R2 URL because browsers ignore
+    // the `download` attribute on cross-origin links (and even if they
+    // did, R2 serves the file with `inline` disposition — clicking the
+    // link would auto-play the MP4 in a new tab instead of saving it).
+    const handleDownload = async (type) => {
+        if (downloadingType) return; // single in-flight per row
+        setDownloadingType(type);
+        try {
+            const resp = await axios.get(
+                `${API_BASE_URL}/api/v1/videos/${video.taskId}/download`,
+                { params: { type } }
+            );
+            const { downloadUrl, filename } = resp.data || {};
+            if (!downloadUrl) {
+                throw new Error("Backend did not return a downloadUrl");
+            }
+            // Same-origin (backend) → browser respects `download` and
+            // R2 honours the `Content-Disposition: attachment` we
+            // asked for when presigning. The user gets a Save dialog.
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            if (filename) a.download = filename;
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            // Surface as a non-blocking console + (best-effort) alert.
+            // Most common cause: 422 UNSUPPORTED_URL when the row was
+            // written before this column existed; fall back to the
+            // public URL so the user can still get the file inline.
+            const code = err.response?.data?.code;
+            if (code === "UNSUPPORTED_URL" && video.videoUrl) {
+                window.open(type === "srt" ? video.srtUrl : video.videoUrl, "_blank", "noopener");
+            } else {
+                console.error("[download] failed", err);
+                alert(err.response?.data?.message || err.message || "Không thể tải file. Vui lòng thử lại.");
+            }
+        } finally {
+            setDownloadingType(null);
         }
     };
 
@@ -174,16 +219,19 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
 
             <footer className="mt-5 flex flex-wrap gap-2.5">
                 {isCompleted && video.videoUrl ? (
-                    <a
-                        href={video.videoUrl}
-                        download={fileName}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-semibold text-xs shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition select-none"
+                    <button
+                        type="button"
+                        onClick={() => handleDownload("video")}
+                        disabled={downloadingType !== null}
+                        className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 disabled:opacity-60 text-slate-950 font-semibold text-xs shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition select-none cursor-pointer"
                     >
-                        <Download className="w-4 h-4" />
-                        <span>Tải video</span>
-                    </a>
+                        {downloadingType === "video" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Download className="w-4 h-4" />
+                        )}
+                        <span>{downloadingType === "video" ? "Đang tải..." : "Tải video"}</span>
+                    </button>
                 ) : isCompleted ? (
                     <span className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-slate-950 border border-white/[0.06] text-xs text-slate-500 select-none font-mono">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -192,16 +240,19 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                 ) : null}
 
                 {video.srtUrl && (
-                    <a
-                        href={video.srtUrl}
-                        download={srtName}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-350 text-xs font-semibold active:scale-[0.98] transition select-none"
+                    <button
+                        type="button"
+                        onClick={() => handleDownload("srt")}
+                        disabled={downloadingType !== null}
+                        className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] disabled:opacity-60 text-zinc-350 text-xs font-semibold active:scale-[0.98] transition select-none cursor-pointer"
                     >
-                        <Subtitles className="w-4 h-4" />
-                        <span>Phụ đề SRT</span>
-                    </a>
+                        {downloadingType === "srt" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Subtitles className="w-4 h-4" />
+                        )}
+                        <span>{downloadingType === "srt" ? "Đang tải..." : "Phụ đề SRT"}</span>
+                    </button>
                 )}
 
                 {(isFailed || isStuck) && (
