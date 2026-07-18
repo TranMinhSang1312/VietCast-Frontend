@@ -173,7 +173,24 @@ export default function VideoDashboard() {
     (e) => {
       const next = e.target.value;
       if (result && next !== url) {
-        resetResultState();
+        // If a render is in flight, ask first — calling resetResultState
+        // here would silently clear the UI without informing the user,
+        // and the backend job would keep running unattached until it
+        // /completes into a row nobody is polling any more.
+        const confirmed =
+          result.status === "PROCESSING"
+            ? window.confirm(
+                "Bạn đang có tác vụ đang xử lý. Đổi URL sẽ huỷ tác vụ hiện tại và tạo tác vụ mới. Tiếp tục?"
+              )
+            : true;
+        if (confirmed) {
+          resetResultState();
+        } else {
+          // User opted out — revert the input to the previous URL so the
+          // browser does not visually show "ghost" draft text.
+          e.target.value = url;
+          return;
+        }
       }
       setUrl(next);
       if (error) setError(null);
@@ -195,6 +212,7 @@ export default function VideoDashboard() {
 const handleReset = useCallback(() => {
         setUrl("");
         setAudioMode("mix");
+        setVoice("vi-VN-NamMinhNeural");
         setLogoCoordinates("");
         setSubtitleMask("");
         setResult(null);
@@ -446,6 +464,11 @@ const handleReset = useCallback(() => {
       } catch (err) {
         if (err.response?.status === 404) {
           clearPollInterval();
+          // Server restarted or the task row was evicted — show the
+          // error AND clear the right-hand panel so the user does not
+          // see "Tác vụ đang xử lý" + taskId ghosted next to a
+          // "Không tìm thấy tác vụ" banner.
+          resetResultState();
           setError("Không tìm thấy tác vụ. Có thể server đã khởi động lại.");
         }
       }
@@ -826,10 +849,10 @@ const handleReset = useCallback(() => {
                         }
                       }}
                       className={
-                        "w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-slate-950 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition select-none " +
+                        "w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-white shadow-[0_18px_60px_-18px_rgba(244,63,94,0.55)] active:scale-[0.98] transition select-none " +
                         (previewFailedBalance
-                          ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                          : "bg-emerald-400 hover:bg-emerald-300")
+                          ? "bg-rose-500/80 hover:bg-rose-500 border border-rose-400/50"
+                          : "bg-emerald-400 hover:bg-emerald-300 text-slate-950")
                       }
                     >
                       {isLoading || costPreviewLoading ? (
@@ -1131,7 +1154,17 @@ const ResultPanel = memo(function ResultPanel({
         {isProcessing && (
           <div className="mb-6 select-none">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
-              <span>ĐANG XỬ LÝ...</span>
+              <span>
+                {progress < 10
+                  ? "ĐANG TẢI VIDEO TỪ NGUỒN..."
+                  : progress < 35
+                  ? "ĐANG TRÍCH XUẤT ÂM THANH..."
+                  : progress < 70
+                  ? "ĐANG DỊCH SANG TIẾNG VIỆT..."
+                  : progress < 90
+                  ? "ĐANG TỔNG HỢP GIỌNG ĐỌC AI..."
+                  : "ĐANG RENDER VIDEO CUỐI CÙNG..."}
+              </span>
               <span className="text-zinc-200">{progress}%</span>
             </div>
             <div
@@ -1139,6 +1172,7 @@ const ResultPanel = memo(function ResultPanel({
               aria-valuenow={progress}
               aria-valuemin={0}
               aria-valuemax={100}
+              aria-valuetext={`${progress}% hoàn thành`}
               className="bg-white/[0.04] h-1.5 w-full rounded-full overflow-hidden"
             >
               <div

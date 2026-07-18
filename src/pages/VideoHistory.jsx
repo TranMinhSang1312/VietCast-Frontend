@@ -77,10 +77,10 @@ const ProgressBar = memo(function ProgressBar({ value }) {
             </div>
             <div
                 role="progressbar"
-                role="progressbar"
                 aria-valuenow={pct}
                 aria-valuemin={0}
                 aria-valuemax={100}
+                aria-valuetext={`${pct}% hoàn thành`}
                 className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden"
             >
                 <div
