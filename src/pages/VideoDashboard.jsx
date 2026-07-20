@@ -5,30 +5,37 @@ import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
 import WatermarkRemover from "../components/watermark/WatermarkRemover";
+import { PRICING } from "../config/pricing";
 
 const AUDIO_MODES = [
   {
     value: "dub",
     label: "Lồng tiếng AI",
-    description: "Thay thế tiếng gốc bằng giọng đọc tiếng Việt do AI tạo.",
+    description: `${PRICING.dubPerMinute} credit/phút, gồm giọng Việt và SRT song ngữ.`,
     icon: Wand2,
   },
   {
     value: "original",
     label: "Giữ tiếng gốc",
-    description: "Giữ nguyên âm thanh gốc của video, không chỉnh sửa.",
+    description: `${PRICING.originalPerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit.`,
     icon: Mic,
   },
   {
     value: "mute",
     label: "Video câm",
-    description: "Loại bỏ hoàn toàn tiếng gốc, chỉ giữ phụ đề tiếng Việt.",
+    description: `${PRICING.mutePerMinute} credit/phút, bỏ âm thanh và không tạo SRT.`,
     icon: Film,
+  },
+  {
+    value: "subtitle",
+    label: "Chỉ tạo phụ đề",
+    description: `${PRICING.subtitlePerMinute} credit/phút, nhận file SRT tiếng Việt.`,
+    icon: Languages,
   },
   {
     value: "mix",
     label: "Trộn âm thanh gốc & AI",
-    description: "Hạ âm lượng gốc còn 30%, lồng tiếng AI phía trên.",
+    description: `${PRICING.mixPerMinute} credit/phút, giữ nhạc nền và thêm giọng Việt.`,
     icon: Subtitles,
   },
 ];
@@ -49,7 +56,6 @@ const VOICE_OPTIONS = [
 ];
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
-const PROGRESS_REGEX = /(\d{1,3})\s*%/;
 
 function extractUrl(raw) {
   if (!raw || !raw.trim()) return null;
@@ -101,7 +107,7 @@ export default function VideoDashboard() {
   // `costPreview` is null until the user pastes a valid URL and the
   // debounced preview call returns. It carries the breakdown the
   // server computed so the renderer can:
-  //   - display "40 phút × 500 = 20 000 credit" inline below the
+  //   - display the mode-aware, per-second total inline below the
   //     input box
   //   - disable the submit button when sufficient=false
   //   - populate the "Nạp thêm ngay" deep-link with the missing amount
@@ -113,7 +119,6 @@ export default function VideoDashboard() {
   // submit button (or when balance changed underneath them) so we can
   // pop the warning dialog with the missing-credits number.
   const [showCreditWarning, setShowCreditWarning] = useState(false);
-  const [topupPrefill, setTopupPrefill] = useState(null);
 
   // Crop modal states
   const [isCropOpen, setIsCropOpen] = useState(false);
@@ -223,7 +228,6 @@ const handleReset = useCallback(() => {
         setCostPreview(null);
         setCostPreviewLoading(false);
         setShowCreditWarning(false);
-        setTopupPrefill(null);
         clearPollInterval();
     }, [clearPollInterval]);
 
@@ -291,7 +295,12 @@ const handleReset = useCallback(() => {
       setCostPreviewLoading(true);
       axios
         .get(`${API_BASE_URL}/api/v1/videos/preview-cost`, {
-          params: { url: canonical, audioMode },
+          params: {
+            url: canonical,
+            audioMode,
+            logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates || null),
+            subtitleMask: audioMode === "subtitle" ? null : (subtitleMask || null),
+          },
           signal: controller.signal,
           timeout: 15000,
         })
@@ -315,7 +324,7 @@ const handleReset = useCallback(() => {
     return () => clearTimeout(handle);
     // handleUrlChange / handleModeChange in deps so the effect re-runs
     // when the user picks a different mode without re-typing.
-  }, [url, audioMode]);
+  }, [url, audioMode, logoCoordinates, subtitleMask]);
 
   const refreshUserCredit = useCallback(async () => {
     try {
@@ -355,7 +364,6 @@ const handleReset = useCallback(() => {
       //     and the user effectively gets a free render.
       // The backend re-checks on POST /process — this is purely UX.
       if (costPreview && costPreview.sufficient === false) {
-        setTopupPrefill(costPreview.missingCredits);
         setShowCreditWarning(true);
         return;
       }
@@ -375,8 +383,8 @@ const handleReset = useCallback(() => {
             // Only forward a voice value when the user picked an
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
-            logoCoordinates: logoCoordinates.trim() || null,
-            subtitleMask: subtitleMask.trim() || null
+            logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates.trim() || null),
+            subtitleMask: audioMode === "subtitle" ? null : (subtitleMask.trim() || null)
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
@@ -416,7 +424,7 @@ const handleReset = useCallback(() => {
         setIsLoading(false);
       }
     },
-    [url, audioMode, logoCoordinates, subtitleMask, updateCreditBalance, refreshUserCredit],
+    [url, audioMode, voice, logoCoordinates, subtitleMask, costPreview, updateCreditBalance, refreshUserCredit],
   );
 
   useEffect(() => {
@@ -529,10 +537,15 @@ const handleReset = useCallback(() => {
   }, [result?.videoUrl, result?.taskId]);
 
   const placeholderMessage = useMemo(() => {
-    if (isProcessing) return "Đang render video…";
+    if (isProcessing && result?.audioMode === "subtitle") return "Đang tạo phụ đề tiếng Việt…";
+    if (isProcessing && (result?.audioMode === "original" || result?.audioMode === "mute")) {
+      return "Đang tải và xử lý video…";
+    }
+    if (isProcessing) return "Đang lồng tiếng và render video…";
     if (result?.status === "FAILED") return "Quá trình xử lý thất bại.";
+    if (result?.audioMode === "subtitle") return "Phụ đề đã sẵn sàng để tải xuống.";
     return "Đang tải video lên máy chủ…";
-  }, [isProcessing, result?.status]);
+  }, [isProcessing, result?.audioMode, result?.status]);
 
   return (
     <div className="w-full flex flex-col items-center bg-slate-950 font-sans text-zinc-100 px-4 py-8 sm:py-12 relative overflow-x-hidden">
@@ -592,7 +605,7 @@ const handleReset = useCallback(() => {
                           breakdown + the "Không đủ credit" caption
                           that links into the topup modal.
                     We surface the breakdown BEFORE the user can click
-                    submit, so a 40-p clip with 1000 credit shows the
+                    submit, so a clip whose estimate exceeds the balance shows the
                     red breakdown immediately rather than waiting for
                     /process to 403 them after the engine has already
                     started chewing on it. */}
@@ -608,10 +621,9 @@ const handleReset = useCallback(() => {
                   //   ② overCap=false, !sufficient → red pricing + topup CTA
                   //   ③ overCap=false,  sufficient → green pricing
                   //
-                  // The old "flatBilled" branch is dead under the uniform
-                  // pricing model (backend always serialises flatBilled=false
-                  // now) but the field still exists on the wire for
-                  // compatibility — we ignore it here.
+                  // flatBilled remains on the wire for compatibility, but
+                  // every active mode now uses a per-second rate plus its
+                  // mode-specific minimum.
                   const overCap = costPreview.overCap === true;
                   const sufficient = costPreview.sufficient === true;
                   let themeClass;
@@ -640,11 +652,9 @@ const handleReset = useCallback(() => {
                       ) : (
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <span className="font-semibold">
-                            {costPreview.flatBilled
-                              ? `Chi phí cố định: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
-                              : costPreview.durationSeconds
-                                ? `Thời lượng: ${costPreview.durationSeconds} giây — Chi phí: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
-                                : `Ước tính: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`}
+                            {costPreview.durationSeconds
+                              ? `Thời lượng: ${costPreview.durationSeconds} giây — Chi phí: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
+                              : `Ước tính: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`}
                           </span>
                           <span className="font-mono text-[11px]">
                             Bạn có: {Math.round(costPreview.currentBalance).toLocaleString("vi-VN")}
@@ -659,7 +669,6 @@ const handleReset = useCallback(() => {
                           <button
                             type="button"
                             onClick={() => {
-                              setTopupPrefill(costPreview.missingCredits);
                               setShowCreditWarning(true);
                             }}
                             className="px-3 py-1.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-100 text-xs font-semibold hover:bg-rose-500/30 active:scale-[0.98] transition"
@@ -677,6 +686,7 @@ const handleReset = useCallback(() => {
               </div>
 
               {/* Advanced Crop Tools (Logo & Subtitles) */}
+              {audioMode !== "subtitle" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/40 border border-white/[0.06]">
                   <div>
@@ -740,6 +750,7 @@ const handleReset = useCallback(() => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Audio mode selector */}
               <div>
@@ -844,7 +855,6 @@ const handleReset = useCallback(() => {
                         // user clicks anyway (e.g. via Enter key).
                         if (previewFailedBalance) {
                           e.preventDefault();
-                          setTopupPrefill(costPreview.missingCredits);
                           setShowCreditWarning(true);
                         }
                       }}
@@ -876,7 +886,6 @@ const handleReset = useCallback(() => {
                       <button
                         type="button"
                         onClick={() => {
-                          setTopupPrefill(costPreview.missingCredits);
                           setShowCreditWarning(true);
                         }}
                         className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-rose-100 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition"
@@ -918,7 +927,6 @@ const handleReset = useCallback(() => {
                 onReset={handleReset}
                 onVideoReady={() => setVideoReady(true)}
                 onVideoError={() => setVideoError(true)}
-                onSetError={setError}
                 onDownload={handleDownload}
               />
             ) : (
@@ -1123,7 +1131,6 @@ const ResultPanel = memo(function ResultPanel({
   onReset,
   onVideoReady,
   onVideoError,
-  onSetError,
   onDownload,
 }) {
   return (
@@ -1135,7 +1142,9 @@ const ResultPanel = memo(function ResultPanel({
               <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-zinc-200">Tác vụ đang xử lý</h2>
+              <h2 className="text-base font-bold text-zinc-200">
+                {result.status === "COMPLETED" ? "Tác vụ đã hoàn thành" : "Tác vụ đang xử lý"}
+              </h2>
               <p className="text-xs text-zinc-500 mt-0.5 font-mono">
                 Task ID: <span className="text-emerald-400">{result.taskId}</span>
               </p>
