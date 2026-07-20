@@ -1,20 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
+import { useCallback, useEffect, useRef, useState, memo } from "react";
 import axios from "axios";
 import {
     History,
     Loader2,
     Download,
-    CheckCircle2,
     AlertCircle,
     Film,
     Subtitles,
     Clock,
     RefreshCw,
+    Mic,
+    VolumeX,
 } from "lucide-react";
 import { API_BASE_URL_PROVIDER } from "../config";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
+
+const MODE_DETAILS = Object.freeze({
+    original: { label: "Giữ tiếng gốc", output: "Video", video: true, srt: false, icon: Mic },
+    mute: { label: "Video câm", output: "Video không âm thanh", video: true, srt: false, icon: VolumeX },
+    subtitle: { label: "Chỉ tạo phụ đề", output: "File SRT tiếng Việt", video: false, srt: true, icon: Subtitles },
+    dub: { label: "Lồng tiếng AI", output: "Video và SRT", video: true, srt: true, icon: Film },
+    mix: { label: "Trộn âm gốc & AI", output: "Video và SRT", video: true, srt: true, icon: Film },
+});
 
 const STATUS_STYLES = {
     PROCESSING: {
@@ -99,31 +108,25 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const isProcessing = status === "PROCESSING";
     const [isRetrying, setIsRetrying] = useState(false);
     const [downloadingType, setDownloadingType] = useState(null); // 'video' | 'srt' | null
+    const [actionError, setActionError] = useState(null);
 
-    const isStuck = useMemo(() => {
-        if (!isProcessing || !video.createdAt) return false;
-        const createdTime = new Date(video.createdAt).getTime();
-        const diff = Date.now() - createdTime;
-        // Stuck if processing for more than 10 minutes
-        return diff > 10 * 60 * 1000;
-    }, [isProcessing, video.createdAt]);
-
-    const fileName = useMemo(
-        () => `VietCast_${video.taskId}.mp4`,
-        [video.taskId],
-    );
-    const srtName = useMemo(
-        () => `phude_viet_${video.taskId}.srt`,
-        [video.taskId],
-    );
+    const mode = MODE_DETAILS[video.audioMode] ?? {
+        label: "Tác vụ video",
+        output: video.srtUrl && !video.videoUrl ? "File SRT" : "Kết quả xử lý",
+        video: Boolean(video.videoUrl),
+        srt: Boolean(video.srtUrl),
+        icon: Film,
+    };
+    const ModeIcon = mode.icon;
 
     const handleRetryClick = async () => {
         if (isRetrying) return;
+        setActionError(null);
         setIsRetrying(true);
         try {
             await onRetry(video.taskId);
         } catch (err) {
-            // Error is handled by parent
+            setActionError(err?.message || "Không thể chạy lại tác vụ. Vui lòng thử lại sau.");
         } finally {
             setIsRetrying(false);
         }
@@ -136,6 +139,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     // link would auto-play the MP4 in a new tab instead of saving it).
     const handleDownload = async (type) => {
         if (downloadingType) return; // single in-flight per row
+        setActionError(null);
         setDownloadingType(type);
         try {
             const resp = await axios.get(
@@ -162,11 +166,12 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             // written before this column existed; fall back to the
             // public URL so the user can still get the file inline.
             const code = err.response?.data?.code;
-            if (code === "UNSUPPORTED_URL" && video.videoUrl) {
-                window.open(type === "srt" ? video.srtUrl : video.videoUrl, "_blank", "noopener");
+            const fallbackUrl = type === "srt" ? video.srtUrl : video.videoUrl;
+            if (code === "UNSUPPORTED_URL" && fallbackUrl) {
+                window.open(fallbackUrl, "_blank", "noopener");
             } else {
                 console.error("[download] failed", err);
-                alert(err.response?.data?.message || err.message || "Không thể tải file. Vui lòng thử lại.");
+                setActionError(err.response?.data?.message || err.message || "Không thể tải file. Vui lòng thử lại.");
             }
         } finally {
             setDownloadingType(null);
@@ -178,14 +183,17 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             <header className="flex items-start justify-between gap-3 mb-3 select-none">
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                     <div className="shrink-0 w-10 h-10 rounded-lg bg-slate-950 ring-1 ring-white/[0.06] flex items-center justify-center">
-                        <Film className="w-5 h-5 text-zinc-400" />
+                        <ModeIcon className="w-5 h-5 text-zinc-400" />
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-base font-bold text-slate-100 font-mono">
                                 Task #{video.taskId}
                             </h3>
-                            <StatusPill status={isStuck ? "FAILED" : status} />
+                            <StatusPill status={status} />
+                            <span className="inline-flex items-center rounded-md border border-white/[0.06] bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-slate-400">
+                                {mode.label}
+                            </span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-1 text-xs font-mono text-zinc-500">
                             <Clock className="w-3.5 h-3.5" />
@@ -201,24 +209,29 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                 </p>
             )}
 
-            {isProcessing && !isStuck && <ProgressBar value={video.progress ?? 0} />}
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-slate-950/40 px-3.5 py-2.5 text-xs">
+                <span className="text-slate-500">Đầu ra</span>
+                <span className="font-semibold text-slate-200">{mode.output}</span>
+            </div>
 
-            {isStuck && (
-                <div className="mt-3 flex items-start gap-2.5 p-4 rounded-xl bg-amber-950/20 border border-amber-900/30 text-sm text-amber-200">
-                    <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-amber-400" />
-                    <span>Tác vụ này có vẻ đã bị kẹt (quá 10 phút). Bạn có thể bấm nút Thử lại bên dưới để chạy lại.</span>
-                </div>
-            )}
+            {isProcessing && <ProgressBar value={video.progress ?? 0} />}
 
             {isFailed && (
                 <div className="mt-3 flex items-start gap-2.5 p-4 rounded-xl bg-rose-950/30 border border-rose-900/40 text-sm text-red-200">
                     <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-rose-400" />
-                    <span>{video.message || "Quá trình render thất bại. Vui lòng kiểm tra log hệ thống hoặc bấm Thử lại."}</span>
+                    <span>{video.message || "Quá trình xử lý thất bại. Credit đã trừ sẽ được hoàn tự động; bạn có thể thử lại tác vụ."}</span>
+                </div>
+            )}
+
+            {actionError && (
+                <div role="alert" className="mt-3 flex items-start gap-2.5 rounded-xl border border-rose-900/40 bg-rose-950/30 p-3 text-xs text-rose-200">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+                    <span>{actionError}</span>
                 </div>
             )}
 
             <footer className="mt-5 flex flex-wrap gap-2.5">
-                {isCompleted && video.videoUrl ? (
+                {isCompleted && mode.video && video.videoUrl && (
                     <button
                         type="button"
                         onClick={() => handleDownload("video")}
@@ -232,14 +245,9 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                         )}
                         <span>{downloadingType === "video" ? "Đang tải..." : "Tải video"}</span>
                     </button>
-                ) : isCompleted ? (
-                    <span className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-slate-950 border border-white/[0.06] text-xs text-slate-500 select-none font-mono">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span>FILE SẴN SÀNG</span>
-                    </span>
-                ) : null}
+                )}
 
-                {video.srtUrl && (
+                {isCompleted && mode.srt && video.srtUrl && (
                     <button
                         type="button"
                         onClick={() => handleDownload("srt")}
@@ -255,7 +263,14 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     </button>
                 )}
 
-                {(isFailed || isStuck) && (
+                {isCompleted && ((mode.video && !video.videoUrl) || (mode.srt && !video.srtUrl)) && (
+                    <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-2.5 text-xs text-amber-200">
+                        <AlertCircle className="h-4 w-4" />
+                        Chưa nhận đủ file đầu ra
+                    </span>
+                )}
+
+                {isFailed && (
                     <button
                         type="button"
                         disabled={isRetrying}
@@ -267,7 +282,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     </button>
                 )}
 
-                {!isCompleted && !isFailed && !isStuck && (
+                {!isCompleted && !isFailed && (
                     <span className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-slate-950/70 border border-white/[0.06] text-xs font-mono uppercase tracking-wider text-zinc-500 select-none">
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" />
                         Đang xử lý...
@@ -316,8 +331,7 @@ export default function VideoHistory() {
             fetchHistory(false);
         } catch (err) {
             const serverMessage = err.response?.data?.message || err.message || "Không thể chạy lại tác vụ. Vui lòng thử lại sau.";
-            alert(serverMessage);
-            throw err;
+            throw new Error(serverMessage, { cause: err });
         }
     }, [fetchHistory]);
 
@@ -329,7 +343,9 @@ export default function VideoHistory() {
     }, []);
 
     useEffect(() => {
-        fetchHistory(true);
+        // Defer the initial state update out of the effect body and cancel
+        // it if the page unmounts before the next task.
+        const initialFetchTimer = setTimeout(() => fetchHistory(true), 0);
 
         const tick = () => {
             const current = historyRef.current;
@@ -341,7 +357,10 @@ export default function VideoHistory() {
 
         pollTimerRef.current = setInterval(tick, POLL_INTERVAL_MS);
 
-        return clearPollInterval;
+        return () => {
+            clearTimeout(initialFetchTimer);
+            clearPollInterval();
+        };
     }, [fetchHistory, clearPollInterval]);
 
     const handleManualRefresh = useCallback(() => fetchHistory(true), [fetchHistory]);
@@ -405,7 +424,7 @@ export default function VideoHistory() {
                             Chưa có tác vụ nào
                         </h2>
                         <p className="text-sm text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-                            Bắt đầu bằng cách tạo một yêu cầu lồng tiếng video mới!
+                            Chọn một chức năng trên Dashboard để tạo video hoặc phụ đề đầu tiên.
                         </p>
                     </div>
                 )}

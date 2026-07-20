@@ -1,47 +1,35 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Coins, Loader2, X, AlertCircle } from "lucide-react";
 import {
   createPaymentLink,
   formatVnd,
 } from "../../services/payment";
+import { PRICING } from "../../config/pricing";
 
 const PRESETS = Object.freeze([
-  { vnd: 10_000,    label: "10.000" },
-  { vnd: 50_000,    label: "50.000" },
-  { vnd: 100_000,   label: "100.000" },
-  { vnd: 200_000,   label: "200.000" },
-  { vnd: 500_000,   label: "500.000" },
-  { vnd: 1_000_000, label: "1.000.000" },
+  { vnd: 2_000 },
+  { vnd: 10_000 },
+  { vnd: 50_000 },
+  { vnd: 100_000 },
+  { vnd: 200_000 },
+  { vnd: 500_000 },
 ]);
 
-const MIN_AMOUNT = 10_000;
+const MIN_AMOUNT = 2_000;
 const MAX_AMOUNT = 100_000_000;
 
+function fullMinutes(credits, perMinute) {
+  return Math.max(0, Math.floor(credits / perMinute));
+}
+
 export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }) {
-  const [presetVnd, setPresetVnd] = useState(PRESETS[1].vnd); // 50k default
-  const [customStr, setCustomStr] = useState("");
+  const initialMissing = Math.max(0, Math.ceil(Number(prefillAmount) || 0));
+  const [presetVnd, setPresetVnd] = useState(initialMissing > 0 ? null : PRESETS[2].vnd); // 50k default
+  const [customStr, setCustomStr] = useState(
+    initialMissing > 0 ? String(Math.max(MIN_AMOUNT, initialMissing)) : "",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setError(null);
-      setIsSubmitting(false);
-      // Populate the credit field with the missing-credits amount the
-      // caller passed in (see the "Insufficient credit" warning in
-      // VideoDashboard). The default is the credits delta; the user can
-      // still pick a preset or change the custom value before submit.
-      // We do NOT snap to a preset — the caller probably wants this
-      // exact number, so we leave the input in custom mode.
-      if (prefillAmount && prefillAmount > 0) {
-        setCustomStr(String(Math.ceil(prefillAmount)));
-        setPresetVnd(null);
-      } else {
-        setCustomStr("");
-        setPresetVnd(PRESETS[1].vnd);
-      }
-    }
-  }, [isOpen, prefillAmount]);
 
   if (!isOpen) return null;
 
@@ -52,6 +40,9 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
   })();
   const effectiveCredits = effectiveVnd;
   const isCustom = customStr !== "";
+  const subtitleMinutes = fullMinutes(effectiveCredits, PRICING.subtitlePerMinute);
+  const dubbingMinutes = fullMinutes(effectiveCredits, PRICING.dubPerMinute);
+  const missingCredits = initialMissing;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,7 +112,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
         if (e.target === e.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="w-full max-w-md rounded-3xl border border-white/[0.06] bg-slate-950 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] shadow-black/40 overflow-hidden font-sans text-zinc-100">
+      <div className="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-3xl border border-white/[0.06] bg-slate-950 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] shadow-black/40 font-sans text-zinc-100">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-2 select-none">
@@ -149,9 +140,9 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
           {/* Presets + Custom shortcut */}
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2 select-none">
-              Chọn gói nhanh (VND)
+              Chọn theo nhu cầu sử dụng
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {PRESETS.map((p) => {
                 const selected = !isCustom && presetVnd === p.vnd;
                 return (
@@ -163,13 +154,16 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
                       setCustomStr("");
                     }}
                     disabled={isSubmitting}
-                    className={`px-2 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 select-none ${
+                    className={`px-3 py-3 rounded-xl text-left border transition disabled:opacity-50 select-none ${
                       selected
                         ? "bg-emerald-400 border-emerald-400 text-slate-950 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98]"
                         : "bg-slate-950/70 border-white/[0.06] text-slate-400 hover:border-white/[0.12] active:scale-[0.98]"
                     }`}
                   >
-                    {p.label}
+                    <span className="block text-sm font-bold">{formatVnd(p.vnd)}đ</span>
+                    <span className={`mt-1 block text-[10px] leading-relaxed ${selected ? "text-slate-800" : "text-slate-500"}`}>
+                      ≈ {fullMinutes(p.vnd, PRICING.dubPerMinute)} phút lồng tiếng · {fullMinutes(p.vnd, PRICING.subtitlePerMinute)} phút phụ đề
+                    </span>
                   </button>
                 );
               })}
@@ -181,7 +175,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
                   document.getElementById("topup-custom")?.focus();
                 }}
                 disabled={isSubmitting}
-                className={`px-2 py-2 rounded-xl text-xs font-medium border transition disabled:opacity-50 select-none ${
+                className={`px-3 py-3 rounded-xl text-xs font-semibold border transition disabled:opacity-50 select-none ${
                   isCustom
                     ? "bg-emerald-400 border-emerald-400 text-slate-950 shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98]"
                     : "bg-slate-950/70 border-white/[0.06] text-slate-400 hover:border-white/[0.12] active:scale-[0.98]"
@@ -198,7 +192,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
               htmlFor="topup-custom"
               className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2 select-none"
             >
-              Hoặc nhập số tiền khác (VND)
+              Hoặc nạp đúng số credit đang thiếu
             </label>
             <input
               id="topup-custom"
@@ -207,13 +201,22 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
               value={customStr}
               onChange={(e) => setCustomStr(e.target.value)}
               disabled={isSubmitting}
-              placeholder="vd: 200000"
+              placeholder="Ví dụ: 12500"
               className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-white/[0.06] text-zinc-100 placeholder:text-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 focus:outline-none transition disabled:opacity-50 text-xs"
             />
           </div>
 
+          {missingCredits > 0 && (
+            <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-3 text-xs leading-relaxed text-emerald-100">
+              {missingCredits >= MIN_AMOUNT
+                ? `Đã nhập đúng ${formatVnd(missingCredits)}đ — tương ứng ${formatVnd(missingCredits)} credit bạn đang thiếu.`
+                : `Bạn đang thiếu ${formatVnd(missingCredits)} credit. Mức nạp tối thiểu qua cổng thanh toán là ${formatVnd(MIN_AMOUNT)}đ.`}
+            </div>
+          )}
+
           {/* Summary info box */}
-          <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] px-4 py-3 flex items-center justify-between select-none">
+          <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] px-4 py-3 select-none">
+            <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">Số tiền thanh toán</div>
               <div className="text-base font-bold text-slate-200 mt-0.5">
@@ -226,6 +229,18 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
                 {formatVnd(effectiveCredits)} credit
               </div>
             </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-3 text-xs">
+              <div className="rounded-lg bg-slate-950/60 px-3 py-2">
+                <div className="text-slate-500">Chỉ tạo phụ đề</div>
+                <div className="mt-0.5 font-semibold text-slate-200">≈ {subtitleMinutes} phút</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/60 px-3 py-2">
+                <div className="text-slate-500">Lồng tiếng / trộn âm</div>
+                <div className="mt-0.5 font-semibold text-slate-200">≈ {dubbingMinutes} phút</div>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-slate-500">Quy đổi hiện tại: 1 VND = 1 credit. Số phút được làm tròn xuống.</p>
           </div>
 
           {/* Error display */}

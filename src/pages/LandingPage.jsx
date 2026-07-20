@@ -11,6 +11,9 @@ import {
   ShieldCheck,
   RefreshCcw,
   Wallet,
+  Clock3,
+  Database,
+  Headphones,
 } from "lucide-react";
 import { PRICING } from "../config/pricing";
 
@@ -110,29 +113,29 @@ export default function LandingPage() {
             <div className="flex flex-wrap items-center gap-3 mt-2">
               <MagneticPrimary>
                 <Play className="w-4 h-4 fill-current" />
-                Render ngay
+                Dùng thử với video ngắn
               </MagneticPrimary>
-              <Link
-                to="/pricing"
+              <a
+                href="#demo"
                 className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] px-6 py-3.5 text-sm font-semibold text-slate-200 transition active:scale-[0.98]"
               >
-                Xem bảng phí
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <Headphones className="w-4 h-4" />
+                Nghe trước / sau
+              </a>
             </div>
 
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-xs font-mono uppercase tracking-wider text-slate-500">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-xs font-medium text-slate-500">
               <li className="inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.5)]" />
-                Whisper ASR
+                Giữ nhạc nền
               </li>
               <li className="inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_12px_2px_rgba(129,140,248,0.5)]" />
-                Gemini Pro
+                SRT song ngữ
               </li>
               <li className="inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.5)]" />
-                Edge TTS
+                Hoàn credit khi lỗi
               </li>
             </ul>
           </div>
@@ -200,6 +203,36 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <section id="demo" className="mt-24 scroll-mt-8">
+          <div className="max-w-2xl">
+            <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300">
+              Demo âm thanh 6 giây
+            </div>
+            <h2 className="mt-3 text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white text-balance">
+              Nghe trước khi quyết định nạp credit.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-400">
+              Cùng một thông điệp, trước bằng tiếng Anh và sau bằng giọng Việt. Đây là đoạn minh họa ngắn được tạo bằng chính giọng đọc dùng trong VietCast.
+            </p>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <DemoVideoCard
+              eyebrow="Trước · tiếng Anh"
+              title="Video nguồn"
+              description="Nghe câu gốc để so sánh nhịp nói và nội dung."
+              src="/demo/original-en.mp4"
+            />
+            <DemoVideoCard
+              eyebrow="Sau · tiếng Việt"
+              title="Bản VietCast"
+              description="Nội dung được chuyển sang tiếng Việt với giọng Nam Minh."
+              src="/demo/vietcast-vi.mp4"
+              accent
+            />
+          </div>
+        </section>
+
         {/* FEATURE STRIP: three quiet, generous cards. No equal-card
             grid. Card 2 is wider and visually anchored because dubbing
             is the headline product. */}
@@ -229,7 +262,7 @@ export default function LandingPage() {
         </section>
 
         {/* POLICY ROW */}
-        <section className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <PolicyCard
             icon={Wallet}
             title="Đặt cọc trước"
@@ -260,6 +293,26 @@ export default function LandingPage() {
               </>
             }
           />
+          <PolicyCard
+            icon={Clock3}
+            title="Thời gian xử lý"
+            body={
+              <>
+                Dashboard hiển thị tiến độ theo từng bước. Phụ đề thường nhanh hơn
+                lồng tiếng vì không phải tạo giọng và render lại video.
+              </>
+            }
+          />
+          <PolicyCard
+            icon={Database}
+            title="Lưu trữ kết quả"
+            body={
+              <>
+                Ứng dụng hiện không đặt lịch xóa tự động. Kết quả nằm trong Lịch sử
+                để tải lại; bạn vẫn nên lưu một bản riêng cho dự án quan trọng.
+              </>
+            }
+          />
         </section>
 
         {/* FINAL CTA. One last conversion moment before the footer. */}
@@ -275,13 +328,13 @@ export default function LandingPage() {
                 Nạp credit. Dịch. Xuất.
               </h2>
               <p className="mt-4 max-w-xl mx-auto text-base text-slate-400 leading-relaxed">
-                Đăng nhập, chọn gói nạp phù hợp, và bắt đầu render video đầu
-                tiên trong vòng một phút.
+                Đăng nhập, dán URL và xem chi phí trước khi bấm xử lý. Bắt đầu
+                bằng một video ngắn để tự đánh giá chất lượng.
               </p>
               <div className="mt-8 flex justify-center">
                 <MagneticPrimary>
                   <Coins className="w-4 h-4" />
-                  Nạp credit ngay
+                  Dùng thử với video ngắn
                 </MagneticPrimary>
               </div>
             </div>
@@ -336,5 +389,28 @@ function PolicyCard({ icon: Icon, title, body }) {
       </div>
       <p className="text-xs text-slate-400 leading-relaxed">{body}</p>
     </div>
+  );
+}
+
+function DemoVideoCard({ eyebrow, title, description, src, accent = false }) {
+  return (
+    <article className={`${SURFACE} overflow-hidden ${accent ? "border-emerald-400/25" : ""}`}>
+      <div className="aspect-video bg-slate-950">
+        <video
+          controls
+          preload="metadata"
+          src={src}
+          aria-label={`${title}: ${description}`}
+          className="h-full w-full object-cover"
+        />
+      </div>
+      <div className="p-5 sm:p-6">
+        <div className={`text-[10px] font-mono uppercase tracking-[0.2em] ${accent ? "text-emerald-300" : "text-slate-500"}`}>
+          {eyebrow}
+        </div>
+        <h3 className="mt-2 text-lg font-bold text-white">{title}</h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{description}</p>
+      </div>
+    </article>
   );
 }
