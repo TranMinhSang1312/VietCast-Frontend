@@ -12,6 +12,7 @@ import {
   RefreshCcw,
   Wallet,
 } from "lucide-react";
+import { PRICING } from "../config/pricing";
 
 // Reused across the page so the surface tokens stay consistent.
 const SURFACE = "rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl";
@@ -88,7 +89,7 @@ export default function LandingPage() {
           <div className="lg:col-span-7 flex flex-col gap-7">
             <div className="inline-flex items-center gap-2 self-start rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-yellow-300">
               <Zap className="w-3.5 h-3.5 fill-yellow-300" />
-              Miễn phí file SRT cho mỗi tác vụ
+              Tặng SRT khi dịch hoặc lồng tiếng
             </div>
 
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-[-0.03em] sm:tracking-[-0.04em] text-white leading-[1.02]">
@@ -171,7 +172,7 @@ export default function LandingPage() {
                       Phí ước tính
                     </div>
                     <div className="mt-1.5 text-2xl font-extrabold tracking-tight text-emerald-300">
-                      6.000
+                      {(12 * PRICING.dubPerMinute).toLocaleString("vi-VN")}
                     </div>
                     <div className="text-[10px] text-slate-500 mt-0.5">credit</div>
                   </div>
@@ -206,14 +207,14 @@ export default function LandingPage() {
           <FeatureCard
             icon={VolumeX}
             title="Giữ tiếng gốc / Video câm"
-            body="Phí cố định 200 credit cho mỗi video. Tải video giữ nguyên âm thanh hoặc xuất video không tiếng (câm)."
+            body={`${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Chỉ tải và xử lý âm thanh, không chạy dịch hoặc tạo giọng AI.`}
             accent="slate"
             className="md:col-span-4"
           />
           <FeatureCard
             icon={Mic}
             title="Lồng tiếng AI"
-            body="800 credit / phút. Lồng tiếng đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ."
+            body={`${PRICING.dubPerMinute} credit/phút. Lồng tiếng đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ.`}
             accent="indigo"
             highlight
             className="md:col-span-5"
@@ -221,7 +222,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={Subtitles}
             title="Dịch phụ đề"
-            body="1 credit / dòng phụ đề. Dịch lại trực tiếp từng dòng trong trang chỉnh sửa mà không cần chạy lại video."
+            body={`${PRICING.subtitlePerMinute} credit/phút. Nhận file SRT tiếng Việt mà không tạo giọng đọc hoặc render lại video.`}
             accent="slate"
             className="md:col-span-3"
           />

@@ -49,7 +49,7 @@ const LEFT_COPY = {
     titleStart: "Dịch thuật và tạo giọng đọc ",
     titleAccent: "chuẩn tiếng Việt.",
     body:
-      "VietCast giữ nguyên âm điệu tự nhiên, hỗ trợ lồng tiếng đè giọng hoặc giữ nhạc nền gốc, kèm phụ đề SRT song ngữ cho từng tác vụ.",
+      "VietCast hỗ trợ lồng tiếng đè giọng hoặc giữ nhạc nền gốc; các chế độ dịch và lồng tiếng có kèm phụ đề SRT song ngữ.",
   },
   register: {
     eyebrow: "Bắt đầu miễn phí",
@@ -303,7 +303,7 @@ export default function Login() {
           {!isVerify && !isRegister && (
             <div className="mt-10 inline-flex items-center gap-2 rounded-full bg-yellow-400/10 border border-yellow-400/30 px-3 py-1.5 text-xs font-semibold text-yellow-200">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Mỗi tác vụ tặng kèm file SRT song ngữ.
+              Tác vụ dịch và lồng tiếng có kèm file SRT song ngữ.
             </div>
           )}
 
