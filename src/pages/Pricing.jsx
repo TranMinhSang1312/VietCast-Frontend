@@ -502,9 +502,9 @@ export default function Pricing() {
                       {c.toLocaleString("vi-VN")} credit
                     </td>
                     <td className="px-5 py-3 text-right text-xs text-slate-500 hidden sm:table-cell">
-                      ≈ {Math.floor(c / RATE_PER_MINUTE)} phút render{" "}
+                      ≈ {Math.floor(c / SUBTITLE_RATE_PER_MINUTE)} phút phụ đề{" "}
                       <span className="text-slate-700">·</span>{" "}
-                      {Math.floor(c / (RATE_PER_MINUTE * MAX_MINUTES))} video tối đa ({MAX_MINUTES}p)
+                      {Math.floor(c / RATE_PER_MINUTE)} phút lồng tiếng
                     </td>
                   </tr>
                 ))}

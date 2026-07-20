@@ -73,7 +73,6 @@ export default function Login() {
   // "verify"  — 6-digit OTP form (the email field is reused, the user
   //             can't edit it without going back to register).
   const [mode, setMode] = useState("login");
-  const [registerStep, setRegisterStep] = useState("form"); // "form" | "otp"
 
   // Form state. Kept shared across modes so toggling is instant, but
   // `switchMode` wipes everything to avoid the "old email still in the
@@ -101,14 +100,13 @@ export default function Login() {
   // programmatic fill (paste handler below).
   const otpInputRefs = useRef([]);
 
-  // Convenience: register = register mode = "form" substep.
+  // Mode is the single source of truth for which form is visible.
   const isRegister = mode === "register";
   const isVerify = mode === "verify";
   const copy = LEFT_COPY[isVerify ? "verify" : mode];
 
   const switchMode = useCallback((next) => {
     setMode(next);
-    if (next !== "register") setRegisterStep("form");
     setError(null);
     setIsLoading(false);
     setIsGoogleLoading(false);
@@ -153,7 +151,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await register({ email: email.trim(), password });
-      setRegisterStep("otp");
+      setMode("verify");
       setOtp(["", "", "", "", "", ""]);
       // Focus the first OTP slot after the form re-renders.
       setTimeout(() => otpInputRefs.current[0]?.focus(), 50);
@@ -192,7 +190,9 @@ export default function Login() {
       // coming back is already a friendly Vietnamese hint, so we
       // surface it as a non-fatal info rather than blowing up the UI.
       await register({ email: email.trim(), password });
+      setOtp(["", "", "", "", "", ""]);
       setError("Đã gửi lại mã OTP. Vui lòng kiểm tra email.");
+      setTimeout(() => otpInputRefs.current[0]?.focus(), 50);
     } catch (err) {
       setError(err?.message || "Không gửi lại được OTP. Vui lòng thử lại.");
     } finally {
@@ -466,7 +466,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => {
-                    setRegisterStep("form");
+                    setMode("register");
                     setError(null);
                     setOtp(["", "", "", "", "", ""]);
                   }}

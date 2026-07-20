@@ -150,14 +150,17 @@ function AppShell() {
         </main>
       </div>
 
-      <TopupModal
-        isOpen={isTopupOpen}
-        onClose={() => {
-          setIsTopupOpen(false);
-          setTopupPrefill(null);
-        }}
-        prefillAmount={topupPrefill}
-      />
+      {isTopupOpen && (
+        <TopupModal
+          key={topupPrefill ?? "standard"}
+          isOpen
+          onClose={() => {
+            setIsTopupOpen(false);
+            setTopupPrefill(null);
+          }}
+          prefillAmount={topupPrefill}
+        />
+      )}
     </div>
   );
 }

@@ -40,6 +40,29 @@ const AUDIO_MODES = [
   },
 ];
 
+const MODE_OUTPUTS = Object.freeze({
+  original: { label: "Video giữ tiếng gốc", video: true, srt: false },
+  mute: { label: "Video không âm thanh", video: true, srt: false },
+  subtitle: { label: "Phụ đề SRT tiếng Việt", video: false, srt: true },
+  dub: { label: "Video lồng tiếng + SRT", video: true, srt: true },
+  mix: { label: "Video trộn âm + SRT", video: true, srt: true },
+});
+
+function outputForMode(mode) {
+  return MODE_OUTPUTS[mode] ?? MODE_OUTPUTS.mix;
+}
+
+function progressLabel(mode, progress) {
+  if (progress < 10) return "ĐANG TẢI VIDEO TỪ NGUỒN...";
+  if (mode === "original" || mode === "mute") {
+    return progress < 90 ? "ĐANG XỬ LÝ VIDEO..." : "ĐANG TẢI KẾT QUẢ LÊN...";
+  }
+  if (progress < 35) return "ĐANG TRÍCH XUẤT ÂM THANH...";
+  if (progress < 70) return mode === "subtitle" ? "ĐANG NHẬN DẠNG LỜI NÓI..." : "ĐANG DỊCH SANG TIẾNG VIỆT...";
+  if (mode === "subtitle") return "ĐANG HOÀN THIỆN FILE SRT...";
+  return progress < 90 ? "ĐANG TỔNG HỢP GIỌNG ĐỌC AI..." : "ĐANG RENDER VIDEO CUỐI CÙNG...";
+}
+
 // Whitelist kept in sync with backend VideoRequest.@Pattern on `voice`.
 // Blank / null means "use the engine's built-in TTS_VOICE default".
 const VOICE_OPTIONS = [
@@ -1133,20 +1156,30 @@ const ResultPanel = memo(function ResultPanel({
   onVideoError,
   onDownload,
 }) {
+  const output = outputForMode(result.audioMode);
+  const isCompleted = result.status === "COMPLETED";
+  const isFailed = result.status === "FAILED";
+  const missingExpectedOutput = isCompleted
+    && ((output.video && !result.videoUrl) || (output.srt && !result.srtUrl));
+
   return (
     <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-6 flex flex-col h-full justify-between">
       <div>
         <div className="flex items-start justify-between gap-3 mb-6 select-none">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
+              {result.audioMode === "subtitle" ? (
+                <Subtitles className="w-4.5 h-4.5 text-emerald-400" />
+              ) : (
+                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
+              )}
             </div>
             <div>
               <h2 className="text-base font-bold text-zinc-200">
-                {result.status === "COMPLETED" ? "Tác vụ đã hoàn thành" : "Tác vụ đang xử lý"}
+                {isCompleted ? "Tác vụ đã hoàn thành" : isFailed ? "Tác vụ thất bại" : "Tác vụ đang xử lý"}
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5 font-mono">
-                Task ID: <span className="text-emerald-400">{result.taskId}</span>
+                {output.label} · Task <span className="text-emerald-400">#{result.taskId}</span>
               </p>
             </div>
           </div>
@@ -1164,15 +1197,7 @@ const ResultPanel = memo(function ResultPanel({
           <div className="mb-6 select-none">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
               <span>
-                {progress < 10
-                  ? "ĐANG TẢI VIDEO TỪ NGUỒN..."
-                  : progress < 35
-                  ? "ĐANG TRÍCH XUẤT ÂM THANH..."
-                  : progress < 70
-                  ? "ĐANG DỊCH SANG TIẾNG VIỆT..."
-                  : progress < 90
-                  ? "ĐANG TỔNG HỢP GIỌNG ĐỌC AI..."
-                  : "ĐANG RENDER VIDEO CUỐI CÙNG..."}
+                {progressLabel(result.audioMode, progress)}
               </span>
               <span className="text-zinc-200">{progress}%</span>
             </div>
@@ -1192,9 +1217,11 @@ const ResultPanel = memo(function ResultPanel({
           </div>
         )}
 
-        {/* Video Player */}
-        <div className="rounded-xl overflow-hidden bg-black border border-white/[0.06] aspect-video relative">
-          {videoSrc && result.status === "COMPLETED" ? (
+        {/* Output preview. Subtitle-only jobs intentionally do not show an
+            empty video player because their product is the SRT file. */}
+        {output.video ? (
+          <div className="rounded-xl overflow-hidden bg-black border border-white/[0.06] aspect-video relative">
+          {videoSrc && isCompleted ? (
             <>
               <video
                 controls
@@ -1222,7 +1249,28 @@ const ResultPanel = memo(function ResultPanel({
               <p className="text-sm text-zinc-355">Không thể phát trực tiếp video. Hãy thử tải về máy của bạn.</p>
             </div>
           )}
-        </div>
+          </div>
+        ) : (
+          <div className="min-h-56 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] px-6 py-8 flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-slate-950 ring-1 ring-emerald-400/25 flex items-center justify-center">
+              {isProcessing ? (
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-300" />
+              ) : (
+                <Subtitles className="w-6 h-6 text-emerald-300" />
+              )}
+            </div>
+            <h3 className="mt-4 text-lg font-bold text-white">
+              {isCompleted ? "File phụ đề đã sẵn sàng" : isFailed ? "Không tạo được phụ đề" : "Đang tạo phụ đề tiếng Việt"}
+            </h3>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
+              {isCompleted
+                ? "Tác vụ này chỉ xuất SRT nên không có video xem trước. Bạn có thể tải file và ghép vào trình phát hoặc phần mềm dựng phim."
+                : isFailed
+                ? "Credit đã trừ sẽ được hoàn theo chính sách tác vụ thất bại."
+                : "Hệ thống đang nhận dạng, dịch và đóng gói file SRT; không chạy bước tạo giọng hay render video."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Action Actions */}
@@ -1245,18 +1293,24 @@ const ResultPanel = memo(function ResultPanel({
           </span>
         </div>
 
-        <div className="flex gap-2.5">
-          {result.srtUrl && (
+        {missingExpectedOutput && (
+          <div role="alert" className="rounded-xl border border-amber-400/25 bg-amber-400/[0.05] px-4 py-3 text-xs text-amber-200">
+            Tác vụ đã hoàn thành nhưng máy chủ chưa trả đủ file đầu ra. Hãy mở Lịch sử tác vụ và thử tải lại sau ít phút.
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          {output.srt && result.srtUrl && isCompleted && (
             <button
               type="button"
               onClick={() => onDownload(result.taskId, "srt")}
               className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-slate-200 text-sm font-semibold active:scale-[0.98] transition cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span>Tải Phụ đề</span>
+              <span>Tải phụ đề SRT</span>
             </button>
           )}
-          {result.videoUrl && result.status === "COMPLETED" && (
+          {output.video && result.videoUrl && isCompleted && (
             <button
               type="button"
               onClick={() => onDownload(result.taskId, "video")}
