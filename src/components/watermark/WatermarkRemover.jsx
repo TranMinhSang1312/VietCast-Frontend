@@ -3,6 +3,7 @@ import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Eraser, Loader2, X, AlertTriangle } from "lucide-react";
 import axios from "axios";
+import { API_BASE_URL_PROVIDER } from "../../config";
 
 const DEFAULT_CROP_PERCENT = 30;
 
@@ -51,7 +52,7 @@ export default function WatermarkRemover({
       setError(null);
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/v1/videos/preview-frame`,
+          `${API_BASE_URL_PROVIDER.sync}/api/v1/videos/preview-frame`,
           {
             params: { url: videoSrc },
             responseType: "blob",
