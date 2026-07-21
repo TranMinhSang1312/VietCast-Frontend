@@ -283,6 +283,7 @@ export default function WatermarkRemover({
                   src={frameUrl}
                   alt="Khung hình video xem trước"
                   className="max-h-[55vh] max-w-full block object-contain"
+                  draggable={false}
                 />
               </ReactCrop>
             )}
