@@ -243,6 +243,30 @@ export default function WatermarkRemover({
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-rose-400 text-sm font-medium gap-3 bg-slate-950/80">
                 <AlertTriangle className="w-8 h-8 text-rose-400" />
                 <span className="max-w-md">{error}</span>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="%2318181b" stroke="%233f3f46" stroke-width="4"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23a1a1aa" font-family="sans-serif" font-size="36" font-weight="bold">MÀN HÌNH MẪU NGANG (16:9 - 1080p)</text><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="%2371717a" font-family="sans-serif" font-size="24">Vẽ ô vuông che logo/phụ đề tại vị trí tương ứng</text></svg>`;
+                      setFrameUrl(svg);
+                      setError(null);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition active:scale-[0.98]"
+                  >
+                    Dùng màn hình mẫu ngang (16:9)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920"><rect width="1080" height="1920" fill="%2318181b" stroke="%233f3f46" stroke-width="4"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23a1a1aa" font-family="sans-serif" font-size="36" font-weight="bold">MÀN HÌNH MẪU DỌC (9:16 - 1080p)</text><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%2371717a" font-family="sans-serif" font-size="24">Vẽ ô vuông che logo/phụ đề tại vị trí tương ứng</text></svg>`;
+                      setFrameUrl(svg);
+                      setError(null);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition active:scale-[0.98]"
+                  >
+                    Dùng màn hình mẫu dọc (9:16)
+                  </button>
+                </div>
               </div>
             )}
 
