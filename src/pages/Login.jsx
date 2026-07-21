@@ -43,6 +43,16 @@ function validateRegisterForm({ email, password, confirmPassword }) {
   return null;
 }
 
+function signupBenefitFrom(userOrResponse) {
+  if (userOrResponse?.signupBenefitGranted !== true) return null;
+  const amount = Number(userOrResponse?.bonusCreditBalance ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return {
+    amount,
+    expiresAt: userOrResponse?.bonusExpiresAt ?? null,
+  };
+}
+
 const LEFT_COPY = {
   login: {
     eyebrow: "Lồng tiếng AI cho video của bạn",
@@ -173,8 +183,11 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
-      await verifyEmail({ email: email.trim(), otp: code });
-      navigate(postLoginTarget, { replace: true });
+      const verifiedUser = await verifyEmail({ email: email.trim(), otp: code });
+      navigate(postLoginTarget, {
+        replace: true,
+        state: { signupBenefit: signupBenefitFrom(verifiedUser) },
+      });
     } catch (err) {
       setError(err?.message || "Mã OTP không đúng hoặc đã hết hạn.");
     } finally {
@@ -210,8 +223,11 @@ export default function Login() {
       }
       setIsGoogleLoading(true);
       try {
-        await googleLogin(idToken);
-        navigate(postLoginTarget, { replace: true });
+        const signedInUser = await googleLogin(idToken);
+        navigate(postLoginTarget, {
+          replace: true,
+          state: { signupBenefit: signupBenefitFrom(signedInUser) },
+        });
       } catch (err) {
         setError(
           err?.message ||

@@ -1,11 +1,20 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Sidebar from "./components/layout/Sidebar";
 import CreditPill from "./components/layout/CreditPill";
 import TopupModal from "./components/topup/TopupModal";
-import { LogOut, Loader2, Shield } from "lucide-react";
+import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
+import { formatCredit, formatCountdown } from "./utils/format";
 
 // Lazy-load the heavy tab contents so the initial bundle only ships the
 // Login + nav chrome.
@@ -42,7 +51,23 @@ function AppShell() {
   const [isTopupOpen, setIsTopupOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [topupPrefill, setTopupPrefill] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [welcomeBenefit, setWelcomeBenefit] = useState(
+    () => location.state?.signupBenefit ?? null
+  );
   const { user, logout, syncProfile } = useAuth();
+
+  // Navigation state makes this a one-time welcome message. Clear the
+  // route state immediately so refresh/back does not repeat it.
+  useEffect(() => {
+    const incoming = location.state?.signupBenefit;
+    if (!incoming) return;
+    navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: null,
+    });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   // Cross-component channel for opening the topup modal from inside
   // any tab (e.g. VideoDashboard's "Insufficient credit" warning).
@@ -144,6 +169,37 @@ function AppShell() {
         </header>
 
         <main className="flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-950">
+          {welcomeBenefit && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mx-4 mt-4 flex items-start gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.08] p-4 sm:mx-6"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-300/20 bg-emerald-300/10">
+                <Gift className="h-5 w-5 text-emerald-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">
+                  Chào mừng bạn đến VietCast
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-emerald-100/75 sm:text-sm">
+                  Bạn đã nhận {formatCredit(welcomeBenefit.amount)} credit phúc lợi để trải nghiệm dịch vụ
+                  {welcomeBenefit.expiresAt && (
+                    <>. Thời gian sử dụng còn {formatCountdown(welcomeBenefit.expiresAt)}</>
+                  )}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWelcomeBenefit(null)}
+                aria-label="Đóng thông báo phúc lợi"
+                className="shrink-0 rounded-lg p-1.5 text-emerald-200/60 transition hover:bg-emerald-300/10 hover:text-emerald-100 active:scale-[0.98]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <Suspense fallback={<TabFallback />}>
             <Outlet />
           </Suspense>

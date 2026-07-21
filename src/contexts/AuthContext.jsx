@@ -108,7 +108,12 @@ export function AuthProvider({ children }) {
     setToken(data.token);
     setUser(userPayload);
     axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
-    return userPayload;
+    // Keep the one-response-only benefit flag out of localStorage. It is
+    // returned to Login.jsx only so the welcome banner appears once.
+    return {
+      ...userPayload,
+      signupBenefitGranted: data.signupBenefitGranted === true,
+    };
   }, []);
 
   /**
