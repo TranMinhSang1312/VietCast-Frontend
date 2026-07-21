@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { XCircle, ArrowLeft, Coins } from "lucide-react";
 
@@ -19,10 +20,29 @@ export default function PaymentCancel() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  const status = searchParams.get("status");
+
+  // Redirect to success if transaction was actually paid but user landed on cancel page
+  useEffect(() => {
+    if (status === "PAID") {
+      navigate("/payment/success?" + searchParams.toString(), { replace: true });
+    }
+  }, [status, searchParams, navigate]);
+
   const orderCode =
     searchParams.get("orderCode") ||
     searchParams.get("id") ||
     null;
+
+  if (status === "PAID") {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-700/60 rounded-2xl p-8 text-center text-slate-300">
+          Đang xác nhận thông tin thanh toán...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
