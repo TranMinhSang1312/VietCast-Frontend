@@ -137,6 +137,20 @@ export default function WatermarkRemover({
     };
   }, []);
 
+  const onImageLoad = useCallback((e) => {
+    const { width, height } = e.currentTarget;
+    setCrop(
+      centerCrop(
+        makeAspectCrop(
+          { unit: "%", width: DEFAULT_CROP_PERCENT },
+          initialAspect ?? 16 / 9,
+        ),
+        width,
+        height,
+      )
+    );
+  }, [initialAspect]);
+
   // ------------------------------------------------------------------
   // Handlers
   // ------------------------------------------------------------------
@@ -247,7 +261,7 @@ export default function WatermarkRemover({
                   <button
                     type="button"
                     onClick={() => {
-                      const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="%2318181b" stroke="%233f3f46" stroke-width="4"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23a1a1aa" font-family="sans-serif" font-size="36" font-weight="bold">MÀN HÌNH MẪU NGANG (16:9 - 1080p)</text><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="%2371717a" font-family="sans-serif" font-size="24">Vẽ ô vuông che logo/phụ đề tại vị trí tương ứng</text></svg>`;
+                      const svg = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxyZWN0IHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIGZpbGw9IiMxODE4MWIiIHN0cm9rZT0iIzNmM2Y0NiIgc3Ryb2tlLXdpZHRoPSI0Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhMWExYWEiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjM2IiBmb250LXdlaWdodD0iYm9sZCI+TcOATiBIw4xOSCBN4bqqVSBOR0FORyAoMTY6OSAtIDEwODBwKTwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjU4JSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzcxNzE3YSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiPlbhur0gw7QgdnXDtG5nIGNoZSBsb2dvL3Bo4bulIMSR4buBIHThuqFpIHbhu4sgdHLDrSB0xrDGoW5nIOG7qW5nPC90ZXh0Pjwvc3ZnPg==`;
                       setFrameUrl(svg);
                       setError(null);
                     }}
@@ -258,7 +272,7 @@ export default function WatermarkRemover({
                   <button
                     type="button"
                     onClick={() => {
-                      const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920"><rect width="1080" height="1920" fill="%2318181b" stroke="%233f3f46" stroke-width="4"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23a1a1aa" font-family="sans-serif" font-size="36" font-weight="bold">MÀN HÌNH MẪU DỌC (9:16 - 1080p)</text><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%2371717a" font-family="sans-serif" font-size="24">Vẽ ô vuông che logo/phụ đề tại vị trí tương ứng</text></svg>`;
+                      const svg = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDgwIiBoZWlnaHQ9IjE5MjAiIHZpZXdCb3g9IjAgMCAxMDgwIDE5MjAiPjxyZWN0IHdpZHRoPSIxMDgwIiBoZWlnaHQ9IjE5MjAiIGZpbGw9IiMxODE4MWIiIHN0cm9rZT0iIzNmM2Y0NiIgc3Ryb2tlLXdpZHRoPSI0Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhMWExYWEiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjM2IiBmb250LXdlaWdodD0iYm9sZCI+TcOATiBIw4xOSCBN4bqqVSBE4buMQyAoOToxNiAtIDEwODBwKTwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjU1JSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzcxNzE3YSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiPlbhur0gw7QgdnXDtG5nIGNoZSBsb2dvL3Bo4bulIMSR4buBIHThuqFpIHbhu4sgdHLDrSB0xrDGoW5nIOG7qW5nPC90ZXh0Pjwvc3ZnPg==`;
                       setFrameUrl(svg);
                       setError(null);
                     }}
@@ -284,6 +298,7 @@ export default function WatermarkRemover({
                   alt="Khung hình video xem trước"
                   className="max-h-[55vh] max-w-full block object-contain"
                   draggable={false}
+                  onLoad={onImageLoad}
                 />
               </ReactCrop>
             )}
