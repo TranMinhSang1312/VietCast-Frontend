@@ -27,6 +27,7 @@
 
 import axios from "axios";
 import { API_BASE_URL_PROVIDER } from "../config";
+import { getBrowserFingerprint } from "../utils/fingerprint";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 
@@ -73,9 +74,10 @@ export async function login({ emailOrUsername, password }) {
  * @returns {Promise<AuthResponseBody>}
  */
 export async function register({ email, password }) {
+  const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.register,
-    { email, password },
+    { email, password, deviceFingerprint },
     { skipAuth: true }   // public route — no bearer header
   );
   return data;
@@ -108,9 +110,10 @@ export async function verifyEmail({ email, otp }) {
  * @returns {Promise<AuthResponseBody>}
  */
 export async function loginWithGoogle({ idToken }) {
+  const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.google,
-    { idToken },
+    { idToken, deviceFingerprint },
     { skipAuth: true }   // the public /google route
   );
   return data;
