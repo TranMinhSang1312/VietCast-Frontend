@@ -79,6 +79,8 @@ const VOICE_OPTIONS = [
 ];
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
+const ACTIVE_TASK_STORAGE_KEY = "vc_active_task";
+const TASK_RECOVERY_LOOKBACK_MS = 10 * 60 * 1000;
 
 function extractUrl(raw) {
   if (!raw || !raw.trim()) return null;
@@ -102,6 +104,52 @@ function normalizePreviewUrl(raw) {
   return stripped.replace(/[?&]$/, "");
 }
 
+function toDashboardResult(task, fallback) {
+  const taskId = task?.taskId ?? task?.id;
+  if (taskId === null || taskId === undefined || taskId === "") return null;
+
+  const status = task.status === "PENDING" ? "PROCESSING" : task.status;
+  return {
+    ...fallback,
+    taskId: String(taskId),
+    status: status || "PROCESSING",
+    url: task.originalUrl ?? fallback?.url ?? null,
+    audioMode: task.audioMode ?? fallback?.audioMode ?? null,
+    videoUrl: task.videoUrl ?? task.resultUrl ?? null,
+    srtUrl: task.srtUrl ?? null,
+    message: task.message ?? task.note ?? fallback?.message ?? null,
+    progress: typeof task.progress === "number" ? task.progress : 0,
+  };
+}
+
+function taskMatchesSubmission(task, submission) {
+  if (!task || !submission?.url) return false;
+  const sameUrl = normalizePreviewUrl(task.originalUrl) === normalizePreviewUrl(submission.url);
+  const sameMode = !task.audioMode || !submission.audioMode || task.audioMode === submission.audioMode;
+  if (!sameUrl || !sameMode) return false;
+
+  const submittedAt = Date.parse(submission.submittedAt);
+  const createdAt = Date.parse(task.createdAt);
+  const lowerBound = Number.isFinite(submittedAt)
+    ? submittedAt - 15_000
+    : Date.now() - TASK_RECOVERY_LOOKBACK_MS;
+  return !Number.isFinite(createdAt) || createdAt >= lowerBound;
+}
+
+async function recoverSubmittedTask(submission, attempts = 3) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const { data } = await axios.get(`${API_BASE_URL}/api/v1/tasks`, { timeout: 10000 });
+    const tasks = Array.isArray(data) ? data : [];
+    const match = tasks.find((task) => taskMatchesSubmission(task, submission));
+    if (match) return toDashboardResult(match, submission);
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+  return null;
+}
+
 export default function VideoDashboard() {
   const { updateCreditBalance } = useAuth();
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
@@ -113,7 +161,7 @@ export default function VideoDashboard() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(() => {
     try {
-      const saved = localStorage.getItem("vc_active_task");
+      const saved = localStorage.getItem(ACTIVE_TASK_STORAGE_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -149,6 +197,7 @@ export default function VideoDashboard() {
 
   const pollIntervalRef = useRef(null);
   const usageLoggedTaskIdRef = useRef(null);
+  const recoveryAttemptedRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem("vc_url", url);
@@ -172,9 +221,9 @@ export default function VideoDashboard() {
 
   useEffect(() => {
     if (result) {
-      localStorage.setItem("vc_active_task", JSON.stringify(result));
+      localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(result));
     } else {
-      localStorage.removeItem("vc_active_task");
+      localStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
     }
   }, [result]);
 
@@ -190,6 +239,7 @@ export default function VideoDashboard() {
   }, []);
 
   const resetResultState = useCallback(() => {
+    localStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
     setResult(null);
     setProgress(0);
     setVideoReady(false);
@@ -360,6 +410,55 @@ const handleReset = useCallback(() => {
     }
   }, [updateCreditBalance]);
 
+  // A submit can finish after the user navigates to History. React then
+  // discards the state update from the unmounted dashboard, while the
+  // optimistic PROCESSING object remains in localStorage without a taskId.
+  // Reconcile that object against the authoritative task list on remount.
+  useEffect(() => {
+    if (!result || result.taskId || result.status !== "PROCESSING") return;
+    if (recoveryAttemptedRef.current) return;
+    recoveryAttemptedRef.current = true;
+
+    let cancelled = false;
+    const pending = result;
+
+    recoverSubmittedTask(pending)
+      .then((recovered) => {
+        if (recovered) {
+          localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(recovered));
+          if (!cancelled) {
+            setResult(recovered);
+            setProgress(
+              recovered.status === "COMPLETED"
+                ? 100
+                : recovered.status === "FAILED"
+                  ? 0
+                  : recovered.progress || 0,
+            );
+            setError(null);
+            refreshUserCredit();
+          }
+          return;
+        }
+
+        localStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
+        if (!cancelled) {
+          setResult(null);
+          setProgress(0);
+          setError("Không thể nối lại tác vụ vừa gửi. Vui lòng kiểm tra trong Lịch sử video.");
+        }
+      })
+      .catch(() => {
+        // Keep the pending object so the next page visit can retry recovery;
+        // a temporary history/API outage must not destroy the task handle.
+        recoveryAttemptedRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [result, refreshUserCredit]);
+
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
@@ -393,7 +492,15 @@ const handleReset = useCallback(() => {
 
       setIsLoading(true);
       setError(null);
-      setResult({ status: "PROCESSING", url: cleanUrl, audioMode });
+      recoveryAttemptedRef.current = false;
+      const pendingSubmission = {
+        status: "PROCESSING",
+        url: cleanUrl,
+        audioMode,
+        submittedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(pendingSubmission));
+      setResult(pendingSubmission);
       setVideoReady(false);
       setVideoError(false);
 
@@ -411,12 +518,50 @@ const handleReset = useCallback(() => {
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
-        setResult({ ...data, url: data.url ?? cleanUrl, audioMode: data.audioMode ?? audioMode, voice: data.voice ?? voice });
+        const acceptedResult = {
+          ...data,
+          url: data.url ?? cleanUrl,
+          audioMode: data.audioMode ?? audioMode,
+          voice: data.voice ?? voice,
+          submittedAt: pendingSubmission.submittedAt,
+        };
+        // Persist synchronously: if navigation unmounts this component before
+        // React applies setResult, the next mount still has the real taskId.
+        localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(acceptedResult));
+        setResult(acceptedResult);
         refreshUserCredit();
       } catch (err) {
         const status = err?.response?.status || err?.status;
         const code = err?.response?.data?.code || err?.code;
         const backendMessage = err?.response?.data?.message;
+
+        // A timeout/network disconnect is ambiguous: the backend may have
+        // accepted and even completed the task after the browser stopped
+        // waiting. Recover it before showing an error or clearing the UI.
+        if (!err?.response || code === "ECONNABORTED") {
+          try {
+            const recovered = await recoverSubmittedTask(pendingSubmission);
+            if (recovered) {
+              localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(recovered));
+              setResult(recovered);
+              setProgress(
+                recovered.status === "COMPLETED"
+                  ? 100
+                  : recovered.status === "FAILED"
+                    ? 0
+                    : recovered.progress || 0,
+              );
+              setError(null);
+              refreshUserCredit();
+              return;
+            }
+          } catch {
+            // Fall through to the normal connection error after recovery
+            // attempts are exhausted.
+          }
+        }
+
+        resetResultState();
         if (code === "VIDEO_TOO_LONG" || status === 413) {
           // Cap enforcement surface. The preview may have failed
           // (yt-dlp timeout) so the user saw no banner, but /process
@@ -447,7 +592,7 @@ const handleReset = useCallback(() => {
         setIsLoading(false);
       }
     },
-    [url, audioMode, voice, logoCoordinates, subtitleMask, costPreview, updateCreditBalance, refreshUserCredit],
+    [url, audioMode, voice, logoCoordinates, subtitleMask, costPreview, updateCreditBalance, refreshUserCredit, resetResultState],
   );
 
   useEffect(() => {
@@ -1179,7 +1324,12 @@ const ResultPanel = memo(function ResultPanel({
                 {isCompleted ? "Tác vụ đã hoàn thành" : isFailed ? "Tác vụ thất bại" : "Tác vụ đang xử lý"}
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5 font-mono">
-                {output.label} · Task <span className="text-emerald-400">#{result.taskId}</span>
+                {output.label}
+                {result.taskId ? (
+                  <> · Task <span className="text-emerald-400">#{result.taskId}</span></>
+                ) : (
+                  <span className="text-indigo-300"> · Đang gửi yêu cầu…</span>
+                )}
               </p>
             </div>
           </div>
