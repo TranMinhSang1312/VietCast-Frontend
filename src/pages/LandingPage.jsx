@@ -247,7 +247,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={Mic}
             title="Lồng tiếng AI"
-            body={`${PRICING.dubPerMinute} credit/phút. Lồng tiếng đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ.`}
+            body={`${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Lồng tiếng đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ.`}
             accent="indigo"
             highlight
             className="md:col-span-5"
@@ -255,7 +255,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={Subtitles}
             title="Dịch phụ đề"
-            body={`${PRICING.subtitlePerMinute} credit/phút. Nhận file SRT tiếng Việt mà không tạo giọng đọc hoặc render lại video.`}
+            body={`${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT tiếng Việt mà không tạo giọng đọc hoặc render lại video.`}
             accent="slate"
             className="md:col-span-3"
           />

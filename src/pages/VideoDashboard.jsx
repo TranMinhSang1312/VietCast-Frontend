@@ -11,7 +11,7 @@ const AUDIO_MODES = [
   {
     value: "dub",
     label: "Lồng tiếng AI",
-    description: `${PRICING.dubPerMinute} credit/phút, gồm giọng Việt và SRT song ngữ.`,
+    description: `${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Gồm giọng Việt và SRT song ngữ.`,
     icon: Wand2,
   },
   {
@@ -23,19 +23,19 @@ const AUDIO_MODES = [
   {
     value: "mute",
     label: "Video câm",
-    description: `${PRICING.mutePerMinute} credit/phút, bỏ âm thanh và không tạo SRT.`,
+    description: `${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Bỏ âm thanh và không tạo SRT.`,
     icon: Film,
   },
   {
     value: "subtitle",
     label: "Chỉ tạo phụ đề",
-    description: `${PRICING.subtitlePerMinute} credit/phút, nhận file SRT tiếng Việt.`,
+    description: `${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT tiếng Việt.`,
     icon: Languages,
   },
   {
     value: "mix",
     label: "Trộn âm thanh gốc & AI",
-    description: `${PRICING.mixPerMinute} credit/phút, giữ nhạc nền và thêm giọng Việt.`,
+    description: `${PRICING.mixPerMinute} credit/phút, tối thiểu ${PRICING.mixPerMinute} credit. Giữ nhạc nền và thêm giọng Việt.`,
     icon: Subtitles,
   },
 ];

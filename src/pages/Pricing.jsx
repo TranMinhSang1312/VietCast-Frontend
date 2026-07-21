@@ -416,6 +416,7 @@ export default function Pricing() {
                 <Bullet text="Nhận dạng lời nói và dịch sang tiếng Việt" />
                 <Bullet text="Xuất file SRT, không tạo giọng đọc AI" />
                 <Bullet text="Không render hoặc upload lại video" />
+                <Bullet text={`Phí tối thiểu ${SUBTITLE_RATE_PER_MINUTE.toLocaleString("vi-VN")} credit mỗi tác vụ`} />
                 <Bullet text="Tự động hoàn tiền 100% khi xử lý thất bại" />
               </ul>
 
