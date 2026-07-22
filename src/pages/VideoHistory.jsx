@@ -166,12 +166,16 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             // written before this column existed; fall back to the
             // public URL so the user can still get the file inline.
             const code = err.response?.data?.code;
+            const status = err.response?.status;
+            const msg = err.response?.data?.message;
             const fallbackUrl = type === "srt" ? video.srtUrl : video.videoUrl;
-            if (code === "UNSUPPORTED_URL" && fallbackUrl) {
+            if (code === "FILE_EXPIRED" || status === 410) {
+                setActionError(msg || "Tệp này đã hết hạn lưu trữ 7 ngày trên hệ thống. Vui lòng thực hiện lại tác vụ nếu cần.");
+            } else if (code === "UNSUPPORTED_URL" && fallbackUrl) {
                 window.open(fallbackUrl, "_blank", "noopener");
             } else {
                 console.error("[download] failed", err);
-                setActionError(err.response?.data?.message || err.message || "Không thể tải file. Vui lòng thử lại.");
+                setActionError(msg || err.message || "Không thể tải file. Vui lòng thử lại.");
             }
         } finally {
             setDownloadingType(null);

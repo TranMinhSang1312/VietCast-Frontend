@@ -332,12 +332,16 @@ const handleReset = useCallback(() => {
             // fall back to opening the public URL so the user can still
             // get the file inline.
             const code = err.response?.data?.code;
+            const status = err.response?.status;
+            const msg = err.response?.data?.message;
             const fallback = type === "srt" ? result?.srtUrl : result?.videoUrl;
-            if (code === "UNSUPPORTED_URL" && fallback) {
+            if (code === "FILE_EXPIRED" || status === 410) {
+                setError(msg || "Tệp này đã hết hạn lưu trữ 7 ngày trên hệ thống. Vui lòng thực hiện lại tác vụ nếu cần.");
+            } else if (code === "UNSUPPORTED_URL" && fallback) {
                 window.open(fallback, "_blank", "noopener");
             } else {
                 console.error("[download] failed", err);
-                setError(err.response?.data?.message || err.message || "Không thể tải file. Vui lòng thử lại.");
+                setError(msg || err.message || "Không thể tải file. Vui lòng thử lại.");
             }
         }
     }, [result]);
