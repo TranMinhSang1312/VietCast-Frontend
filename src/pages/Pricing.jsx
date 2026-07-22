@@ -590,7 +590,7 @@ export default function Pricing() {
               q="Video và phụ đề kết quả được lưu trữ bao lâu?"
               a={
                 <>
-                  VietCast tự động lưu trữ các tệp Video và Phụ đề kết quả trên hạ tầng Cloudflare R2 trong <strong>7 ngày</strong> tính từ lúc khởi tạo. Sau 7 ngày, các tệp trên Cloudflare R2 sẽ tự động được dọn dẹp. Vui lòng tải file về thiết bị cá nhân để lưu trữ lâu dài.
+                  VietCast tự động lưu trữ các tệp Video và Phụ đề kết quả trên hệ thống trong <strong>7 ngày</strong> tính từ lúc khởi tạo. Sau 7 ngày, các tệp sẽ tự động được dọn dẹp. Vui lòng tải file về thiết bị cá nhân để lưu trữ lâu dài.
                 </>
               }
               open={openFaq === 5}

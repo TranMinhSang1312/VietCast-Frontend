@@ -151,7 +151,7 @@ async function recoverSubmittedTask(submission, attempts = 3) {
 }
 
 export default function VideoDashboard() {
-  const { updateCreditBalance } = useAuth();
+  const { updateCreditBalance, syncProfile } = useAuth();
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
@@ -401,14 +401,11 @@ const handleReset = useCallback(() => {
 
   const refreshUserCredit = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API_BASE_URL}/api/auth/me`);
-      if (data && typeof data.creditBalance === "number") {
-        updateCreditBalance(data.creditBalance);
-      }
+      await syncProfile();
     } catch {
       /* ignore */
     }
-  }, [updateCreditBalance]);
+  }, [syncProfile]);
 
   // A submit can finish after the user navigates to History. React then
   // discards the state update from the unmounted dashboard, while the
@@ -574,10 +571,7 @@ const handleReset = useCallback(() => {
           );
         } else if (status === 402 || status === 403 || code === "INSUFFICIENT_CREDIT") {
           try {
-            const { data } = await axios.get(`${API_BASE_URL}/api/auth/me`);
-            if (data && typeof data.creditBalance === "number") {
-              updateCreditBalance(data.creditBalance);
-            }
+            await syncProfile();
           } catch {
             /* ignore */
           }
@@ -1474,7 +1468,7 @@ const ResultPanel = memo(function ResultPanel({
 
         {isCompleted && (
           <p className="mt-3 text-[11px] text-slate-400/80 text-center select-none font-sans">
-            💡 Tệp kết quả (Video & SRT) được tự động lưu trữ trong <strong>7 ngày</strong> trên Cloudflare R2. Hãy tải về máy cá nhân của bạn.
+            💡 Tệp kết quả (Video & SRT) được tự động lưu trữ trong <strong>7 ngày</strong> trên hệ thống. Hãy tải về máy cá nhân của bạn.
           </p>
         )}
       </div>

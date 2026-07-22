@@ -388,7 +388,7 @@ export default function VideoHistory() {
                 <div className="mb-6 p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 flex items-start gap-3 backdrop-blur-md">
                     <Clock className="w-5 h-5 text-indigo-400 mt-0.5 shrink-0" />
                     <div className="text-xs sm:text-sm text-indigo-200/90 leading-relaxed">
-                        <span className="font-semibold text-white">Chính sách lưu trữ 7 ngày:</span> Các tệp Video và Phụ đề kết quả được hệ thống tự động lưu trữ trong <strong className="text-indigo-300 font-bold">7 ngày</strong> trên Cloudflare R2. Hãy tải về máy cá nhân của bạn trước khi hết hạn lưu trữ.
+                        <span className="font-semibold text-white">Chính sách lưu trữ 7 ngày:</span> Các tệp Video và Phụ đề kết quả được hệ thống tự động lưu trữ trong <strong className="text-indigo-300 font-bold">7 ngày</strong>. Hãy tải về máy cá nhân của bạn trước khi hết hạn lưu trữ.
                     </div>
                 </div>
 

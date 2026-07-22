@@ -308,7 +308,7 @@ export default function LandingPage() {
             title="Lưu trữ kết quả"
             body={
               <>
-                Kết quả (video & phụ đề) được lưu trữ an toàn trên máy chủ Cloudflare R2 trong vòng <b>7 ngày</b>.
+                Kết quả (video & phụ đề) được lưu trữ an toàn trên hệ thống trong vòng <b>7 ngày</b>.
                 Sau 7 ngày, hệ thống sẽ tự động dọn dẹp file. Vui lòng tải về thiết bị của bạn sau khi hoàn thành.
               </>
             }

@@ -58,6 +58,12 @@ function AppShell() {
   );
   const { user, logout, syncProfile } = useAuth();
 
+  // Sync profile on mount AND on route navigation so the Header CreditPill
+  // always displays the fresh, up-to-date credit balance.
+  useEffect(() => {
+    syncProfile();
+  }, [location.pathname, syncProfile]);
+
   // Navigation state makes this a one-time welcome message. Clear the
   // route state immediately so refresh/back does not repeat it.
   useEffect(() => {
