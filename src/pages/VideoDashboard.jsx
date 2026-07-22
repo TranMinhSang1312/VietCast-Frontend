@@ -446,7 +446,8 @@ const handleReset = useCallback(() => {
         if (!cancelled) {
           setResult(null);
           setProgress(0);
-          setError("Không thể nối lại tác vụ vừa gửi. Vui lòng kiểm tra trong Lịch sử video.");
+          // Gracefully clear draft without showing a false-alarm error banner
+          setError(null);
         }
       })
       .catch(() => {
