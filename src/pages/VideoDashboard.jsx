@@ -1471,6 +1471,12 @@ const ResultPanel = memo(function ResultPanel({
             </button>
           )}
         </div>
+
+        {isCompleted && (
+          <p className="mt-3 text-[11px] text-slate-400/80 text-center select-none font-sans">
+            💡 Tệp kết quả (Video & SRT) được tự động lưu trữ trong <strong>7 ngày</strong> trên Cloudflare R2. Hãy tải về máy cá nhân của bạn.
+          </p>
+        )}
       </div>
 
       {result.message && (

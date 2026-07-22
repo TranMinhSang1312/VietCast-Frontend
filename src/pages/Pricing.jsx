@@ -586,6 +586,16 @@ export default function Pricing() {
               open={openFaq === 4}
               onToggle={() => setOpenFaq(openFaq === 4 ? -1 : 4)}
             />
+            <Faq
+              q="Video và phụ đề kết quả được lưu trữ bao lâu?"
+              a={
+                <>
+                  VietCast tự động lưu trữ các tệp Video và Phụ đề kết quả trên hạ tầng Cloudflare R2 trong <strong>7 ngày</strong> tính từ lúc khởi tạo. Sau 7 ngày, các tệp trên Cloudflare R2 sẽ tự động được dọn dẹp. Vui lòng tải file về thiết bị cá nhân để lưu trữ lâu dài.
+                </>
+              }
+              open={openFaq === 5}
+              onToggle={() => setOpenFaq(openFaq === 5 ? -1 : 5)}
+            />
           </div>
         </section>
       </main>
