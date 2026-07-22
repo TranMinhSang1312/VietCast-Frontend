@@ -64,19 +64,41 @@ function progressLabel(mode, progress) {
 }
 
 // Whitelist kept in sync with backend VideoRequest.@Pattern on `voice`.
-// Blank / null means "use the engine's built-in TTS_VOICE default".
-const VOICE_OPTIONS = [
-  {
-    value: "vi-VN-NamMinhNeural",
-    label: "Nam Minh (nam, mặc định)",
-    description: "Giọng nam miền Bắc tự nhiên, phù hợp phim tài liệu / tin tức.",
-  },
-  {
-    value: "vi-VN-HoaiMyNeural",
-    label: "Hoài My (nữ)",
-    description: "Giọng nữ miền Bắc ấm áp, phù hợp video giải trí / kể chuyện.",
-  },
-];
+// Dynamic voice mapping per target language
+const LANGUAGE_VOICE_MAP = {
+  "Tiếng Việt": [
+    { value: "vi-VN-NamMinhNeural", label: "Nam Minh (nam, mặc định)", description: "Giọng nam miền Bắc tự nhiên, truyền cảm" },
+    { value: "vi-VN-HoaiMyNeural", label: "Hoài My (nữ)", description: "Giọng nữ miền Bắc truyền cảm, ấm áp" },
+  ],
+  "English": [
+    { value: "en-US-ChristopherNeural", label: "Christopher (nam)", description: "Giọng nam Mỹ tự nhiên, chuẩn tin tức" },
+    { value: "en-US-JennyNeural", label: "Jenny (nữ)", description: "Giọng nữ Mỹ truyền cảm, rõ ràng" },
+  ],
+  "日本語": [
+    { value: "ja-JP-KeitaNeural", label: "Keita 啓太 (nam)", description: "Giọng nam Nhật Bản chuẩn" },
+    { value: "ja-JP-NanamiNeural", label: "Nanami 七海 (nữ)", description: "Giọng nữ Nhật Bản ngọt ngào" },
+  ],
+  "한국어": [
+    { value: "ko-KR-InJoonNeural", label: "InJoon 인준 (nam)", description: "Giọng nam Hàn Quốc tự nhiên" },
+    { value: "ko-KR-SunHiNeural", label: "SunHi 선희 (nữ)", description: "Giọng nữ Hàn Quốc truyền cảm" },
+  ],
+  "Español": [
+    { value: "es-ES-AlvaroNeural", label: "Alvaro (nam)", description: "Giọng nam Tây Ban Nha" },
+    { value: "es-ES-ElviraNeural", label: "Elvira (nữ)", description: "Giọng nữ Tây Ban Nha" },
+  ],
+  "Français": [
+    { value: "fr-FR-HenriNeural", label: "Henri (nam)", description: "Giọng nam Pháp" },
+    { value: "fr-FR-DeniseNeural", label: "Denise (nữ)", description: "Giọng nữ Pháp" },
+  ],
+  "Deutsch": [
+    { value: "de-DE-ConradNeural", label: "Conrad (nam)", description: "Giọng nam Đức" },
+    { value: "de-DE-KatjaNeural", label: "Katja (nữ)", description: "Giọng nữ Đức" },
+  ],
+  "中文": [
+    { value: "zh-CN-YunjianNeural", label: "Yunjian 云健 (nam)", description: "Giọng nam Trung Quốc chuẩn" },
+    { value: "zh-CN-XiaoxiaoNeural", label: "Xiaoxiao 晓晓 (nữ)", description: "Giọng nữ Trung Quốc nhẹ nhàng" },
+  ],
+};
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const ACTIVE_TASK_STORAGE_KEY = "vc_active_task";
@@ -943,17 +965,17 @@ const handleReset = useCallback(() => {
                 </div>
               </div>
 
-              {/* Voice selector — only relevant when the engine will actually TTS */}
-              {(audioMode === "dub" || audioMode === "mix") && (
-                <div>
+              {/* Voice Selection */}
+              {modeWantsDubbing && (
+                <div className="space-y-2">
                   <label
                     htmlFor="voice-select"
                     className="block text-sm font-semibold text-zinc-300 mb-3"
                   >
-                    Giọng đọc tiếng Việt
+                    Giọng đọc bản ngữ ({targetLanguage})
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {VOICE_OPTIONS.map((opt) => {
+                    {(LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"]).map((opt) => {
                       const checked = voice === opt.value;
                       return (
                         <button
@@ -1004,7 +1026,12 @@ const handleReset = useCallback(() => {
                 </label>
                 <select
                   value={targetLanguage}
-                  onChange={(e) => setTargetLanguage(e.target.value)}
+                  onChange={(e) => {
+                    const newLang = e.target.value;
+                    setTargetLanguage(newLang);
+                    const opts = LANGUAGE_VOICE_MAP[newLang] || LANGUAGE_VOICE_MAP["Tiếng Việt"];
+                    setVoice(opts[0].value);
+                  }}
                   disabled={isLoading || isProcessing}
                   className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
                 >
