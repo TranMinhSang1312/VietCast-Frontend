@@ -155,6 +155,7 @@ export default function VideoDashboard() {
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
+  const [targetLanguage, setTargetLanguage] = useState(() => localStorage.getItem("vc_targetLanguage") || "Tiếng Việt");
   const [logoCoordinates, setLogoCoordinates] = useState(() => localStorage.getItem("vc_logoCoordinates") || "");
   const [subtitleMask, setSubtitleMask] = useState(() => localStorage.getItem("vc_subtitleMask") || "");
   const [isLoading, setIsLoading] = useState(false);
@@ -210,6 +211,10 @@ export default function VideoDashboard() {
   useEffect(() => {
     localStorage.setItem("vc_voice", voice);
   }, [voice]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_targetLanguage", targetLanguage);
+  }, [targetLanguage]);
 
   useEffect(() => {
     localStorage.setItem("vc_logoCoordinates", logoCoordinates);
@@ -512,6 +517,7 @@ const handleReset = useCallback(() => {
           {
             url: cleanUrl,
             audioMode,
+            targetLanguage,
             // Only forward a voice value when the user picked an
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
@@ -990,6 +996,28 @@ const handleReset = useCallback(() => {
                   </div>
                 </div>
               )}
+
+              {/* Target Language Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">
+                  Ngôn ngữ đích (Dịch & Lồng tiếng)
+                </label>
+                <select
+                  value={targetLanguage}
+                  onChange={(e) => setTargetLanguage(e.target.value)}
+                  disabled={isLoading || isProcessing}
+                  className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
+                >
+                  <option value="Tiếng Việt">🇻🇳 Tiếng Việt (Vietnamese)</option>
+                  <option value="English">🇺🇸 English (Tiếng Anh)</option>
+                  <option value="日本語">🇯🇵 日本語 (Tiếng Nhật)</option>
+                  <option value="한국어">🇰🇷 한국어 (Tiếng Hàn)</option>
+                  <option value="Español">🇪🇸 Español (Tiếng Tây Ban Nha)</option>
+                  <option value="Français">🇫🇷 Français (Tiếng Pháp)</option>
+                  <option value="Deutsch">🇩🇪 Deutsch (Tiếng Đức)</option>
+                  <option value="中文">🇨🇳 中文 (Tiếng Trung)</option>
+                </select>
+              </div>
 
               {/* Submit Action */}
               {!isProcessing && (() => {
