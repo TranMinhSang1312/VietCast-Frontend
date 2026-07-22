@@ -1286,6 +1286,32 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
   );
 });
 
+function useElapsedTime(submittedAt, isProcessing) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!isProcessing || !submittedAt) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const start = new Date(submittedAt).getTime();
+    const update = () => {
+      const diff = Math.max(0, Math.floor((Date.now() - start) / 1000));
+      setElapsedSeconds(diff);
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [submittedAt, isProcessing]);
+
+  if (!isProcessing || elapsedSeconds <= 0) return null;
+  const mins = Math.floor(elapsedSeconds / 60);
+  const secs = elapsedSeconds % 60;
+  const mm = String(mins).padStart(2, "0");
+  const ss = String(secs).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
 const ResultPanel = memo(function ResultPanel({
   result,
   isProcessing,
@@ -1304,6 +1330,7 @@ const ResultPanel = memo(function ResultPanel({
   const isFailed = result.status === "FAILED";
   const missingExpectedOutput = isCompleted
     && ((output.video && !result.videoUrl) || (output.srt && !result.srtUrl));
+  const elapsedText = useElapsedTime(result.submittedAt, isProcessing);
 
   return (
     <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-6 flex flex-col h-full justify-between">
@@ -1347,7 +1374,14 @@ const ResultPanel = memo(function ResultPanel({
               <span>
                 {progressLabel(result.audioMode, progress)}
               </span>
-              <span className="text-zinc-200">{progress}%</span>
+              <div className="flex items-center gap-2.5">
+                {elapsedText && (
+                  <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    ⏱️ {elapsedText}
+                  </span>
+                )}
+                <span className="text-zinc-200">{progress}%</span>
+              </div>
             </div>
             <div
               role="progressbar"

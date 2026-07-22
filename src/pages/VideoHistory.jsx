@@ -49,6 +49,21 @@ const FALLBACK_STATUS_STYLE = {
     dotClass: "bg-zinc-450",
 };
 
+function formatProcessingDuration(createdAt, updatedAt) {
+    if (!createdAt || !updatedAt) return null;
+    const start = new Date(createdAt).getTime();
+    const end = new Date(updatedAt).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
+    const totalSeconds = Math.round((end - start) / 1000);
+    if (totalSeconds <= 0) return null;
+    if (totalSeconds < 60) {
+        return `${totalSeconds}s`;
+    }
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+}
+
 function formatTimestamp(value) {
     if (!value) return "—";
     const date = value instanceof Date ? value : new Date(value);
