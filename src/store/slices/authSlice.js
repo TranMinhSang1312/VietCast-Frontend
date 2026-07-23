@@ -43,7 +43,7 @@ const initialState = {
   token: storedToken || null,
   user: initialUser,
   isLoggedIn: Boolean(storedToken),
-  isLoading: true,
+  isLoading: !storedToken, // If stored token exists, don't block boot UI with fullscreen loader
   error: null,
 };
 
@@ -182,6 +182,7 @@ const authSlice = createSlice({
       state.token = token;
       state.user = user;
       state.isLoggedIn = true;
+      state.isLoading = false;
       state.error = null;
       if (token) {
         localStorage.setItem(TOKEN_KEY, token);
@@ -257,6 +258,14 @@ const authSlice = createSlice({
       .addCase(googleLoginThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+
+      // fetchProfileThunk
+      .addCase(fetchProfileThunk.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(fetchProfileThunk.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });
