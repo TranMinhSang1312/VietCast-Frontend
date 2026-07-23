@@ -173,7 +173,7 @@ async function recoverSubmittedTask(submission, attempts = 3) {
 }
 
 export default function VideoDashboard() {
-  const { updateCreditBalance, syncProfile } = useAuth();
+  const { user, updateCreditBalance, syncProfile } = useAuth();
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
