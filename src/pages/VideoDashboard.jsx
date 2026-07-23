@@ -382,19 +382,80 @@ const handleReset = useCallback(() => {
   // effect; the 600ms debounce absorbs "still typing" keystrokes. Worst
   // case is one round-trip per settled URL = ~10s when yt-dlp times
   // out (matches the server timeout). We surface that with a spinner
-  // inside the input area so the user knows we're working.
-  //
-  // AbortController cancels an in-flight request when the URL changes
-  // again or the component unmounts, so the latest settled URL wins.
+function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, userBalance) {
+  const seconds = Math.max(0, Number(durationSeconds) || 0);
+  const minutes = seconds / 60;
+
+  let ratePerMin = 800;
+  let minCost = 800;
+  if (mode === "original" || mode === "mute") {
+    ratePerMin = 200;
+    minCost = 500;
+  } else if (mode === "subtitle") {
+    ratePerMin = 500;
+    minCost = 500;
+  } else if (mode === "dub" || mode === "mix") {
+    ratePerMin = 800;
+    minCost = 800;
+  }
+
+  const baseCost = Math.max(minCost, Math.round(minutes * ratePerMin));
+
+  const hasLogo = mode !== "subtitle" && Boolean(logoCoords && logoCoords.trim());
+  const hasSubMask = mode !== "subtitle" && Boolean(subMask && subMask.trim());
+  let visualFilterCost = 0;
+  if (hasLogo || hasSubMask) {
+    visualFilterCost = Math.round(minutes * 250);
+  }
+
+  const estimatedCost = baseCost + visualFilterCost;
+  const currentBalance = Number(userBalance) || 0;
+  const sufficient = currentBalance >= estimatedCost;
+
+  return {
+    durationSeconds: seconds,
+    estimatedCost,
+    userBalance: currentBalance,
+    sufficient,
+    missingCredits: sufficient ? 0 : Math.round(estimatedCost - currentBalance),
+    audioMode: mode,
+  };
+}
+
+  const lastPreviewUrlRef = useRef("");
+  const cachedDurationRef = useRef(null);
+
+  // Debounced fetch of the cost preview whenever the URL or audioMode change.
+  // Optimization: If the video duration is already probed for this URL,
+  // mode switching (e.g. "dub" <-> "mix" or "subtitle") instantly recalculates cost
+  // client-side without making redundant preview-cost API calls to the server.
   useEffect(() => {
+    const cleanUrl = extractUrl(url);
+    if (!cleanUrl) {
+      setCostPreview(null);
+      setCostPreviewLoading(false);
+      lastPreviewUrlRef.current = "";
+      cachedDurationRef.current = null;
+      return;
+    }
+
+    const canonical = normalizePreviewUrl(cleanUrl);
+    const userBalance = (Number(user?.creditBalance) || 0) + (Number(user?.bonusCreditBalance) || 0);
+
+    if (canonical === lastPreviewUrlRef.current && cachedDurationRef.current !== null) {
+      const instantPreview = computeInstantCostPreview(
+        cachedDurationRef.current,
+        audioMode,
+        logoCoordinates,
+        subtitleMask,
+        userBalance
+      );
+      setCostPreview(instantPreview);
+      setCostPreviewLoading(false);
+      return;
+    }
+
     const handle = setTimeout(() => {
-      const cleanUrl = extractUrl(url);
-      if (!cleanUrl) {
-        setCostPreview(null);
-        setCostPreviewLoading(false);
-        return;
-      }
-      const canonical = normalizePreviewUrl(cleanUrl);
       const controller = new AbortController();
       setCostPreviewLoading(true);
       axios
@@ -410,25 +471,22 @@ const handleReset = useCallback(() => {
         })
         .then((res) => {
           setCostPreview(res.data);
+          if (res.data?.durationSeconds) {
+            lastPreviewUrlRef.current = canonical;
+            cachedDurationRef.current = res.data.durationSeconds;
+          }
         })
         .catch((err) => {
           if (axios.isCancel(err)) return;
-          // Surface as a soft warning rather than throwing — the user
-          // can still attempt submit, at which point the backend
-          // re-does the check.
           setCostPreview(null);
         })
         .finally(() => {
           setCostPreviewLoading(false);
         });
-      // Cancel on cleanup so a fast-typing user does not pile up
-      // stale requests behind the latest one.
       return () => controller.abort();
     }, 600);
     return () => clearTimeout(handle);
-    // handleUrlChange / handleModeChange in deps so the effect re-runs
-    // when the user picks a different mode without re-typing.
-  }, [url, audioMode, logoCoordinates, subtitleMask]);
+  }, [url, audioMode, logoCoordinates, subtitleMask, user?.creditBalance, user?.bonusCreditBalance]);
 
   const refreshUserCredit = useCallback(async () => {
     try {

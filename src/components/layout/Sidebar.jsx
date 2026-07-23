@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import {
   Wand2,
   Film,
@@ -26,28 +26,34 @@ export default function Sidebar({ collapsed, onToggle }) {
         collapsed ? "md:w-16" : "md:w-60 lg:w-64"
       } shrink-0 flex-col bg-slate-950/90 border-r border-white/[0.06] backdrop-blur-xl transition-[width] duration-200 ease-in-out`}
     >
-      {/* Brand area. Hidden when collapsed (the icon-only variant is
-          skipped — a slim chevron at the top still hints at the brand
-          without competing for space with the toggle button. */}
-      <div className="flex items-center justify-between px-4 py-5 border-b border-white/[0.06]">
+      {/* Brand area with Link to Home */}
+      <div className="flex items-center justify-between px-3.5 py-4 border-b border-white/[0.06]">
         {collapsed ? (
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 select-none">
+          <Link
+            to="/"
+            title="Về trang chủ"
+            className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 select-none hover:opacity-90 transition"
+          >
             <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
-          </div>
+          </Link>
         ) : (
-          <div className="flex items-center gap-2.5 select-none min-w-0">
-            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+          <Link
+            to="/"
+            title="Về trang chủ"
+            className="flex items-center gap-3 select-none min-w-0 group hover:opacity-90 transition"
+          >
+            <div className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
               <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
-              <span className="text-sm font-bold tracking-tight text-white">
+              <span className="text-base font-extrabold tracking-tight text-white group-hover:text-indigo-200 transition">
                 VietCast
               </span>
-              <p className="mt-0.5 text-[10px] text-slate-500 uppercase tracking-[0.18em] font-mono">
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.18em] font-mono">
                 Studio
               </p>
             </div>
-          </div>
+          </Link>
         )}
         <button
           type="button"
@@ -97,14 +103,6 @@ export default function Sidebar({ collapsed, onToggle }) {
           </NavLink>
         ))}
       </nav>
-
-      {!collapsed && (
-        <div className="px-5 py-3 border-t border-white/[0.06]">
-          <p className="text-[11px] text-slate-500 font-mono">
-            v1.0 · Bản nội bộ
-          </p>
-        </div>
-      )}
     </aside>
   );
 }

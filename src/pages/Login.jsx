@@ -115,7 +115,7 @@ export default function Login() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const { login, register, verifyEmail, googleLogin } = useAuth();
+  const { user, isAuthenticated, login, register, verifyEmail, googleLogin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -123,8 +123,13 @@ export default function Login() {
     if (lockedMsg) {
       setError(lockedMsg);
       sessionStorage.removeItem("vc_account_locked_message");
+    } else {
+      const existingToken = localStorage.getItem("vc_token");
+      if (isAuthenticated || existingToken) {
+        navigate(postLoginTarget, { replace: true });
+      }
     }
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleConfigured = Boolean(googleClientId);
@@ -209,11 +214,8 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
-      const verifiedUser = await verifyEmail({ email: email.trim(), otp: code });
-      navigate(postLoginTarget, {
-        replace: true,
-        state: { signupBenefit: signupBenefitFrom(verifiedUser) },
-      });
+      await verifyEmail({ email: email.trim(), otp: code });
+      navigate(postLoginTarget, { replace: true });
     } catch (err) {
       setError(err?.message || "Mã OTP không đúng hoặc đã hết hạn.");
     } finally {
@@ -225,59 +227,44 @@ export default function Login() {
     setError(null);
     setIsLoading(true);
     try {
-      // The backend enforces a 60s cooldown per email; the message
-      // coming back is already a friendly Vietnamese hint, so we
-      // surface it as a non-fatal info rather than blowing up the UI.
       await register({ email: email.trim(), password });
       setOtp(["", "", "", "", "", ""]);
-      setError("Đã gửi lại mã OTP. Vui lòng kiểm tra email.");
       setTimeout(() => otpInputRefs.current[0]?.focus(), 50);
     } catch (err) {
-      setError(err?.message || "Không gửi lại được OTP. Vui lòng thử lại.");
+      setError(err?.message || "Không thể gửi lại mã OTP. Vui lòng thử lại sau.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSuccess = useCallback(
-    async (credentialResponse) => {
-      setError(null);
-      const idToken = credentialResponse?.credential;
-      if (!idToken) {
-        setError("Google không trả về mã xác thực. Vui lòng thử lại.");
-        return;
-      }
-      setIsGoogleLoading(true);
-      try {
-        const signedInUser = await googleLogin(idToken);
-        navigate(postLoginTarget, {
-          replace: true,
-          state: { signupBenefit: signupBenefitFrom(signedInUser) },
-        });
-      } catch (err) {
-        setError(
-          err?.message ||
-            "Đăng nhập bằng Google thất bại. Vui lòng thử lại."
-        );
-      } finally {
-        setIsGoogleLoading(false);
-      }
-    },
-    [googleLogin, navigate]
-  );
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError("Đăng nhập với Google thất bại. Vui lòng thử lại.");
+      return;
+    }
+    setError(null);
+    setIsGoogleLoading(true);
+    try {
+      await googleLogin({ idToken: credentialResponse.credential });
+      navigate(postLoginTarget, { replace: true });
+    } catch (err) {
+      setError(err?.message || "Đăng nhập với Google thất bại. Vui lòng thử lại.");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
-  const handleGoogleError = useCallback(() => {
-    setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
-  }, []);
+  const handleGoogleError = () => {
+    setError("Đăng nhập với Google thất bại. Vui lòng thử lại.");
+  };
 
   // OTP input wiring — type/digit/backspace/auto-advance/paste.
-  const handleOtpChange = (index, raw) => {
-    const digit = raw.replace(/\D/g, "").slice(-1); // keep last typed digit
-    setOtp((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
+  const handleOtpChange = (index, value) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const next = [...otp];
+    next[index] = digit;
+    setOtp(next);
+
     if (digit && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
@@ -313,13 +300,18 @@ export default function Login() {
 
       {/* Left side - Editorial brand intro */}
       <div className="hidden md:flex md:w-[55%] lg:w-[60%] flex-col justify-between p-12 lg:p-16 border-r border-white/[0.06] bg-slate-950 relative">
-        <header className="flex items-center gap-3 select-none z-10">
-          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
+        <header className="flex items-center gap-5 select-none z-10">
+          <div className="w-36 h-36 lg:w-44 lg:h-44 rounded-3xl overflow-hidden flex items-center justify-center shrink-0 shadow-[0_0_50px_rgba(99,102,241,0.25)] border border-white/10 transition-transform hover:scale-105">
             <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">
-            VietCast
-          </span>
+          <div>
+            <span className="text-4xl lg:text-5xl font-black tracking-tight text-white block">
+              VietCast
+            </span>
+            <span className="text-xs text-indigo-400 font-mono tracking-[0.25em] uppercase mt-1 block">
+              AI Video Platform
+            </span>
+          </div>
         </header>
 
         <main className="my-auto max-w-lg z-10">
@@ -336,11 +328,6 @@ export default function Login() {
           <p className="mt-6 text-lg text-zinc-400 leading-relaxed font-light">
             {copy.body}
           </p>
-          <div className="mt-10 flex flex-wrap gap-3 text-xs font-mono text-slate-400">
-            <TechChip color="emerald" label="Whisper ASR" />
-            <TechChip color="indigo"  label="Gemini Pro" />
-            <TechChip color="violet"  label="Edge TTS" />
-          </div>
 
           {!isVerify && !isRegister && (
             <div className="mt-10 inline-flex items-center gap-2 rounded-full bg-yellow-400/10 border border-yellow-400/30 px-3 py-1.5 text-xs font-semibold text-yellow-200">
@@ -830,17 +817,4 @@ function FormField({ id, label, icon: Icon, type = "text", ...rest }) {
   );
 }
 
-function TechChip({ color, label }) {
-  const dot =
-    color === "emerald"
-      ? "bg-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.5)]"
-      : color === "violet"
-      ? "bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.5)]"
-      : "bg-indigo-400 shadow-[0_0_12px_2px_rgba(129,140,248,0.5)]";
-  return (
-    <span className="inline-flex items-center gap-1.5 border border-white/[0.06] bg-white/[0.025] px-3 py-1.5 rounded-full">
-      <span className={`w-1.5 h-1.5 rounded-full ${dot} animate-pulse`} />
-      <span>{label}</span>
-    </span>
-  );
-}
+
