@@ -72,7 +72,7 @@ export default function CreditPill({ user, onTopup }) {
           >
             <Gift className="w-3.5 h-3.5" />
             <span className="text-[11px] font-semibold">
-              +{formatCredit(bonusAmount)} • còn {countdown}
+              +{formatCredit(bonusAmount)} Bonus
             </span>
           </div>
         )}
