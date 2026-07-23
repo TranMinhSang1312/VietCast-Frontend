@@ -804,24 +804,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
       <div className="absolute bottom-[-25%] left-[-15%] w-[520px] h-[520px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="w-full max-w-6xl z-10">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-white/[0.06] mb-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <Languages className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white leading-tight">VietCast</h1>
-              <p className="text-xs text-slate-500 font-mono">Workspace</p>
-            </div>
-          </div>
-          <div className="text-center md:text-left select-none">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tighter text-zinc-100">
-              Lồng tiếng Video AI
-            </h2>
-          </div>
-        </header>
-
         {/* Workspace Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Form Controls */}

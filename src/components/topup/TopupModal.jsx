@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Coins, Loader2, X, AlertCircle } from "lucide-react";
+import { Coins, Loader2, X, AlertCircle, Gift } from "lucide-react";
 import {
   createPaymentLink,
   formatVnd,
@@ -137,6 +137,17 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+          {/* Promo Bonus Banner */}
+          <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3.5 text-xs text-yellow-200 space-y-1">
+            <div className="flex items-center gap-2 font-bold text-yellow-300">
+              <Gift className="w-4 h-4 shrink-0" />
+              <span>🎁 Ưu đãi Đăng ký mới (10.000 Credit Bonus)</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-yellow-200/90 font-light">
+              Tài khoản mới được tặng <strong className="font-semibold text-white">10.000 credit bonus</strong> (HSD: 3 ngày). Nếu nạp từ <strong className="font-semibold text-white">10.000đ trở lên</strong> trong 3 ngày này, hệ thống sẽ tự động <strong className="font-semibold text-yellow-300">bảo lưu trọn 10.000 credit bonus thành credit vĩnh viễn</strong>!
+            </p>
+          </div>
+
           {/* Presets + Custom shortcut */}
           <div>
             <label className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2 select-none">

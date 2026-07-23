@@ -205,7 +205,7 @@ function AppShell() {
                 <p className="mt-0.5 text-xs leading-relaxed text-emerald-100/75 sm:text-sm">
                   Bạn đã nhận {formatCredit(welcomeBenefit.amount)} credit phúc lợi để trải nghiệm dịch vụ
                   {welcomeBenefit.expiresAt && (
-                    <>. Thời gian sử dụng còn {formatCountdown(welcomeBenefit.expiresAt)}</>
+                    <>. Hạn dùng còn {formatCountdown(welcomeBenefit.expiresAt)}. Nạp từ 10.000đ trở lên trong 3 ngày để bảo lưu trọn 10.000 credit bonus thành vĩnh viễn!</>
                   )}.
                 </p>
               </div>

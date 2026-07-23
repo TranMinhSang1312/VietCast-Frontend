@@ -101,7 +101,7 @@ export default function CreditPill({ user, onTopup }) {
             (isUrgent ? "text-amber-300/90" : "text-emerald-300/80")
           }
         >
-          Tặng {formatCredit(bonusAmount)} khi đăng ký • {isUrgent ? "sắp hết hạn" : "còn hạn"} {countdown}
+          Tặng {formatCredit(bonusAmount)} khi đăng ký • {isUrgent ? "sắp hết hạn" : "còn hạn"} {countdown} (Nạp ≥10k giữ bonus)
         </p>
       )}
     </div>
