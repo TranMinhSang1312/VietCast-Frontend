@@ -102,9 +102,85 @@ axios.interceptors.request.use(
 // Auto-clearing here was the source of bug C-3 in the security review:
 // a single 401 from a misconfigured endpoint would lock the user out
 // even though their session was valid for every other route.
+import { API_BASE_URL_PROVIDER } from "../config";
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 axios.interceptors.response.use(
   (response) => response,
-  (err) => {
+  async (err) => {
+    const originalRequest = err.config;
+
+    if (err.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthSkipped(originalRequest)) {
+      if (originalRequest.url?.includes("/auth/login") || originalRequest.url?.includes("/auth/refresh-token")) {
+        const processed = handleApiError(err);
+        return Promise.reject(new ApiError(processed));
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers && typeof originalRequest.headers.set === "function") {
+              originalRequest.headers.set("Authorization", `Bearer ${token}`);
+            } else if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return axios(originalRequest);
+          })
+          .catch((queueErr) => {
+            const processed = handleApiError(queueErr);
+            return Promise.reject(new ApiError(processed));
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const API_BASE_URL = API_BASE_URL_PROVIDER?.sync || "";
+        const { data } = await axios.post(
+          `${API_BASE_URL}/api/v1/auth/refresh-token`,
+          {},
+          { skipAuth: true, withCredentials: true }
+        );
+
+        const newAccessToken = data.token || data.accessToken;
+        if (newAccessToken) {
+          setAuthToken(newAccessToken);
+          processQueue(null, newAccessToken);
+
+          if (originalRequest.headers && typeof originalRequest.headers.set === "function") {
+            originalRequest.headers.set("Authorization", `Bearer ${newAccessToken}`);
+          } else if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          }
+          return axios(originalRequest);
+        }
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        clearAuthToken();
+        window.location.assign("/login");
+        const processed = handleApiError(refreshErr);
+        return Promise.reject(new ApiError(processed));
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     const processed = handleApiError(err);
     return Promise.reject(new ApiError(processed));
   }
