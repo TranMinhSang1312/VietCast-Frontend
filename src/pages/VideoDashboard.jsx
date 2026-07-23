@@ -408,16 +408,18 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
     visualFilterCost = Math.round(minutes * 250);
   }
 
-  const estimatedCost = baseCost + visualFilterCost;
+  const estimatedCost = (baseCost + visualFilterCost) || 800;
   const currentBalance = Number(userBalance) || 0;
   const sufficient = currentBalance >= estimatedCost;
 
   return {
     durationSeconds: seconds,
+    totalRequired: estimatedCost,
     estimatedCost,
+    currentBalance: currentBalance,
     userBalance: currentBalance,
     sufficient,
-    missingCredits: sufficient ? 0 : Math.round(estimatedCost - currentBalance),
+    missingCredits: sufficient ? 0 : Math.max(0, Math.round(estimatedCost - currentBalance)),
     audioMode: mode,
   };
 }
@@ -430,6 +432,16 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
   // mode switching (e.g. "dub" <-> "mix" or "subtitle") instantly recalculates cost
   // client-side without making redundant preview-cost API calls to the server.
   useEffect(() => {
+    // If a task is active, processing, or completed (result is present),
+    // do NOT fetch or compute cost preview to avoid confusing the user.
+    if (result) {
+      setCostPreview(null);
+      setCostPreviewLoading(false);
+      lastPreviewUrlRef.current = "";
+      cachedDurationRef.current = null;
+      return;
+    }
+
     const cleanUrl = extractUrl(url);
     if (!cleanUrl) {
       setCostPreview(null);
@@ -486,7 +498,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
       return () => controller.abort();
     }, 600);
     return () => clearTimeout(handle);
-  }, [url, audioMode, logoCoordinates, subtitleMask, user?.creditBalance, user?.bonusCreditBalance]);
+  }, [url, audioMode, logoCoordinates, subtitleMask, user?.creditBalance, user?.bonusCreditBalance, result]);
 
   const refreshUserCredit = useCallback(async () => {
     try {
@@ -841,13 +853,13 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                     red breakdown immediately rather than waiting for
                     /process to 403 them after the engine has already
                     started chewing on it. */}
-                {costPreviewLoading && (
+                {!result && costPreviewLoading && (
                   <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>Đang tính chi phí xử lý video...</span>
                   </div>
                 )}
-                {!costPreviewLoading && costPreview && (() => {
+                {!result && !costPreviewLoading && costPreview && (() => {
                   // Three mutually-exclusive visual states:
                   //   ① overCap=true              → red banner, no pricing shown
                   //   ② overCap=false, !sufficient → red pricing + topup CTA
@@ -885,11 +897,11 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <span className="font-semibold">
                             {costPreview.durationSeconds
-                              ? `Thời lượng: ${costPreview.durationSeconds} giây — Chi phí: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`
-                              : `Ước tính: ${Math.round(costPreview.totalRequired).toLocaleString("vi-VN")} credit`}
+                              ? `Thời lượng: ${costPreview.durationSeconds} giây — Chi phí: ${Math.round(Number(costPreview.totalRequired) || 0).toLocaleString("vi-VN")} credit`
+                              : `Ước tính: ${Math.round(Number(costPreview.totalRequired) || 0).toLocaleString("vi-VN")} credit`}
                           </span>
                           <span className="font-mono text-[11px]">
-                            Bạn có: {Math.round(costPreview.currentBalance).toLocaleString("vi-VN")}
+                            Bạn có: {Math.round(Number(costPreview.currentBalance) || 0).toLocaleString("vi-VN")}
                           </span>
                         </div>
                       )}
@@ -905,7 +917,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                             }}
                             className="px-3 py-1.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-100 text-xs font-semibold hover:bg-rose-500/30 active:scale-[0.98] transition"
                           >
-                            Nạp thêm {Math.round(costPreview.missingCredits).toLocaleString("vi-VN")} credit ngay
+                            Nạp thêm {Math.round(Number(costPreview.missingCredits) || 0).toLocaleString("vi-VN")} credit ngay
                           </button>
                           <span className="text-[11px] opacity-70">
                             hoặc chọn video ngắn hơn.
