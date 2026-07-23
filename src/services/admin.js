@@ -24,6 +24,7 @@ const ENDPOINTS = Object.freeze({
   costSummary:     `${API_BASE_URL}/api/v1/admin/costs/summary`,
   costLowMargin:   `${API_BASE_URL}/api/v1/admin/costs/low-margin`,
   users:           `${API_BASE_URL}/api/v1/admin/users`,
+  cookies:         `${API_BASE_URL}/api/v1/admin/cookies`,
   grantCredit:     (id) => `${API_BASE_URL}/api/v1/admin/users/${id}/credit`,
   lockUser:        (id) => `${API_BASE_URL}/api/v1/admin/users/${id}/lock`,
   unlockUser:      (id) => `${API_BASE_URL}/api/v1/admin/users/${id}/unlock`,
@@ -138,6 +139,19 @@ export async function fetchCostSummary({ windowDays = 30 } = {}) {
 export async function fetchLowMarginJobs({ limit = 50 } = {}) {
   const { data } = await axios.get(ENDPOINTS.costLowMargin, {
     params: { limit },
+  });
+  return data;
+}
+
+/**
+ * Cập nhật cookie đa nền tảng cho Python Engine.
+ * @param {string} platform Tên nền tảng (bilibili, tiktok, youtube, douyin...)
+ * @param {string} cookieData Nội dung cookie định dạng Netscape
+ */
+export async function updateAdminCookie(platform, cookieData) {
+  const { data } = await axios.put(ENDPOINTS.cookies, {
+    platform,
+    cookieData,
   });
   return data;
 }

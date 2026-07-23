@@ -1,16 +1,18 @@
 import { useState, Suspense, lazy } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BarChart3, Users, LogOut, Coins, Shield, Loader2 } from "lucide-react";
+import { BarChart3, Users, LogOut, Coins, Shield, Loader2, Cookie } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
 // Lazy-load tab contents so the admin bundle does NOT load when the user
 // is on the regular /dashboard. Each tab becomes its own chunk.
 const AdminDashboard = lazy(() => import("./AdminDashboard"));
 const AdminUsers      = lazy(() => import("./AdminUsers"));
+const CookieManager   = lazy(() => import("./CookieManager"));
 
 const TABS = [
   { id: "dashboard", label: "Tổng quan", icon: BarChart3, path: "/admin" },
   { id: "users",      label: "Người dùng", icon: Users,     path: "/admin/users" },
+  { id: "cookies",    label: "Quản lý Cookie", icon: Cookie,  path: "/admin/cookies" },
 ];
 
 function TabFallback() {
@@ -32,7 +34,12 @@ export default function AdminApp() {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  const activeTabId = location.pathname.startsWith("/admin/users") ? "users" : "dashboard";
+  let activeTabId = "dashboard";
+  if (location.pathname.startsWith("/admin/users")) {
+    activeTabId = "users";
+  } else if (location.pathname.startsWith("/admin/cookies")) {
+    activeTabId = "cookies";
+  }
 
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-100">
@@ -95,7 +102,13 @@ export default function AdminApp() {
       </nav>
 
       <Suspense fallback={<TabFallback />}>
-        {activeTabId === "users" ? <AdminUsers /> : <AdminDashboard />}
+        {activeTabId === "users" ? (
+          <AdminUsers />
+        ) : activeTabId === "cookies" ? (
+          <CookieManager />
+        ) : (
+          <AdminDashboard />
+        )}
       </Suspense>
     </div>
   );
