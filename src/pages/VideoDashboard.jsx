@@ -52,13 +52,13 @@ function outputForMode(mode) {
   return MODE_OUTPUTS[mode] ?? MODE_OUTPUTS.mix;
 }
 
-function progressLabel(mode, progress) {
+function progressLabel(mode, progress, targetLanguage = "Tiếng Việt") {
   if (progress < 10) return "ĐANG TẢI VIDEO TỪ NGUỒN...";
   if (mode === "original" || mode === "mute") {
     return progress < 90 ? "ĐANG XỬ LÝ VIDEO..." : "ĐANG TẢI KẾT QUẢ LÊN...";
   }
   if (progress < 35) return "ĐANG TRÍCH XUẤT ÂM THANH...";
-  if (progress < 70) return mode === "subtitle" ? "ĐANG NHẬN DẠNG LỜI NÓI..." : "ĐANG DỊCH SANG TIẾNG VIỆT...";
+  if (progress < 70) return mode === "subtitle" ? "ĐANG NHẬN DẠNG LỜI NÓI..." : `ĐANG DỊCH SANG ${(targetLanguage || "TIẾNG VIỆT").toUpperCase()}...`;
   if (mode === "subtitle") return "ĐANG HOÀN THIỆN FILE SRT...";
   return progress < 90 ? "ĐANG TỔNG HỢP GIỌNG ĐỌC AI..." : "ĐANG RENDER VIDEO CUỐI CÙNG...";
 }
@@ -1428,7 +1428,7 @@ const ResultPanel = memo(function ResultPanel({
           <div className="mb-6 select-none">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
               <span>
-                {progressLabel(result.audioMode, progress)}
+                {progressLabel(result.audioMode, progress, result.targetLanguage || targetLanguage)}
               </span>
               <div className="flex items-center gap-2.5">
                 {elapsedText && (
