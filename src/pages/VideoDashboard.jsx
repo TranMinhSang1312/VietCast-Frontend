@@ -1142,6 +1142,7 @@ const handleReset = useCallback(() => {
                 result={result}
                 isProcessing={isProcessing}
                 progress={progress}
+                targetLanguage={targetLanguage}
                 videoReady={videoReady}
                 videoError={videoError}
                 videoSrc={videoSrc}
@@ -1372,6 +1373,7 @@ const ResultPanel = memo(function ResultPanel({
   result,
   isProcessing,
   progress,
+  targetLanguage = "Tiếng Việt",
   videoReady,
   videoError,
   videoSrc,
@@ -1428,7 +1430,7 @@ const ResultPanel = memo(function ResultPanel({
           <div className="mb-6 select-none">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
               <span>
-                {progressLabel(result.audioMode, progress, result.targetLanguage || targetLanguage)}
+                {progressLabel(result.audioMode, progress, result?.targetLanguage || targetLanguage || "Tiếng Việt")}
               </span>
               <div className="flex items-center gap-2.5">
                 {elapsedText && (
