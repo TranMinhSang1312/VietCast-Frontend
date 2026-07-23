@@ -467,7 +467,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
             subtitleMask: audioMode === "subtitle" ? null : (subtitleMask || null),
           },
           signal: controller.signal,
-          timeout: 15000,
+          timeout: 30000,
         })
         .then((res) => {
           setCostPreview(res.data);
