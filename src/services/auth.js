@@ -89,10 +89,11 @@ export async function verifyEmail({ email, otp }) {
  * Google Sign-In.
  */
 export async function loginWithGoogle({ idToken }) {
+  const tokenString = typeof idToken === "object" && idToken?.idToken ? idToken.idToken : idToken;
   const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.google,
-    { idToken, deviceFingerprint },
+    { idToken: tokenString, deviceFingerprint },
     {
       skipAuth: true,
       withCredentials: true,

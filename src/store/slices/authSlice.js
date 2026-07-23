@@ -100,8 +100,9 @@ export const loginThunk = createAsyncThunk(
 /** Google Login */
 export const googleLoginThunk = createAsyncThunk(
   "auth/googleLogin",
-  async (idToken, { dispatch, rejectWithValue }) => {
+  async (idTokenArg, { dispatch, rejectWithValue }) => {
     try {
+      const idToken = typeof idTokenArg === "object" && idTokenArg?.idToken ? idTokenArg.idToken : idTokenArg;
       const data = await loginWithGoogleApi({ idToken });
       if (!data?.token) {
         throw new Error("Máy chủ không trả về mã xác thực.");
