@@ -41,11 +41,8 @@ const ENDPOINTS = Object.freeze({
   verifyEmail: `${API_BASE_URL}/api/v1/auth/verify-email`,
   google:      `${API_BASE_URL}/api/v1/auth/google`,
   me:          `${API_BASE_URL}/api/v1/auth/me`,
-  // Legacy endpoints we keep calling until the desktop client ships
-  // the v1 release — the user-gate logic in App.jsx still references
-  // them.
-  legacyLogin: `${API_BASE_URL}/api/auth/login`,
-  legacyMe:    `${API_BASE_URL}/api/auth/me`,
+  refreshToken:`${API_BASE_URL}/api/v1/auth/refresh-token`,
+  logout:      `${API_BASE_URL}/api/v1/auth/logout`,
 });
 
 /**
@@ -58,71 +55,75 @@ export async function login({ emailOrUsername, password }) {
   const { data } = await axios.post(
     ENDPOINTS.login,
     { emailOrUsername, password },
-    { skipAuth: true }   // the public /login route — no bearer header
+    { skipAuth: true, withCredentials: true }
   );
   return data;
 }
 
 /**
- * Step 1 of the LOCAL sign-up flow. The server creates the user row,
- * mints a 6-digit OTP, emails it, and returns `token=null` + a
- * `message` telling the user to check their inbox. We deliberately
- * do NOT persist anything to localStorage here — the JWT only lands
- * after step 2 (`verifyEmail`) succeeds.
- *
- * @param {{ email: string, password: string }} body
- * @returns {Promise<AuthResponseBody>}
+ * Step 1 of the LOCAL sign-up flow.
  */
 export async function register({ email, password }) {
   const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.register,
     { email, password, deviceFingerprint },
-    { skipAuth: true }   // public route — no bearer header
+    { skipAuth: true }
   );
   return data;
 }
 
 /**
- * Step 2 of the LOCAL sign-up flow. Caller passes the OTP exactly
- * as it appears in the verification email (whitespace trimmed
- * server-side). On success the server returns a JWT in the same
- * shape as {@link login} so the AuthContext can persist it
- * identically.
- *
- * @param {{ email: string, otp: string }} body
- * @returns {Promise<AuthResponseBody>}
+ * Step 2 of the LOCAL sign-up flow.
  */
 export async function verifyEmail({ email, otp }) {
   const { data } = await axios.post(
     ENDPOINTS.verifyEmail,
     { email, otp },
-    { skipAuth: true }   // public route — no bearer header
+    { skipAuth: true }
   );
   return data;
 }
 
 /**
- * Google Sign-In. Caller passes the raw idToken straight from
- * `useGoogleLogin`'s `credentialResponse.credential`.
- *
- * @param {{ idToken: string }} body
- * @returns {Promise<AuthResponseBody>}
+ * Google Sign-In.
  */
 export async function loginWithGoogle({ idToken }) {
   const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.google,
     { idToken, deviceFingerprint },
-    { skipAuth: true }   // the public /google route
+    { skipAuth: true, withCredentials: true }
+  );
+  return data;
+}
+
+/**
+ * Silent Refresh via HttpOnly Cookie.
+ */
+export async function refreshToken() {
+  const { data } = await axios.post(
+    ENDPOINTS.refreshToken,
+    {},
+    { skipAuth: true, withCredentials: true }
+  );
+  return data;
+}
+
+/**
+ * Logout and clear HttpOnly Cookie on backend.
+ */
+export async function logout() {
+  const { data } = await axios.post(
+    ENDPOINTS.logout,
+    {},
+    { withCredentials: true }
   );
   return data;
 }
 
 /**
  * Authoritative server-side profile refresh.
- *
- * @returns {Promise<UserSummary>}
  */
 export async function fetchProfile() {
   const { data } = await axios.get(ENDPOINTS.me);
