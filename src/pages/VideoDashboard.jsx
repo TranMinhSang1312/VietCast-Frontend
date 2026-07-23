@@ -966,7 +966,7 @@ const handleReset = useCallback(() => {
               </div>
 
               {/* Voice Selection */}
-              {modeWantsDubbing && (
+              {(audioMode === "dub" || audioMode === "mix") && (
                 <div className="space-y-2">
                   <label
                     htmlFor="voice-select"
