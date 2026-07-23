@@ -302,16 +302,18 @@ export default function Login() {
 
       {/* Left side - Editorial brand intro */}
       <div className="hidden md:flex md:w-[55%] lg:w-[60%] flex-col justify-between p-12 lg:p-16 border-r border-white/[0.06] bg-slate-950 relative">
-        <header className="flex items-center gap-5 select-none z-10">
-          <div className="w-36 h-36 lg:w-44 lg:h-44 rounded-3xl overflow-hidden flex items-center justify-center shrink-0 shadow-[0_0_50px_rgba(99,102,241,0.25)] border border-white/10 transition-transform hover:scale-105">
-            <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
-          </div>
+        <header className="flex items-center gap-4 select-none z-10">
+          <img
+            src="/logo.png"
+            alt="VietCast Logo"
+            className="w-28 h-28 lg:w-36 lg:h-36 object-contain shrink-0 transition-transform hover:scale-105"
+          />
           <div>
             <span className="text-4xl lg:text-5xl font-black tracking-tight text-white block">
               VietCast
             </span>
-            <span className="text-xs text-indigo-400 font-mono tracking-[0.25em] uppercase mt-1 block">
-              AI Video Platform
+            <span className="text-xs text-indigo-400 font-mono tracking-[0.2em] uppercase mt-1 block">
+              AI Video Translation Platform
             </span>
           </div>
         </header>
