@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   KeyRound,
   RotateCcw,
+  X,
+  ShieldAlert,
 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 
@@ -637,35 +639,10 @@ export default function Login() {
                 </label>
               </div>
 
-              {error && (
-                <div
-                  className={`p-4 rounded-xl border flex flex-col gap-2.5 ${
-                    error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")
-                      ? "bg-amber-950/40 border-amber-500/40 text-amber-200"
-                      : "bg-rose-950/30 border-rose-900/40 text-rose-200"
-                  }`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <AlertCircle
-                      className={`w-5 h-5 mt-0.5 shrink-0 ${
-                        error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")
-                          ? "text-amber-400"
-                          : "text-rose-400"
-                      }`}
-                    />
-                    <div className="text-xs whitespace-pre-line leading-relaxed flex-1 font-medium">
-                      {error}
-                    </div>
-                  </div>
-                  {(error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")) && (
-                    <a
-                      href="mailto:support@vietcast.app?subject=G%E1%BA%A3i%20tr%C3%ACnh%20m%E1%BB%9F%20kh%C3%B3a%20t%C3%A0i%20kho%E1%BA%A3n%20VietCast"
-                      className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition text-center"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>Gửi email giải trình hỗ trợ mở khóa</span>
-                    </a>
-                  )}
+              {error && !(error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")) && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-200">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
+                  <div className="text-xs">{error}</div>
                 </div>
               )}
 
@@ -767,6 +744,59 @@ export default function Login() {
               ← Về trang chủ
             </Link>
           </p>
+      {/* Account Locked Popup Modal */}
+      {error && (error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lock-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setError(null);
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-amber-500/30 shadow-2xl p-6 relative">
+            {/* Header */}
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div className="flex-1 pr-6">
+                <h3 id="lock-modal-title" className="text-base font-bold text-amber-100">
+                  Tài khoản đã bị khóa
+                </h3>
+                <p className="text-xs text-amber-400/80 mt-0.5 font-medium">
+                  Thông báo từ hệ thống quản trị VietCast
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition absolute top-5 right-5"
+                aria-label="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Message Body */}
+            <div className="rounded-xl bg-slate-950/70 border border-white/[0.06] p-4 mb-5 text-xs leading-relaxed text-zinc-300 whitespace-pre-line font-medium">
+              {error}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold active:scale-[0.98] transition"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         </div>
       </div>
     </div>
