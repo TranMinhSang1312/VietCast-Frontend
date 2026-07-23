@@ -723,14 +723,11 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
           refreshUserCredit();
         }
       } catch (err) {
-        if (err.response?.status === 404) {
+        const status = err.response?.status;
+        if (status === 404) {
           clearPollInterval();
-          // Server restarted or the task row was evicted — show the
-          // error AND clear the right-hand panel so the user does not
-          // see "Tác vụ đang xử lý" + taskId ghosted next to a
-          // "Không tìm thấy tác vụ" banner.
           resetResultState();
-          setError("Không tìm thấy tác vụ. Có thể server đã khởi động lại.");
+          setError("Tác vụ không tồn tại hoặc CSDL đã được làm mới.");
         }
       }
     };
