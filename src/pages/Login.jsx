@@ -288,8 +288,8 @@ export default function Login() {
       {/* Left side - Editorial brand intro */}
       <div className="hidden md:flex md:w-[55%] lg:w-[60%] flex-col justify-between p-12 lg:p-16 border-r border-white/[0.06] bg-slate-950 relative">
         <header className="flex items-center gap-3 select-none z-10">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
+            <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-bold tracking-tight text-white">
             VietCast
@@ -348,8 +348,8 @@ export default function Login() {
         <div className="w-full max-w-sm mx-auto z-10">
           {/* Mobile brand header */}
           <div className="md:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-500/10 ring-1 ring-indigo-400/30 mb-4">
-              <Sparkles className="w-6 h-6 text-indigo-300" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl overflow-hidden mb-4 mx-auto">
+              <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white">VietCast</h1>
             <p className="text-sm text-zinc-400 mt-1">

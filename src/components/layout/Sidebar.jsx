@@ -31,20 +31,13 @@ export default function Sidebar({ collapsed, onToggle }) {
           without competing for space with the toggle button. */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-white/[0.06]">
         {collapsed ? (
-          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shadow-md shadow-indigo-500/30 select-none">
-            <span className="text-[11px] font-bold text-white">VC</span>
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 select-none">
+            <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
           </div>
         ) : (
           <div className="flex items-center gap-2.5 select-none min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-4.5 h-4.5 text-white"
-                aria-hidden="true"
-              >
-                <path d="M12 2 14.39 8.26 21 9.27l-5 4.87L17.18 21 12 17.77 6.82 21 8 14.14l-5-4.87 6.61-1.01L12 2Z" />
-              </svg>
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
               <span className="text-sm font-bold tracking-tight text-white">
