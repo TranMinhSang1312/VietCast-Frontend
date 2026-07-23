@@ -10,6 +10,7 @@ import {
   loginWithGoogle as loginWithGoogleApi,
   register as registerApi,
   verifyEmail as verifyEmailApi,
+  logout as logoutApi,
   fetchProfile,
 } from "../services/auth";
 
@@ -246,8 +247,14 @@ export function AuthProvider({ children }) {
     return persistAuth(data);
   }, [persistAuth]);
 
-  const logout = useCallback(() => {
-    clearAuth();
+  const logout = useCallback(async () => {
+    try {
+      await logoutApi();
+    } catch {
+      // Best-effort backend cookie cleanup
+    } finally {
+      clearAuth();
+    }
   }, [clearAuth]);
 
   const updateCreditBalance = useCallback((newBalance) => {
