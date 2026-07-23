@@ -123,6 +123,17 @@ axios.interceptors.response.use(
   async (err) => {
     const originalRequest = err.config;
 
+    if (err.response?.data?.code === "ACCOUNT_LOCKED" || (err.response?.status === 403 && err.response?.data?.message?.includes("khóa"))) {
+      const lockMsg = err.response?.data?.message || "Tài khoản của bạn đã bị khóa bởi Quản trị viên.";
+      sessionStorage.setItem("vc_account_locked_message", lockMsg);
+      clearAuthToken();
+      if (!window.location.pathname.includes("/login")) {
+        window.location.assign("/login");
+      }
+      const processed = handleApiError(err);
+      return Promise.reject(new ApiError(processed));
+    }
+
     if (err.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthSkipped(originalRequest)) {
       if (originalRequest.url?.includes("/auth/login") || originalRequest.url?.includes("/auth/refresh-token")) {
         const processed = handleApiError(err);
@@ -173,6 +184,9 @@ axios.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         clearAuthToken();
+        if (refreshErr.response?.data?.code === "ACCOUNT_LOCKED" || refreshErr.response?.data?.message?.includes("khóa")) {
+          sessionStorage.setItem("vc_account_locked_message", refreshErr.response?.data?.message);
+        }
         window.location.assign("/login");
         const processed = handleApiError(refreshErr);
         return Promise.reject(new ApiError(processed));

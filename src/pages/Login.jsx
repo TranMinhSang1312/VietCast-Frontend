@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, memo } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -115,6 +115,14 @@ export default function Login() {
 
   const { login, register, verifyEmail, googleLogin } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const lockedMsg = sessionStorage.getItem("vc_account_locked_message");
+    if (lockedMsg) {
+      setError(lockedMsg);
+      sessionStorage.removeItem("vc_account_locked_message");
+    }
+  }, []);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleConfigured = Boolean(googleClientId);
@@ -630,9 +638,34 @@ export default function Login() {
               </div>
 
               {error && (
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-200">
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
-                  <div className="text-xs">{error}</div>
+                <div
+                  className={`p-4 rounded-xl border flex flex-col gap-2.5 ${
+                    error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")
+                      ? "bg-amber-950/40 border-amber-500/40 text-amber-200"
+                      : "bg-rose-950/30 border-rose-900/40 text-rose-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle
+                      className={`w-5 h-5 mt-0.5 shrink-0 ${
+                        error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")
+                          ? "text-amber-400"
+                          : "text-rose-400"
+                      }`}
+                    />
+                    <div className="text-xs whitespace-pre-line leading-relaxed flex-1 font-medium">
+                      {error}
+                    </div>
+                  </div>
+                  {(error.includes("khóa") || error.includes("locked") || error.includes("bị khóa")) && (
+                    <a
+                      href="mailto:support@vietcast.app?subject=G%E1%BA%A3i%20tr%C3%ACnh%20m%E1%BB%9F%20kh%C3%B3a%20t%C3%A0i%20kho%E1%BA%A3n%20VietCast"
+                      className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition text-center"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Gửi email giải trình hỗ trợ mở khóa</span>
+                    </a>
+                  )}
                 </div>
               )}
 
