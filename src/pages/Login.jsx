@@ -91,6 +91,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -132,7 +133,7 @@ export default function Login() {
     setError(null);
     setIsLoading(true);
     try {
-      await login({ emailOrUsername, password });
+      await login({ emailOrUsername: emailOrUsername.trim(), password, rememberMe });
       navigate(postLoginTarget, { replace: true });
     } catch (err) {
       setError(err?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
@@ -599,6 +600,19 @@ export default function Login() {
                 icon={Lock}
                 required
               />
+
+              <div className="flex items-center justify-between pt-1 pb-1">
+                <label className="flex items-center gap-2.5 text-xs font-medium text-slate-300 cursor-pointer hover:text-white select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={anyLoading}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500/30 focus:ring-offset-0 transition cursor-pointer accent-indigo-500"
+                  />
+                  <span>Ghi nhớ đăng nhập</span>
+                </label>
+              </div>
 
               {error && (
                 <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-200">
