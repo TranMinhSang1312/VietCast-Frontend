@@ -303,19 +303,21 @@ export default function Login() {
       {/* Left side - Editorial brand intro */}
       <div className="hidden md:flex md:w-[55%] lg:w-[60%] flex-col justify-between p-12 lg:p-16 border-r border-white/[0.06] bg-slate-950 relative">
         <header className="flex items-center gap-4 select-none z-10">
-          <img
-            src="/logo.png"
-            alt="VietCast Logo"
-            className="w-28 h-28 lg:w-36 lg:h-36 object-contain shrink-0 transition-transform hover:scale-105"
-          />
-          <div>
-            <span className="text-4xl lg:text-5xl font-black tracking-tight text-white block">
-              VietCast
-            </span>
-            <span className="text-xs text-indigo-400 font-mono tracking-[0.2em] uppercase mt-1 block">
-              AI Video Translation Platform
-            </span>
-          </div>
+          <Link to="/" title="Về trang chủ" className="flex items-center gap-4 group cursor-pointer">
+            <img
+              src="/logo.png"
+              alt="VietCast Logo"
+              className="w-28 h-28 lg:w-36 lg:h-36 object-contain shrink-0 transition-transform group-hover:scale-105"
+            />
+            <div>
+              <span className="text-4xl lg:text-5xl font-black tracking-tight text-white block group-hover:text-indigo-200 transition">
+                VietCast
+              </span>
+              <span className="text-xs text-indigo-400 font-mono tracking-[0.2em] uppercase mt-1 block">
+                AI Video Translation Platform
+              </span>
+            </div>
+          </Link>
         </header>
 
         <main className="my-auto max-w-lg z-10">
@@ -365,10 +367,12 @@ export default function Login() {
         <div className="w-full max-w-sm mx-auto z-10">
           {/* Mobile brand header */}
           <div className="md:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl overflow-hidden mb-4 mx-auto">
-              <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">VietCast</h1>
+            <Link to="/" title="Về trang chủ" className="inline-block group cursor-pointer">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl overflow-hidden mb-2 mx-auto transition-transform group-hover:scale-105">
+                <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-white group-hover:text-indigo-200 transition">VietCast</h1>
+            </Link>
             <p className="text-sm text-zinc-400 mt-1">
               {isVerify
                 ? "Kiểm tra email để lấy mã OTP"
