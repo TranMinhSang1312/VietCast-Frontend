@@ -664,7 +664,7 @@ export default function Login() {
                       shape="pill"
                       text="signin_with"
                       locale="vi"
-                      width="100%"
+                      width="350"
                     />
                   </div>
                   {isGoogleLoading && (

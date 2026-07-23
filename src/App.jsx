@@ -16,23 +16,37 @@ import TopupModal from "./components/topup/TopupModal";
 import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
 import { formatCredit, formatCountdown } from "./utils/format";
 
-// Lazy-load the heavy tab contents so the initial bundle only ships the
-// Login + nav chrome.
-const VideoDashboard     = lazy(() => import("./pages/VideoDashboard"));
-const VideoHistory       = lazy(() => import("./pages/VideoHistory"));
+// Auto-retry helper for dynamic import chunks. When a new deployment occurs,
+// old JS chunks return 404/HTML. This helper automatically reloads the page
+// to fetch the latest index and chunk manifest.
+function lazyWithRetry(componentImport) {
+  return lazy(async () => {
+    const pageHasBeenReloaded = sessionStorage.getItem("vc_chunk_reloaded");
+    try {
+      const component = await componentImport();
+      sessionStorage.removeItem("vc_chunk_reloaded");
+      return component;
+    } catch (error) {
+      if (!pageHasBeenReloaded) {
+        sessionStorage.setItem("vc_chunk_reloaded", "true");
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+}
 
-// Admin surface is its own lazy chunk so a non-admin user never pays
-// the bytes. Mounted only when user.role === "ADMIN".
-const AdminApp           = lazy(() => import("./pages/admin/AdminApp"));
-
-// PayOS landing pages — small enough to inline but kept lazy.
-const PaymentSuccess     = lazy(() => import("./pages/PaymentSuccess"));
-const PaymentCancel      = lazy(() => import("./pages/PaymentCancel"));
-
-const TopupHistory       = lazy(() => import("./pages/TopupHistory"));
-const CreditUsageHistory = lazy(() => import("./pages/CreditUsageHistory"));
-const Pricing            = lazy(() => import("./pages/Pricing"));
-const LandingPage        = lazy(() => import("./pages/LandingPage"));
+// Lazy-load heavy tab contents with auto-retry on new deployments
+const VideoDashboard     = lazyWithRetry(() => import("./pages/VideoDashboard"));
+const VideoHistory       = lazyWithRetry(() => import("./pages/VideoHistory"));
+const AdminApp           = lazyWithRetry(() => import("./pages/admin/AdminApp"));
+const PaymentSuccess     = lazyWithRetry(() => import("./pages/PaymentSuccess"));
+const PaymentCancel      = lazyWithRetry(() => import("./pages/PaymentCancel"));
+const TopupHistory       = lazyWithRetry(() => import("./pages/TopupHistory"));
+const CreditUsageHistory = lazyWithRetry(() => import("./pages/CreditUsageHistory"));
+const Pricing            = lazyWithRetry(() => import("./pages/Pricing"));
+const LandingPage        = lazyWithRetry(() => import("./pages/LandingPage"));
 
 function TabFallback() {
   return (

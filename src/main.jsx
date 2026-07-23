@@ -7,6 +7,12 @@ import App from './App.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
+// Auto-recovery when dynamic chunks fail to load due to a new deployment
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  window.location.reload();
+});
+
 const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID || 'unconfigured-google-client-id';
 
