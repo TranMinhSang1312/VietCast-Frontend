@@ -93,7 +93,11 @@ export async function loginWithGoogle({ idToken }) {
   const { data } = await axios.post(
     ENDPOINTS.google,
     { idToken, deviceFingerprint },
-    { skipAuth: true, withCredentials: true }
+    {
+      skipAuth: true,
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
   );
   return data;
 }

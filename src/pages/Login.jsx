@@ -238,8 +238,10 @@ export default function Login() {
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    console.log("🔑 Google Credential Token received:", credentialResponse?.credential);
     if (!credentialResponse?.credential) {
-      setError("Đăng nhập với Google thất bại. Vui lòng thử lại.");
+      console.warn("⚠️ Google response missing credential property:", credentialResponse);
+      setError("Đăng nhập với Google thất bại. Không nhận được token từ Google.");
       return;
     }
     setError(null);
