@@ -273,7 +273,12 @@ function App() {
             }
           />
 
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
+            }
+          />
 
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/cancel" element={<PaymentCancel />} />

@@ -95,6 +95,7 @@ export function AuthProvider({ children }) {
       token,
       user,
       isLoggedIn,
+      isAuthenticated: isLoggedIn,
       isLoading,
       error,
       login,
