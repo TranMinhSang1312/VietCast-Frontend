@@ -61,21 +61,52 @@ export function AuthProvider({ children }) {
   // if the request interceptor hasn't fired yet.
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const storedUser = localStorage.getItem(USER_KEY);
+    let mounted = true;
 
-    if (storedToken) {
-      setToken(storedToken);
-      axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
-    }
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem(USER_KEY);
+    async function initAuth() {
+      const storedToken = localStorage.getItem(TOKEN_KEY);
+      const storedUser = localStorage.getItem(USER_KEY);
+
+      if (storedToken) {
+        setToken(storedToken);
+        axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {
+            localStorage.removeItem(USER_KEY);
+          }
+        }
+        if (mounted) setIsLoading(false);
+      } else {
+        // Silent boot check via HttpOnly Cookie (Remember Me)
+        try {
+          const { data } = await axios.post(
+            `${API_BASE_URL_PROVIDER.sync}/api/v1/auth/refresh-token`,
+            {},
+            { skipAuth: true, withCredentials: true }
+          );
+          if (data?.token && mounted) {
+            setToken(data.token);
+            axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+            localStorage.setItem(TOKEN_KEY, data.token);
+            const profile = await fetchProfile();
+            if (mounted) {
+              const userPayload = toUserPayload(profile);
+              setUser(userPayload);
+              localStorage.setItem(USER_KEY, JSON.stringify(userPayload));
+            }
+          }
+        } catch {
+          // No active remember-me session
+        } finally {
+          if (mounted) setIsLoading(false);
+        }
       }
     }
-    setIsLoading(false);
+
+    initAuth();
+    return () => { mounted = false; };
   }, []);
 
   /**
