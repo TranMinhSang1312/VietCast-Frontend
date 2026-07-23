@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -14,6 +14,21 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
+
+const MemoizedGoogleButton = memo(function MemoizedGoogleButton({ onSuccess, onError }) {
+  return (
+    <GoogleLogin
+      onSuccess={onSuccess}
+      onError={onError}
+      useOneTap={false}
+      theme="filled_black"
+      shape="pill"
+      text="signin_with"
+      locale="vi"
+      width="350"
+    />
+  );
+});
 
 // Local client-side validation. Cheap regex is good enough for a
 // first-pass UI check — the backend must still be the source of
@@ -656,15 +671,9 @@ export default function Login() {
               {googleConfigured ? (
                 <div className="relative w-full">
                   <div className={isGoogleLoading ? "pointer-events-none opacity-60" : undefined}>
-                    <GoogleLogin
+                    <MemoizedGoogleButton
                       onSuccess={handleGoogleSuccess}
                       onError={handleGoogleError}
-                      useOneTap={false}
-                      theme="filled_black"
-                      shape="pill"
-                      text="signin_with"
-                      locale="vi"
-                      width="350"
                     />
                   </div>
                   {isGoogleLoading && (

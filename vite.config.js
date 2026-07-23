@@ -108,10 +108,16 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       strictPort: true,
       host: true, // expose to LAN so other devices on the network can hit it
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      },
     },
     preview: {
       port: 4173,
       strictPort: true,
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      },
     },
     resolve: {
       alias: {
