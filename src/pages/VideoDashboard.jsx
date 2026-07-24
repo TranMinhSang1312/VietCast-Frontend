@@ -1023,14 +1023,9 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
 
               {/* Audio mode selector */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-semibold text-zinc-300">
-                    Chế độ âm thanh
-                  </label>
-                  <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-                    ✨ 2 Chức năng chính ở hàng trên
-                  </span>
-                </div>
+                <label className="block text-sm font-semibold text-zinc-300">
+                  Chế độ âm thanh
+                </label>
 
                 {/* Row 1: Primary Featured Modes (Lồng tiếng AI & Trộn âm thanh Side-by-Side) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

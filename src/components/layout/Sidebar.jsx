@@ -32,9 +32,9 @@ export default function Sidebar({ collapsed, onToggle }) {
           <Link
             to="/"
             title="Về trang chủ"
-            className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 select-none hover:opacity-90 transition"
+            className="flex items-center justify-center shrink-0 select-none hover:opacity-90 transition"
           >
-            <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt="VietCast Logo" className="w-9 h-9 object-contain" />
           </Link>
         ) : (
           <Link
@@ -42,9 +42,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             title="Về trang chủ"
             className="flex items-center gap-3 select-none min-w-0 group hover:opacity-90 transition"
           >
-            <div className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <img src="/logo.png" alt="VietCast Logo" className="w-full h-full object-cover" />
-            </div>
+            <img src="/logo.png" alt="VietCast Logo" className="w-10 h-10 object-contain shrink-0 group-hover:scale-105 transition-transform" />
             <div className="min-w-0">
               <span className="text-base font-extrabold tracking-tight text-white group-hover:text-indigo-200 transition">
                 VietCast
