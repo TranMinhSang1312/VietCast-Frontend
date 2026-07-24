@@ -189,8 +189,12 @@ export default function VideoDashboard() {
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
-  const [targetLanguage, setTargetLanguage] = useState(() => localStorage.getItem("vc_targetLanguage") || "Tiếng Việt");
-  const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
+  const [targetLanguage, setTargetLanguage] = useState(() => {
+    return localStorage.getItem("vc_targetLanguage") || "Tiếng Việt";
+  });
+  const [sourceLanguage, setSourceLanguage] = useState(() => {
+    return localStorage.getItem("vc_sourceLanguage") || "auto";
+  });const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
   const [logoCoordinates, setLogoCoordinates] = useState(() => localStorage.getItem("vc_logoCoordinates") || "");
   const [subtitleMask, setSubtitleMask] = useState(() => localStorage.getItem("vc_subtitleMask") || "");
   const [isLoading, setIsLoading] = useState(false);
@@ -254,6 +258,10 @@ export default function VideoDashboard() {
   useEffect(() => {
     localStorage.setItem("vc_targetLanguage", targetLanguage);
   }, [targetLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_sourceLanguage", sourceLanguage);
+  }, [sourceLanguage]);
 
   useEffect(() => {
     localStorage.setItem("vc_logoCoordinates", logoCoordinates);
@@ -634,6 +642,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
             url: cleanUrl,
             audioMode,
             targetLanguage,
+            sourceLanguage,
             // Only forward a voice value when the user picked an
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
@@ -1040,6 +1049,40 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                   </div>
                 </div>
               )}
+
+              {/* Source Language Selection (Speed Optimization Tip) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="source-lang" className="block text-sm font-semibold text-zinc-300">
+                    Ngôn ngữ gốc của Video (Đầu vào)
+                  </label>
+                  <span className="text-[11px] text-amber-400 font-semibold bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20 flex items-center gap-1">
+                    ⚡ Giúp AI bóc tách nhanh hơn 20-30%
+                  </span>
+                </div>
+                <select
+                  id="source-lang"
+                  value={sourceLanguage}
+                  onChange={(e) => setSourceLanguage(e.target.value)}
+                  disabled={isLoading || isProcessing}
+                  className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
+                >
+                  <option value="auto">🌐 Tự động nhận diện (Mặc định)</option>
+                  <option value="zh">🇨🇳 Tiếng Trung (Trung Quốc)</option>
+                  <option value="en">🇺🇸 Tiếng Anh (English)</option>
+                  <option value="ja">🇯🇵 Tiếng Nhật (Japanese)</option>
+                  <option value="ko">🇰🇷 Tiếng Hàn (Korean)</option>
+                  <option value="fr">🇫🇷 Tiếng Pháp (French)</option>
+                  <option value="de">🇩🇪 Tiếng Đức (German)</option>
+                  <option value="ru">🇷🇺 Tiếng Nga (Russian)</option>
+                  <option value="es">🇪🇸 Tiếng Tây Ban Nha (Spanish)</option>
+                </select>
+                {sourceLanguage !== "auto" && (
+                  <p className="mt-2 text-xs text-emerald-400/90 flex items-center gap-1.5 font-medium bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                    💡 Đã chọn <b>{sourceLanguage.toUpperCase()}</b>: AI sẽ bỏ qua bước quét đoán ngôn ngữ, giúp lồng tiếng nhanh hơn và chuẩn 100%!
+                  </p>
+                )}
+              </div>
 
               {/* Target Language Selection */}
               <div>
