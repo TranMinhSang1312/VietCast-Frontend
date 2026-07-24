@@ -1233,7 +1233,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                         </>
                       ) : (
                         <>
-                          <Wand2 className="w-5 h-5" />
+                          <MagicWand size={20} weight="fill" />
                           <span>Bắt đầu xử lý video</span>
                         </>
                       )}
