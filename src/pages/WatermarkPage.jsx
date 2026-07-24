@@ -146,7 +146,7 @@ export default function WatermarkPage() {
     w = Math.max(1, Math.min(w, sourceW - x));
     h = Math.max(1, Math.min(h, sourceH - y));
 
-    const coordsObj = { x, y, w, h, str: `${x},${y},${w},${h}` };
+    const coordsObj = { x, y, w, h, str: `${x}:${y}:${w}:${h}` };
 
     if (activeCropTarget === "logo") {
       setLogoCoords(coordsObj);
@@ -174,9 +174,11 @@ export default function WatermarkPage() {
     setIsSubmitting(true);
 
     try {
-      // Preserve original audio track 100% while applying visual delogo filter
+      // Ensure clean URL matching Spring Boot @URL pattern (must start with http:// or https://)
+      const validUrl = "https://local-upload.vietcast.app";
+
       const payload = {
-        url: videoObjectUrl || "https://local-upload.vietcast.app",
+        url: validUrl,
         audioMode: "original",
         logoCoordinates: logoCoords ? logoCoords.str : null,
         subtitleMask: subMaskCoords ? subMaskCoords.str : null,
