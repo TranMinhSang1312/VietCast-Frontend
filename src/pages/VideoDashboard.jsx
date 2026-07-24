@@ -414,7 +414,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
   }
 
   let hardsubCost = 0;
-  if (hardsubFlag) {
+  if (hardsubFlag && (mode === "dub" || mode === "mix")) {
     hardsubCost = Math.max(60, Math.round(minutes * 60));
   }
 
@@ -627,7 +627,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
             voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
             logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates.trim() || null),
             subtitleMask: audioMode === "subtitle" ? null : (subtitleMask.trim() || null),
-            hardsub: audioMode === "subtitle" ? false : hardsub,
+            hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
@@ -1108,8 +1108,8 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                 </select>
               </div>
 
-              {/* Hardsub Toggle Switch */}
-              {audioMode !== "subtitle" && (
+              {/* Hardsub Toggle Switch - Only applicable for AI Dubbing and Mix modes */}
+              {(audioMode === "dub" || audioMode === "mix") && (
                 <div className="rounded-xl border border-white/[0.08] bg-slate-950/40 p-4 transition hover:border-white/[0.14]">
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
