@@ -252,71 +252,28 @@ export default function WatermarkPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Input & Cropping Area */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Input Mode Selector */}
-          <div className="flex rounded-xl bg-slate-950 p-1 border border-white/[0.06]">
-            <button
-              type="button"
-              onClick={() => setInputMode("file")}
-              className={`flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition select-none ${
-                inputMode === "file"
-                  ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/30"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <UploadSimple size={18} weight="duotone" />
-              <span>Tải Video từ máy tính</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputMode("url")}
-              className={`flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition select-none ${
-                inputMode === "url"
-                  ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/30"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <LinkSimple size={18} weight="duotone" />
-              <span>Nhập đường dẫn Video (URL)</span>
-            </button>
+          {/* File Upload Zone - Direct Local File Selection */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-6 text-center bg-indigo-500/[0.02] hover:bg-indigo-500/[0.05] transition cursor-pointer select-none"
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mx-auto flex items-center justify-center mb-3">
+              <UploadSimple size={24} weight="duotone" />
+            </div>
+            <p className="text-sm font-semibold text-slate-200">
+              {selectedFile ? `Đã chọn: ${selectedFile.name}` : "Nhấp hoặc Kéo thả file Video từ máy tính vào đây"}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Hỗ trợ tệp MP4, MOV, WebM (Tự động phát và xem trước khung hình trực tiếp trên trình duyệt)
+            </p>
           </div>
-
-          {/* File Upload Zone */}
-          {inputMode === "file" ? (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-6 text-center bg-indigo-500/[0.02] hover:bg-indigo-500/[0.05] transition cursor-pointer select-none"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mx-auto flex items-center justify-center mb-3">
-                <UploadSimple size={24} weight="duotone" />
-              </div>
-              <p className="text-sm font-semibold text-slate-200">
-                {selectedFile ? selectedFile.name : "Nhấp hoặc Kéo thả file Video vào đây"}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Hỗ trợ MP4, MOV, WebM (Tối đa 500 MB)
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">
-                Đường dẫn Video (YouTube, TikTok, Douyin)
-              </label>
-              <input
-                type="text"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-white/[0.08] text-white text-sm focus:border-indigo-400 focus:outline-none transition"
-              />
-            </div>
-          )}
 
           {/* Video Player & Frame Scrubbing */}
           {videoObjectUrl && (
