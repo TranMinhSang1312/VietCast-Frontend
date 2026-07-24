@@ -7,6 +7,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Coins,
+} from "lucide-react";
 import { Eraser } from "@phosphor-icons/react";
 
 // Single source of truth for the user-facing sidebar. Adding a new entry
