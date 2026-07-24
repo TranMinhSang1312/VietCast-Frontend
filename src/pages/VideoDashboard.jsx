@@ -1,44 +1,56 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, Wand2, Mic, Subtitles, CheckCircle2, Download, AlertCircle, Film, Languages, Coins } from "lucide-react";
+import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles } from "lucide-react";
+import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning, Sparkle, Fire } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
 import WatermarkRemover from "../components/watermark/WatermarkRemover";
 import { PRICING } from "../config/pricing";
 
-const AUDIO_MODES = [
+const PRIMARY_AUDIO_MODES = [
   {
     value: "dub",
     label: "Lồng tiếng AI",
-    description: `${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Gồm giọng Việt và SRT song ngữ.`,
-    icon: Wand2,
-  },
-  {
-    value: "original",
-    label: "Giữ tiếng gốc",
-    description: `${PRICING.originalPerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit.`,
-    icon: Mic,
-  },
-  {
-    value: "mute",
-    label: "Video câm",
-    description: `${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Bỏ âm thanh và không tạo SRT.`,
-    icon: Film,
-  },
-  {
-    value: "subtitle",
-    label: "Chỉ tạo phụ đề",
-    description: `${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT tiếng Việt.`,
-    icon: Languages,
+    badge: "🔥 KHUYÊN DÙNG",
+    badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    description: `${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Giọng Việt bản ngữ truyền cảm và file SRT song ngữ.`,
+    icon: MagicWand,
+    isPrimary: true,
   },
   {
     value: "mix",
     label: "Trộn âm thanh gốc & AI",
-    description: `${PRICING.mixPerMinute} credit/phút, tối thiểu ${PRICING.mixPerMinute} credit. Giữ nhạc nền và thêm giọng Việt.`,
-    icon: Subtitles,
+    badge: "⭐ NỔI BẬT",
+    badgeColor: "bg-purple-500/15 text-purple-300 border-purple-500/30",
+    description: `${PRICING.mixPerMinute} credit/phút, tối thiểu ${PRICING.mixPerMinute} credit. Giữ 30% nhạc nền gốc và thêm 120% giọng AI.`,
+    icon: SlidersHorizontal,
+    isPrimary: true,
   },
 ];
+
+const SECONDARY_AUDIO_MODES = [
+  {
+    value: "original",
+    label: "Giữ tiếng gốc",
+    description: `${PRICING.originalPerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit.`,
+    icon: Microphone,
+  },
+  {
+    value: "mute",
+    label: "Video câm",
+    description: `${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Bỏ âm thanh.`,
+    icon: SpeakerSimpleX,
+  },
+  {
+    value: "subtitle",
+    label: "Chỉ tạo phụ đề",
+    description: `${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT.`,
+    icon: ClosedCaptioning,
+  },
+];
+
+const AUDIO_MODES = [...PRIMARY_AUDIO_MODES, ...SECONDARY_AUDIO_MODES];
 
 const MODE_OUTPUTS = Object.freeze({
   original: { label: "Video giữ tiếng gốc", video: true, srt: false },
@@ -1010,12 +1022,32 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
               )}
 
               {/* Audio mode selector */}
-              <div>
-                <label className="block text-sm font-semibold text-zinc-300 mb-3">
-                  Chế độ âm thanh
-                </label>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-semibold text-zinc-300">
+                    Chế độ âm thanh
+                  </label>
+                  <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                    ✨ 2 Chức năng chính ở hàng trên
+                  </span>
+                </div>
+
+                {/* Row 1: Primary Featured Modes (Lồng tiếng AI & Trộn âm thanh Side-by-Side) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {AUDIO_MODES.map((mode) => (
+                  {PRIMARY_AUDIO_MODES.map((mode) => (
+                    <AudioModeOption
+                      key={mode.value}
+                      mode={mode}
+                      checked={audioMode === mode.value}
+                      disabled={isLoading || isProcessing}
+                      onSelect={handleModeChange}
+                    />
+                  ))}
+                </div>
+
+                {/* Row 2: Secondary Modes (3 Columns) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  {SECONDARY_AUDIO_MODES.map((mode) => (
                     <AudioModeOption
                       key={mode.value}
                       mode={mode}
@@ -1402,12 +1434,18 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
 
 const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled, onSelect }) {
   const Icon = mode.icon;
+  const isPrimary = mode.isPrimary;
+
   return (
     <label
-      className={`relative cursor-pointer rounded-xl border p-4 transition flex items-start gap-3 select-none ${
+      className={`relative cursor-pointer rounded-xl border p-3.5 transition-all duration-200 flex items-start gap-3 select-none ${
         checked
-          ? "border-indigo-400 bg-indigo-500/10 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
-          : "border-white/[0.06] bg-slate-950/40 hover:border-white/[0.12]"
+          ? isPrimary
+            ? "border-indigo-400/90 bg-gradient-to-br from-indigo-500/15 via-purple-500/10 to-indigo-950/40 shadow-[0_0_25px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-400/40"
+            : "border-indigo-400 bg-indigo-500/10 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
+          : isPrimary
+          ? "border-indigo-500/25 bg-slate-950/60 hover:border-indigo-400/50 hover:bg-white/[0.04] shadow-[0_4px_20px_-10px_rgba(99,102,241,0.15)]"
+          : "border-white/[0.06] bg-slate-950/40 hover:border-white/[0.12] hover:bg-white/[0.02]"
       } ${disabled ? "opacity-40 pointer-events-none" : "active:scale-[0.98]"}`}
     >
       <input
@@ -1420,26 +1458,37 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
         className="sr-only"
       />
       <div
-        className={`shrink-0 mt-0.5 w-9 h-9 rounded-lg flex items-center justify-center ${
+        className={`shrink-0 mt-0.5 w-8.5 h-8.5 rounded-lg flex items-center justify-center transition-transform duration-200 ${
           checked
-            ? "bg-indigo-500 text-white shadow-md shadow-indigo-500/30"
+            ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/30 scale-105"
+            : isPrimary
+            ? "bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20"
             : "bg-slate-950 text-slate-400 ring-1 ring-white/[0.08]"
         }`}
       >
-        <Icon className="w-4.5 h-4.5" />
+        <Icon size={20} weight={checked ? "fill" : "duotone"} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-semibold text-sm text-slate-100">{mode.label}</span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`font-bold text-xs sm:text-sm ${checked ? "text-white" : "text-slate-100"}`}>
+              {mode.label}
+            </span>
+            {mode.badge && (
+              <span className={`px-1.5 py-0.5 text-[9px] font-extrabold rounded border tracking-wider uppercase ${mode.badgeColor}`}>
+                {mode.badge}
+              </span>
+            )}
+          </div>
           <span
-            className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-              checked ? "border-indigo-400" : "border-slate-700"
+            className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+              checked ? "border-indigo-400 bg-indigo-500/20" : "border-slate-700"
             }`}
           >
-            {checked && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+            {checked && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_1px_rgba(129,140,248,0.8)]" />}
           </span>
         </div>
-        <p className="text-xs text-slate-500 mt-1 leading-normal font-medium">{mode.description}</p>
+        <p className="text-[11px] text-slate-400 mt-1 leading-normal font-medium">{mode.description}</p>
       </div>
     </label>
   );
