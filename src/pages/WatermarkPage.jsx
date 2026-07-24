@@ -157,12 +157,10 @@ export default function WatermarkPage() {
     setActiveCropTarget(null);
   };
 
-  // Cost calculation
+  // Cost calculation: ONLY charge the visual filter rate (250 credits/min, min 250)
   const minutes = Math.max(1, durationSeconds / 60);
-  const baseCost = Math.max(PRICING.basicMinimum, Math.round(minutes * PRICING.mutePerMinute));
-  const hasFilter = Boolean(logoCoords || subMaskCoords);
-  const filterCost = hasFilter ? Math.round(minutes * PRICING.visualFilterPerMinute) : 0;
-  const totalCost = baseCost + filterCost;
+  const filterCost = Math.round(minutes * PRICING.visualFilterPerMinute);
+  const totalCost = Math.max(250, filterCost);
 
   // Submit task
   const handleSubmit = async (e) => {
@@ -176,12 +174,10 @@ export default function WatermarkPage() {
     setIsSubmitting(true);
 
     try {
-      let targetUrl = videoUrl;
-
-      // If user uploaded a direct file, we pass the URL or process request
+      // Preserve original audio track 100% while applying visual delogo filter
       const payload = {
-        url: targetUrl || videoObjectUrl || "https://local-upload.vietcast.app",
-        audioMode: "mute",
+        url: videoObjectUrl || "https://local-upload.vietcast.app",
+        audioMode: "original",
         logoCoordinates: logoCoords ? logoCoords.str : null,
         subtitleMask: subMaskCoords ? subMaskCoords.str : null,
         hardsub: false,
@@ -352,12 +348,12 @@ export default function WatermarkPage() {
                 <span className="font-mono text-white font-bold">{durationSeconds} giây</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Phí xử lý Video câm (`mute`):</span>
-                <span className="font-mono text-white">{baseCost} credit</span>
+                <span>Phí xử lý Video gốc:</span>
+                <span className="font-mono text-emerald-400 font-bold">MIỄN PHÍ (0 credit)</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Phụ thu bộ lọc Delogo hình ảnh:</span>
-                <span className="font-mono text-amber-400 font-bold">+{filterCost} credit</span>
+                <span>Phí bộ lọc Xóa Logo / Che phụ đề:</span>
+                <span className="font-mono text-amber-400 font-bold">250 credit/phút</span>
               </div>
               <div className="pt-3 border-t border-white/[0.08] flex justify-between text-sm font-extrabold text-white">
                 <span>Tổng chi phí:</span>
@@ -423,7 +419,7 @@ export default function WatermarkPage() {
 
       {/* Cropping Modal Overlay */}
       {activeCropTarget && frameCanvasUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
           <div className="bg-slate-950 border border-white/[0.1] rounded-2xl p-6 max-w-4xl w-full space-y-4 overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">
@@ -432,9 +428,9 @@ export default function WatermarkPage() {
               <button type="button" onClick={() => setActiveCropTarget(null)} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
-            <div className="flex justify-center bg-black rounded-xl overflow-hidden p-2 max-h-[60vh]">
-              <ReactCrop crop={crop} onChange={(c) => setCrop(c)} onComplete={(c) => setCompletedCrop(c)}>
-                <img id="crop-frame-img" src={frameCanvasUrl} alt="Crop Frame" className="max-h-[55vh] object-contain" />
+            <div className="flex items-center justify-center bg-slate-900/90 rounded-xl overflow-auto p-4 max-h-[70vh] min-h-[300px]">
+              <ReactCrop crop={crop} onChange={(c) => setCrop(c)} onComplete={(c) => setCompletedCrop(c)} className="inline-block max-h-[65vh] max-w-full">
+                <img id="crop-frame-img" src={frameCanvasUrl} alt="Crop Frame" className="block max-h-[65vh] max-w-full h-auto w-auto object-contain rounded" />
               </ReactCrop>
             </div>
 
