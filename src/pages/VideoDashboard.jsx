@@ -178,9 +178,14 @@ export default function VideoDashboard() {
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
   const [targetLanguage, setTargetLanguage] = useState(() => localStorage.getItem("vc_targetLanguage") || "Tiếng Việt");
+  const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
   const [logoCoordinates, setLogoCoordinates] = useState(() => localStorage.getItem("vc_logoCoordinates") || "");
   const [subtitleMask, setSubtitleMask] = useState(() => localStorage.getItem("vc_subtitleMask") || "");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("vc_hardsub", hardsub ? "true" : "false");
+  }, [hardsub]);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(() => {
     try {
@@ -382,7 +387,7 @@ const handleReset = useCallback(() => {
   // effect; the 600ms debounce absorbs "still typing" keystrokes. Worst
   // case is one round-trip per settled URL = ~10s when yt-dlp times
   // out (matches the server timeout). We surface that with a spinner
-function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, userBalance) {
+function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, userBalance, hardsubFlag = false) {
   const seconds = Math.max(0, Number(durationSeconds) || 0);
   const minutes = seconds / 60;
 
@@ -408,7 +413,12 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
     visualFilterCost = Math.round(minutes * 250);
   }
 
-  const estimatedCost = (baseCost + visualFilterCost) || 800;
+  let hardsubCost = 0;
+  if (hardsubFlag) {
+    hardsubCost = Math.max(60, Math.round(minutes * 60));
+  }
+
+  const estimatedCost = (baseCost + visualFilterCost + hardsubCost) || 800;
   const currentBalance = Number(userBalance) || 0;
   const sufficient = currentBalance >= estimatedCost;
 
@@ -460,7 +470,8 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
         audioMode,
         logoCoordinates,
         subtitleMask,
-        userBalance
+        userBalance,
+        hardsub
       );
       setCostPreview(instantPreview);
       setCostPreviewLoading(false);
@@ -477,6 +488,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
             audioMode,
             logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates || null),
             subtitleMask: audioMode === "subtitle" ? null : (subtitleMask || null),
+            hardsub,
           },
           signal: controller.signal,
           timeout: 30000,
@@ -498,7 +510,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
       return () => controller.abort();
     }, 600);
     return () => clearTimeout(handle);
-  }, [url, audioMode, logoCoordinates, subtitleMask, user?.creditBalance, user?.bonusCreditBalance, result]);
+  }, [url, audioMode, logoCoordinates, subtitleMask, hardsub, user?.creditBalance, user?.bonusCreditBalance, result]);
 
   const refreshUserCredit = useCallback(async () => {
     try {
@@ -614,7 +626,8 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
             logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates.trim() || null),
-            subtitleMask: audioMode === "subtitle" ? null : (subtitleMask.trim() || null)
+            subtitleMask: audioMode === "subtitle" ? null : (subtitleMask.trim() || null),
+            hardsub: audioMode === "subtitle" ? false : hardsub,
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
@@ -1094,6 +1107,46 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                   <option value="中文">🇨🇳 中文 (Tiếng Trung)</option>
                 </select>
               </div>
+
+              {/* Hardsub Toggle Switch */}
+              {audioMode !== "subtitle" && (
+                <div className="rounded-xl border border-white/[0.08] bg-slate-950/40 p-4 transition hover:border-white/[0.14]">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Subtitles className="h-4 w-4 text-indigo-400" />
+                        <span className="text-sm font-semibold text-slate-100">
+                          In phụ đề lên Video (Hardsub)
+                        </span>
+                        <span className="rounded-md bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold text-indigo-400 border border-indigo-500/20">
+                          +60 credit/phút (tối thiểu 60)
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Chèn chữ phụ đề dịch trực tiếp lên khung hình video (font Arial 22pt, nét đẹp). Nếu tắt, video chỉ có âm thanh lồng tiếng AI mà không có chữ in đè.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={hardsub}
+                      disabled={isLoading || isProcessing}
+                      onClick={() => setHardsub(!hardsub)}
+                      className={[
+                        "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50",
+                        hardsub ? "bg-indigo-500" : "bg-slate-700",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          hardsub ? "translate-x-5" : "translate-x-0",
+                        ].join(" ")}
+                      />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Submit Action */}
               {!isProcessing && (() => {
