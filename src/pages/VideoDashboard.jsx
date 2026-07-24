@@ -391,17 +391,17 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
   const seconds = Math.max(0, Number(durationSeconds) || 0);
   const minutes = seconds / 60;
 
-  let ratePerMin = 800;
-  let minCost = 800;
+  let ratePerMin = PRICING.dubPerMinute;
+  let minCost = PRICING.dubPerMinute;
   if (mode === "original" || mode === "mute") {
-    ratePerMin = 200;
-    minCost = 500;
+    ratePerMin = PRICING.mutePerMinute;
+    minCost = PRICING.basicMinimum;
   } else if (mode === "subtitle") {
-    ratePerMin = 500;
-    minCost = 500;
+    ratePerMin = PRICING.subtitlePerMinute;
+    minCost = PRICING.subtitlePerMinute;
   } else if (mode === "dub" || mode === "mix") {
-    ratePerMin = 800;
-    minCost = 800;
+    ratePerMin = PRICING.dubPerMinute;
+    minCost = PRICING.dubPerMinute;
   }
 
   const baseCost = Math.max(minCost, Math.round(minutes * ratePerMin));
@@ -410,7 +410,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
   const hasSubMask = mode !== "subtitle" && Boolean(subMask && subMask.trim());
   let visualFilterCost = 0;
   if (hasLogo || hasSubMask) {
-    visualFilterCost = Math.round(minutes * 250);
+    visualFilterCost = Math.round(minutes * PRICING.visualFilterPerMinute);
   }
 
   let hardsubCost = 0;
@@ -418,7 +418,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
     hardsubCost = Math.max(60, Math.round(minutes * 60));
   }
 
-  const estimatedCost = (baseCost + visualFilterCost + hardsubCost) || 800;
+  const estimatedCost = (baseCost + visualFilterCost + hardsubCost) || PRICING.dubPerMinute;
   const currentBalance = Number(userBalance) || 0;
   const sufficient = currentBalance >= estimatedCost;
 

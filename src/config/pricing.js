@@ -5,8 +5,8 @@ export const PRICING = Object.freeze({
   mutePerMinute: 200,
   basicMinimum: 500,
   subtitlePerMinute: 500,
-  dubPerMinute: 800,
-  mixPerMinute: 800,
+  dubPerMinute: 1200,
+  mixPerMinute: 1200,
   visualFilterPerMinute: 250,
 });
 
