@@ -163,8 +163,14 @@ export default function WatermarkPage() {
   const totalCost = Math.max(250, filterCost);
 
   // Submit task
+  const [uploadProgressMsg, setUploadProgressMsg] = useState("");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedFile) {
+      setError("Vui lòng chọn tệp video từ máy tính trước khi khởi tạo.");
+      return;
+    }
     if (!logoCoords && !subMaskCoords) {
       setError("Vui lòng khoanh vùng ít nhất 1 khu vực (Logo hoặc Phụ đề gốc) để xử lý.");
       return;
@@ -172,13 +178,29 @@ export default function WatermarkPage() {
 
     setError(null);
     setIsSubmitting(true);
+    setUploadProgressMsg("Đang tải video lên lưu trữ Cloud R2...");
 
     try {
-      // Ensure clean URL matching Spring Boot @URL pattern (must start with http:// or https://)
-      const validUrl = "https://local-upload.vietcast.app";
+      // Step 1: Upload direct video file to Backend /api/v1/videos/upload
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
+      const uploadRes = await axios.post(
+        `${API_BASE_URL_PROVIDER.sync}/api/v1/videos/upload`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      const r2VideoUrl = uploadRes.data?.url;
+      if (!r2VideoUrl) {
+        throw new Error("Không nhận được liên kết video từ lưu trữ Cloud.");
+      }
+
+      setUploadProgressMsg("Đang gửi yêu cầu Render...");
+
+      // Step 2: Submit process payload with the real public R2 video URL
       const payload = {
-        url: validUrl,
+        url: r2VideoUrl,
         audioMode: "original",
         logoCoordinates: logoCoords ? logoCoords.str : null,
         subtitleMask: subMaskCoords ? subMaskCoords.str : null,
@@ -197,13 +219,15 @@ export default function WatermarkPage() {
         status: "PROCESSING",
         videoUrl: null,
       });
+      setUploadProgressMsg("");
 
       // Poll task status
       pollTaskStatus(taskId);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Không thể khởi tạo tác vụ xóa Logo. Vui lòng thử lại.");
+      setError(err.response?.data?.message || err.message || "Không thể khởi tạo tác vụ xóa Logo. Vui lòng thử lại.");
       setIsSubmitting(false);
+      setUploadProgressMsg("");
     }
   };
 
@@ -379,7 +403,7 @@ export default function WatermarkPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Đang xử lý Delogo...</span>
+                  <span>{uploadProgressMsg || "Đang xử lý Delogo..."}</span>
                 </>
               ) : (
                 <>
