@@ -7,16 +7,17 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Coins,
-} from "lucide-react";
+import { Eraser } from "@phosphor-icons/react";
 
 // Single source of truth for the user-facing sidebar. Adding a new entry
 // here automatically renders a NavLink with active styling.
 const NAV = [
-  { id: "dashboard",     label: "Lồng tiếng",    icon: Wand2,   path: "/dashboard"     },
-  { id: "video-history", label: "Lịch sử video", icon: Film,    path: "/video-history" },
-  { id: "topup",         label: "Lịch sử nạp",   icon: Receipt, path: "/topup-history" },
-  { id: "credit",        label: "Lịch sử tiêu",  icon: Wallet,  path: "/credit-usage"  },
-  { id: "pricing",       label: "Phí dịch vụ",   icon: Coins,   path: "/pricing"       },
+  { id: "dashboard",     label: "Lồng tiếng",        icon: Wand2,   path: "/dashboard"          },
+  { id: "watermark",     label: "Xóa Logo / Phụ đề", icon: Eraser,  path: "/watermark-remover"  },
+  { id: "video-history", label: "Lịch sử video",     icon: Film,    path: "/video-history"      },
+  { id: "topup",         label: "Lịch sử nạp",       icon: Receipt, path: "/topup-history"      },
+  { id: "credit",        label: "Lịch sử tiêu",      icon: Wallet,  path: "/credit-usage"       },
+  { id: "pricing",       label: "Phí dịch vụ",       icon: Coins,   path: "/pricing"            },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
