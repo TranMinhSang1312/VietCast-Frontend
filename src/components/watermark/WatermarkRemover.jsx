@@ -96,45 +96,57 @@ export default function WatermarkRemover({
   // ------------------------------------------------------------------
 
   const resolveSourceCoords = useCallback((displayCrop) => {
-    const img = imageRef.current;
-    if (!img) {
-      throw new Error("Image element not mounted yet.");
+    const el = imageRef.current;
+    if (!el) {
+      throw new Error("Media element not mounted yet.");
     }
-    const displayW = img.clientWidth;
-    const displayH = img.clientHeight;
+    const displayW = el.clientWidth;
+    const displayH = el.clientHeight;
     if (!displayW || !displayH) {
-      throw new Error("Image has zero display size.");
+      throw new Error("Media element has zero display size.");
     }
 
-    const scaleX = img.naturalWidth / displayW;
-    const scaleY = img.naturalHeight / displayH;
+    const sourceW = el.naturalWidth || el.videoWidth;
+    const sourceH = el.naturalHeight || el.videoHeight;
+    if (!sourceW || !sourceH) {
+      throw new Error("Media element missing natural dimensions.");
+    }
 
-    const x = displayCrop.x * scaleX;
-    const y = displayCrop.y * scaleY;
-    const w = displayCrop.width * scaleX;
-    const h = displayCrop.height * scaleY;
+    const scaleX = sourceW / displayW;
+    const scaleY = sourceH / displayH;
 
-    return {
-      x: Math.round(x),
-      y: Math.round(y),
-      w: Math.round(w),
-      h: Math.round(h),
-    };
+    let x = Math.floor(displayCrop.x * scaleX);
+    let y = Math.floor(displayCrop.y * scaleY);
+    let w = Math.floor(displayCrop.width * scaleX);
+    let h = Math.floor(displayCrop.height * scaleY);
+
+    // Strict clamping to ensure delogo bounds (x+w <= sourceW and y+h <= sourceH)
+    x = Math.max(0, Math.min(x, sourceW - 1));
+    y = Math.max(0, Math.min(y, sourceH - 1));
+    w = Math.max(1, Math.min(w, sourceW - x));
+    h = Math.max(1, Math.min(h, sourceH - y));
+
+    return { x, y, w, h };
   }, []);
 
   const resolveSourceCoordsFromPercent = useCallback((percentCrop) => {
-    const img = imageRef.current;
-    if (!img) throw new Error("Image element not mounted yet.");
-    const x = (percentCrop.x / 100) * img.naturalWidth;
-    const y = (percentCrop.y / 100) * img.naturalHeight;
-    const w = (percentCrop.width / 100) * img.naturalWidth;
-    const h = (percentCrop.height / 100) * img.naturalHeight;
-    return {
-      x: Math.round(x),
-      y: Math.round(y),
-      w: Math.round(w),
-      h: Math.round(h),
-    };
+    const el = imageRef.current;
+    if (!el) throw new Error("Media element not mounted yet.");
+    const sourceW = el.naturalWidth || el.videoWidth;
+    const sourceH = el.naturalHeight || el.videoHeight;
+    if (!sourceW || !sourceH) throw new Error("Media element missing natural dimensions.");
+
+    let x = Math.floor((percentCrop.x / 100) * sourceW);
+    let y = Math.floor((percentCrop.y / 100) * sourceH);
+    let w = Math.floor((percentCrop.width / 100) * sourceW);
+    let h = Math.floor((percentCrop.height / 100) * sourceH);
+
+    x = Math.max(0, Math.min(x, sourceW - 1));
+    y = Math.max(0, Math.min(y, sourceH - 1));
+    w = Math.max(1, Math.min(w, sourceW - x));
+    h = Math.max(1, Math.min(h, sourceH - y));
+
+    return { x, y, w, h };
   }, []);
 
   const onImageLoad = useCallback((e) => {
