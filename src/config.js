@@ -1,8 +1,7 @@
 // Runtime API configuration for the pure-Web build.
 //
-// The renderer learns where the backend lives through ONE chain:
-//   1. import.meta.env.VITE_API_BASE_URL  (build-time constant)
-//   2. PROD_API_BASE_URL                   (hardcoded production fallback)
+// Production always uses the stable VietCast API domain. Development may
+// override it with VITE_API_BASE_URL / VITE_WS_BASE_URL.
 //
 // Earlier Electron-specific runtime config (window.electronAPI.getRuntimeConfig())
 // has been removed — this project is now a plain SPA that talks to the
@@ -15,31 +14,27 @@
 // the request/response interceptors to the shared axios instance
 // (Bearer-token injection + error normalisation).
 
-// Stable production endpoint backed by the Oracle deployment. Vercel should
-// still set the VITE_* values explicitly, while these constants keep builds
-// safe if a deployment environment variable is accidentally omitted.
+// Stable production endpoint backed by the Oracle deployment.
 export const PROD_API_BASE_URL = 'https://api.vietcast.id.vn';
 export const PROD_WS_BASE_URL  = 'wss://api.vietcast.id.vn';
 
-/** Build-time constant OR hardcoded fallback if no env was inlined. */
-function readViteEnv(key, fallback) {
-  try {
-    const v = import.meta.env?.[key];
-    if (typeof v === 'string' && v.length > 0) return v;
-  } catch { /* not in Vite */ }
-  return fallback;
-}
+const RESOLVED_API_BASE_URL = import.meta.env.DEV
+  ? (import.meta.env.VITE_API_BASE_URL || PROD_API_BASE_URL)
+  : PROD_API_BASE_URL;
+
+const RESOLVED_WS_BASE_URL = import.meta.env.DEV
+  ? (import.meta.env.VITE_WS_BASE_URL || PROD_WS_BASE_URL)
+  : PROD_WS_BASE_URL;
 
 let runtimeCache = null;
 
 async function loadRuntimeConfig() {
   if (runtimeCache) return runtimeCache;
 
-  // Vite-inlined env constants OR hardcoded production fallback.
   runtimeCache = {
-    apiBaseUrl: readViteEnv('VITE_API_BASE_URL', PROD_API_BASE_URL),
-    wsBaseUrl:  readViteEnv('VITE_WS_BASE_URL',  PROD_WS_BASE_URL),
-    env:        readViteEnv('MODE', 'production'),
+    apiBaseUrl: RESOLVED_API_BASE_URL,
+    wsBaseUrl:  RESOLVED_WS_BASE_URL,
+    env:        import.meta.env.MODE || 'production',
     platform:   typeof navigator !== 'undefined' ? navigator.platform : 'web',
     source:     'vite-or-fallback',
   };
@@ -62,19 +57,16 @@ export const API_BASE_URL_PROVIDER = {
   /** Async — must be awaited at app boot before any axios call. */
   load: loadRuntimeConfig,
 
-  /**
-   * Synchronous fallback for code paths that can't await —
-   * prefers the Vite-inlined constant, then the production fallback.
-   */
+  /** Synchronous value for code paths that cannot await runtime setup. */
   get sync() {
-    return readViteEnv('VITE_API_BASE_URL', PROD_API_BASE_URL);
+    return RESOLVED_API_BASE_URL;
   },
 };
 
 export const WS_BASE_URL_PROVIDER = {
   load: loadRuntimeConfig,
   get sync() {
-    return readViteEnv('VITE_WS_BASE_URL', PROD_WS_BASE_URL);
+    return RESOLVED_WS_BASE_URL;
   },
 };
 
