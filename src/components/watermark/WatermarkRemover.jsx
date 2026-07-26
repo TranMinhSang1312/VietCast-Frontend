@@ -40,8 +40,11 @@ export default function WatermarkRemover({
 
   // Preview frame extraction state
   const [frameUrl, setFrameUrl] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(Boolean(videoSrc));
+  const [error, setError] = useState(
+    videoSrc ? null : "Đường dẫn video không hợp lệ.",
+  );
+  const [sourceCoordText, setSourceCoordText] = useState("(chưa có)");
 
   useEffect(() => {
     let active = true;
@@ -76,12 +79,8 @@ export default function WatermarkRemover({
       }
     }
 
-    if (videoSrc) {
-      loadFrame();
-    } else {
-      setError("Đường dẫn video không hợp lệ.");
-      setIsLoading(false);
-    }
+    if (!videoSrc) return undefined;
+    loadFrame();
 
     return () => {
       active = false;
@@ -175,7 +174,20 @@ export default function WatermarkRemover({
   const handleCropComplete = useCallback((pixelCrop, percentCrop) => {
     setCompletedCrop(pixelCrop);
     setCompletedPercentCrop(percentCrop);
-  }, []);
+    try {
+      let coords = null;
+      if (pixelCrop?.width > 0 && pixelCrop?.height > 0) {
+        coords = resolveSourceCoords(pixelCrop);
+      } else if (percentCrop?.width > 0 && percentCrop?.height > 0) {
+        coords = resolveSourceCoordsFromPercent(percentCrop);
+      }
+      setSourceCoordText(
+        coords ? `${coords.x}:${coords.y}:${coords.w}:${coords.h}` : "(chưa có)",
+      );
+    } catch {
+      setSourceCoordText("(chưa có)");
+    }
+  }, [resolveSourceCoords, resolveSourceCoordsFromPercent]);
 
   const handleConfirm = useCallback(() => {
     let coords;
@@ -322,31 +334,7 @@ export default function WatermarkRemover({
               Tọa độ (sau khi quy đổi về video gốc)
             </div>
             <div className="font-mono text-sm text-slate-200">
-              {(() => {
-                try {
-                  if (
-                    completedCrop &&
-                    completedCrop.width > 0 &&
-                    completedCrop.height > 0
-                  ) {
-                    const c = resolveSourceCoords(completedCrop);
-                    return `${c.x}:${c.y}:${c.w}:${c.h}`;
-                  }
-                  if (
-                    completedPercentCrop &&
-                    completedPercentCrop.width > 0 &&
-                    completedPercentCrop.height > 0
-                  ) {
-                    const c = resolveSourceCoordsFromPercent(
-                      completedPercentCrop,
-                    );
-                    return `${c.x}:${c.y}:${c.w}:${c.h}`;
-                  }
-                  return "(chưa có)";
-                } catch {
-                  return "(chưa có)";
-                }
-              })()}
+              {sourceCoordText}
             </div>
           </div>
 

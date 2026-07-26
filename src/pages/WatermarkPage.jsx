@@ -1,12 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { 
   Eraser, 
   UploadSimple, 
-  LinkSimple, 
   Scissors, 
   CheckCircle, 
-  ArrowClockwise, 
   DownloadSimple, 
   PlayCircle,
   WarningCircle,
@@ -15,20 +13,15 @@ import {
 import { Loader2 } from "lucide-react";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
-import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
-import { PRICING, formatCredits } from "../config/pricing";
+import { PRICING } from "../config/pricing";
 
 export default function WatermarkPage() {
-  const { user } = useAuth();
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Video input mode: 'file' | 'url'
-  const [inputMode, setInputMode] = useState("file");
   const [selectedFile, setSelectedFile] = useState(null);
   const [videoObjectUrl, setVideoObjectUrl] = useState(null);
-  const [videoUrl, setVideoUrl] = useState("");
 
   // Crop Coordinates State
   const [logoCoords, setLogoCoords] = useState(null);       // {x, y, w, h}
@@ -47,7 +40,6 @@ export default function WatermarkPage() {
   // Processing state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [taskResult, setTaskResult] = useState(null);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
 
   // Clean up object URLs

@@ -5,7 +5,6 @@ import {
   Subtitles,
   VolumeX,
   Zap,
-  Sparkles,
   ArrowRight,
   Play,
   ShieldCheck,

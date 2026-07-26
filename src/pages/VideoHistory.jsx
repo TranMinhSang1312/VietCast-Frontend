@@ -13,16 +13,17 @@ import {
     VolumeX,
 } from "lucide-react";
 import { API_BASE_URL_PROVIDER } from "../config";
+import { getVideoModePolicy } from "../config/videoModes";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
 
-const MODE_DETAILS = Object.freeze({
-    original: { label: "Giữ tiếng gốc", output: "Video", video: true, srt: false, icon: Mic },
-    mute: { label: "Video câm", output: "Video không âm thanh", video: true, srt: false, icon: VolumeX },
-    subtitle: { label: "Chỉ tạo phụ đề", output: "File SRT tiếng Việt", video: false, srt: true, icon: Subtitles },
-    dub: { label: "Lồng tiếng AI", output: "Video và SRT", video: true, srt: true, icon: Film },
-    mix: { label: "Trộn âm gốc & AI", output: "Video và SRT", video: true, srt: true, icon: Film },
+const MODE_ICONS = Object.freeze({
+    original: Mic,
+    mute: VolumeX,
+    subtitle: Subtitles,
+    dub: Film,
+    mix: Film,
 });
 
 const STATUS_STYLES = {
@@ -48,21 +49,6 @@ const FALLBACK_STATUS_STYLE = {
     className: "bg-white/[0.04] text-slate-400 border-white/[0.06]",
     dotClass: "bg-zinc-450",
 };
-
-function formatProcessingDuration(createdAt, updatedAt) {
-    if (!createdAt || !updatedAt) return null;
-    const start = new Date(createdAt).getTime();
-    const end = new Date(updatedAt).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
-    const totalSeconds = Math.round((end - start) / 1000);
-    if (totalSeconds <= 0) return null;
-    if (totalSeconds < 60) {
-        return `${totalSeconds}s`;
-    }
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
-}
 
 function formatTimestamp(value) {
     if (!value) return "—";
@@ -125,13 +111,17 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const [downloadingType, setDownloadingType] = useState(null); // 'video' | 'srt' | null
     const [actionError, setActionError] = useState(null);
 
-    const mode = MODE_DETAILS[video.audioMode] ?? {
-        label: "Tác vụ video",
-        output: video.srtUrl && !video.videoUrl ? "File SRT" : "Kết quả xử lý",
-        video: Boolean(video.videoUrl),
-        srt: Boolean(video.srtUrl),
-        icon: Film,
-    };
+    const knownMode = Object.hasOwn(MODE_ICONS, video.audioMode);
+    const policy = getVideoModePolicy(video.audioMode);
+    const mode = knownMode
+        ? { ...policy, icon: MODE_ICONS[policy.id] }
+        : {
+            label: "Tác vụ video",
+            output: video.srtUrl && !video.videoUrl ? "File SRT" : "Kết quả xử lý",
+            video: Boolean(video.videoUrl),
+            srt: Boolean(video.srtUrl),
+            icon: Film,
+        };
     const ModeIcon = mode.icon;
 
     const handleRetryClick = async () => {

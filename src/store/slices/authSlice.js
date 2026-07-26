@@ -4,7 +4,6 @@ import { API_BASE_URL_PROVIDER } from "../../config";
 import {
   login as loginApi,
   loginWithGoogle as loginWithGoogleApi,
-  register as registerApi,
   verifyEmail as verifyEmailApi,
   logout as logoutApi,
   fetchProfile as fetchProfileApi,

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Coins, Loader2, XCircle, ArrowRight, RefreshCw } from "lucide-react";
+import { CheckCircle2, Coins, Loader2, ArrowRight, RefreshCw } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { confirmPayment } from "../services/payment";
 
@@ -28,7 +28,7 @@ const POLL_TIMEOUT_MS = 30_000;
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
-  const { user, refreshProfile } = useAuth();
+  const { refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [attempts, setAttempts] = useState(0);
   // Baseline balance is captured AFTER the first profile refresh (not
@@ -37,7 +37,6 @@ export default function PaymentSuccess() {
   // baseline the user already had bumped in another tab.
   const [creditBefore, setCreditBefore] = useState(null);
   const [creditAfter, setCreditAfter] = useState(null);
-  const [error, setError] = useState(null);
   // Manual reconciliation state — triggered by the "Tôi đã thanh toán"
   // button as a fallback when the webhook never arrives (dev localhost).
   const [confirming, setConfirming] = useState(false);
@@ -47,6 +46,12 @@ export default function PaymentSuccess() {
   // Guard against double-mount in React 19 strict mode firing two
   // polling intervals at once.
   const stoppedRef = useRef(false);
+  const creditBeforeRef = useRef(null);
+  const [pollingStopped, setPollingStopped] = useState(false);
+  const stopPolling = useCallback(() => {
+    stoppedRef.current = true;
+    setPollingStopped(true);
+  }, []);
 
   const orderCode = searchParams.get("orderCode")
     || searchParams.get("id")
@@ -56,6 +61,10 @@ export default function PaymentSuccess() {
     let timer = null;
     let cancelled = false;
     const deadline = Date.now() + POLL_TIMEOUT_MS;
+    // React Strict Mode runs effect setup → cleanup → setup in development.
+    // Re-arm the ref so the second setup is not permanently disabled by
+    // the first cleanup.
+    stoppedRef.current = false;
 
     async function poll() {
       if (stoppedRef.current || cancelled) return;
@@ -67,14 +76,15 @@ export default function PaymentSuccess() {
         // few hundred ms between page load and first poll, this still
         // reflects the user's actual pre-payment balance (because the
         // webhook is idempotent and our baseline is captured once).
-        if (creditBefore == null) {
+        if (creditBeforeRef.current == null) {
+          creditBeforeRef.current = updated.creditBalance;
           setCreditBefore(updated.creditBalance);
           setCreditAfter(updated.creditBalance);
         } else {
           setCreditAfter(updated.creditBalance);
-          if (updated.creditBalance > creditBefore) {
+          if (updated.creditBalance > creditBeforeRef.current) {
             // Webhook landed — stop polling.
-            stoppedRef.current = true;
+            stopPolling();
             return;
           }
         }
@@ -86,7 +96,7 @@ export default function PaymentSuccess() {
         // Out of patience. Show the success UI anyway — the credit
         // will land on the next refresh. Better UX than a confusing
         // spinner that never resolves.
-        stoppedRef.current = true;
+        stopPolling();
       }
     }
 
@@ -96,10 +106,9 @@ export default function PaymentSuccess() {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-    // creditBefore is captured on the first poll; we only want the
-    // closure to re-create when the component remounts, not when local
-    // state changes. eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // creditBeforeRef keeps the first observed balance stable without
+    // trapping a stale React-state value inside this polling closure.
+  }, [refreshProfile, stopPolling]);
 
   useEffect(() => {
     if (!orderCode) return;
@@ -114,7 +123,7 @@ export default function PaymentSuccess() {
           if (res.creditAmount) {
             setAddedCredit(res.creditAmount);
           }
-          stoppedRef.current = true;
+          stopPolling();
           await refreshProfile();
         }
       } catch (e) {
@@ -126,8 +135,7 @@ export default function PaymentSuccess() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderCode]);
+  }, [orderCode, refreshProfile, stopPolling]);
 
   const credited = ((creditAfter !== null && creditBefore !== null && creditAfter > creditBefore) || isConfirmed);
   const creditedAmount =
@@ -136,7 +144,7 @@ export default function PaymentSuccess() {
       : (creditAfter !== null && creditBefore !== null
           ? Math.max(0, creditAfter - creditBefore)
           : 0);
-  const stillWaiting = !stoppedRef.current && !credited && !error && creditBefore !== null;
+  const stillWaiting = !pollingStopped && !credited && creditBefore !== null;
 
   // Translate a ConfirmOutcome string from the backend into a friendly
   // Vietnamese message. We deliberately do NOT echo the SDK error text
@@ -192,7 +200,7 @@ export default function PaymentSuccess() {
           setAddedCredit(res.creditAmount);
         }
         setIsConfirmed(true);
-        stoppedRef.current = true;
+        stopPolling();
       }
     } catch {
       setConfirmOutcome("STILL_PENDING");
@@ -209,11 +217,6 @@ export default function PaymentSuccess() {
             className="w-16 h-16 mx-auto text-emerald-400"
             strokeWidth={1.5}
           />
-        ) : error ? (
-          <XCircle
-            className="w-16 h-16 mx-auto text-rose-400"
-            strokeWidth={1.5}
-          />
         ) : (
           <Loader2
             className="w-16 h-16 mx-auto text-indigo-400 animate-spin"
@@ -224,9 +227,7 @@ export default function PaymentSuccess() {
         <h1 className="mt-5 text-2xl font-bold text-slate-100">
           {credited
             ? "Nạp credit thành công"
-            : error
-              ? "Không thể xác nhận thanh toán"
-              : stillWaiting
+            : stillWaiting
                 ? "Đang xác nhận thanh toán..."
                 : "Đã nhận được yêu cầu thanh toán"}
         </h1>
@@ -244,8 +245,6 @@ export default function PaymentSuccess() {
               </span>
               .
             </>
-          ) : error ? (
-            error
           ) : stillWaiting ? (
             <>
               Hệ thống đang xác nhận giao dịch với PayOS. Vui lòng giữ
@@ -286,7 +285,7 @@ export default function PaymentSuccess() {
         {/* Manual reconciliation block — only useful when polling has
             timed out and credit has not yet landed. We hide it once
             credited to avoid suggesting duplicate actions. */}
-        {!credited && !error && orderCode && (
+        {!credited && orderCode && (
           <div className="mt-6 pt-5 border-t border-slate-700/60">
             <button
               type="button"
@@ -322,7 +321,7 @@ export default function PaymentSuccess() {
           </div>
         )}
 
-        {!credited && !error && attempts > 0 && (
+        {!credited && attempts > 0 && (
           <p className="mt-4 text-xs text-slate-500 flex items-center justify-center gap-1.5">
             <Coins className="w-3.5 h-3.5" />
             <span>Đã thử {attempts} lần ({Math.round(attempts * POLL_INTERVAL_MS / 1000)}s)</span>

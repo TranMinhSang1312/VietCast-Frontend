@@ -1,68 +1,57 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
 import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles } from "lucide-react";
-import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning, Sparkle, Fire } from "@phosphor-icons/react";
+import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
 import WatermarkRemover from "../components/watermark/WatermarkRemover";
 import { PRICING } from "../config/pricing";
+import {
+  getVideoModePolicy,
+  PRIMARY_VIDEO_MODE_IDS,
+  SECONDARY_VIDEO_MODE_IDS,
+} from "../config/videoModes";
 
-const PRIMARY_AUDIO_MODES = [
-  {
-    value: "dub",
-    label: "Lồng tiếng AI",
-    badge: "🔥 KHUYÊN DÙNG",
-    badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-    description: `${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Giọng Việt bản ngữ truyền cảm và file SRT song ngữ.`,
-    icon: MagicWand,
-    isPrimary: true,
-  },
-  {
-    value: "mix",
-    label: "Trộn âm thanh gốc & AI",
-    badge: "⭐ NỔI BẬT",
-    badgeColor: "bg-purple-500/15 text-purple-300 border-purple-500/30",
-    description: `${PRICING.mixPerMinute} credit/phút, tối thiểu ${PRICING.mixPerMinute} credit. Giữ 30% nhạc nền gốc và thêm 120% giọng AI.`,
-    icon: SlidersHorizontal,
-    isPrimary: true,
-  },
-];
-
-const SECONDARY_AUDIO_MODES = [
-  {
-    value: "original",
-    label: "Giữ tiếng gốc",
-    description: `${PRICING.originalPerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit.`,
-    icon: Microphone,
-  },
-  {
-    value: "mute",
-    label: "Video câm",
-    description: `${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Bỏ âm thanh.`,
-    icon: SpeakerSimpleX,
-  },
-  {
-    value: "subtitle",
-    label: "Chỉ tạo phụ đề",
-    description: `${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT.`,
-    icon: ClosedCaptioning,
-  },
-];
-
-const AUDIO_MODES = [...PRIMARY_AUDIO_MODES, ...SECONDARY_AUDIO_MODES];
-
-const MODE_OUTPUTS = Object.freeze({
-  original: { label: "Video giữ tiếng gốc", video: true, srt: false },
-  mute: { label: "Video không âm thanh", video: true, srt: false },
-  subtitle: { label: "Phụ đề SRT tiếng Việt", video: false, srt: true },
-  dub: { label: "Video lồng tiếng + SRT", video: true, srt: true },
-  mix: { label: "Video trộn âm + SRT", video: true, srt: true },
+const MODE_ICONS = Object.freeze({
+  dub: MagicWand,
+  mix: SlidersHorizontal,
+  original: Microphone,
+  mute: SpeakerSimpleX,
+  subtitle: ClosedCaptioning,
 });
 
-function outputForMode(mode) {
-  return MODE_OUTPUTS[mode] ?? MODE_OUTPUTS.mix;
+const MODE_HIGHLIGHTS = Object.freeze({
+  dub: {
+    badge: "🔥 KHUYÊN DÙNG",
+    badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  },
+  mix: {
+    badge: "⭐ NỔI BẬT",
+    badgeColor: "bg-purple-500/15 text-purple-300 border-purple-500/30",
+  },
+});
+
+function toModeOption(id, isPrimary) {
+  const policy = getVideoModePolicy(id);
+  return {
+    ...policy,
+    ...MODE_HIGHLIGHTS[id],
+    value: policy.id,
+    icon: MODE_ICONS[id],
+    isPrimary,
+  };
 }
+
+const PRIMARY_AUDIO_MODES = PRIMARY_VIDEO_MODE_IDS.map((id) =>
+  toModeOption(id, true));
+const SECONDARY_AUDIO_MODES = SECONDARY_VIDEO_MODE_IDS.map((id) =>
+  toModeOption(id, false));
+
+const VISUAL_FILTERS = Object.freeze([
+  { type: "logo", title: "Xóa logo cứng" },
+  { type: "subtitle", title: "Che phụ đề gốc" },
+]);
 
 function progressLabel(mode, progress, targetLanguage = "Tiếng Việt") {
   if (progress < 10) return "ĐANG TẢI VIDEO TỪ NGUỒN...";
@@ -185,7 +174,7 @@ async function recoverSubmittedTask(submission, attempts = 3) {
 }
 
 export default function VideoDashboard() {
-  const { user, updateCreditBalance, syncProfile } = useAuth();
+  const { user, syncProfile } = useAuth();
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
@@ -410,31 +399,21 @@ const handleReset = useCallback(() => {
 function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, userBalance, hardsubFlag = false) {
   const seconds = Math.max(0, Number(durationSeconds) || 0);
   const minutes = seconds / 60;
+  const policy = getVideoModePolicy(mode);
+  const baseCost = Math.max(
+    policy.minimumPrice,
+    Math.round(minutes * policy.perMinuteRate),
+  );
 
-  let ratePerMin = PRICING.dubPerMinute;
-  let minCost = PRICING.dubPerMinute;
-  if (mode === "original" || mode === "mute") {
-    ratePerMin = PRICING.mutePerMinute;
-    minCost = PRICING.basicMinimum;
-  } else if (mode === "subtitle") {
-    ratePerMin = PRICING.subtitlePerMinute;
-    minCost = PRICING.subtitlePerMinute;
-  } else if (mode === "dub" || mode === "mix") {
-    ratePerMin = PRICING.dubPerMinute;
-    minCost = PRICING.dubPerMinute;
-  }
-
-  const baseCost = Math.max(minCost, Math.round(minutes * ratePerMin));
-
-  const hasLogo = mode !== "subtitle" && Boolean(logoCoords && logoCoords.trim());
-  const hasSubMask = mode !== "subtitle" && Boolean(subMask && subMask.trim());
+  const hasLogo = policy.supportsVisualFilters && Boolean(logoCoords && logoCoords.trim());
+  const hasSubMask = policy.supportsVisualFilters && Boolean(subMask && subMask.trim());
   let visualFilterCost = 0;
   if (hasLogo || hasSubMask) {
     visualFilterCost = Math.round(minutes * PRICING.visualFilterPerMinute);
   }
 
   let hardsubCost = 0;
-  if (hardsubFlag && (mode === "dub" || mode === "mix")) {
+  if (hardsubFlag && policy.supportsHardsub) {
     hardsubCost = Math.max(60, Math.round(minutes * 60));
   }
 
@@ -465,20 +444,24 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
     // If a task is active, processing, or completed (result is present),
     // do NOT fetch or compute cost preview to avoid confusing the user.
     if (result) {
-      setCostPreview(null);
-      setCostPreviewLoading(false);
-      lastPreviewUrlRef.current = "";
-      cachedDurationRef.current = null;
-      return;
+      const handle = setTimeout(() => {
+        setCostPreview(null);
+        setCostPreviewLoading(false);
+        lastPreviewUrlRef.current = "";
+        cachedDurationRef.current = null;
+      }, 0);
+      return () => clearTimeout(handle);
     }
 
     const cleanUrl = extractUrl(url);
     if (!cleanUrl) {
-      setCostPreview(null);
-      setCostPreviewLoading(false);
-      lastPreviewUrlRef.current = "";
-      cachedDurationRef.current = null;
-      return;
+      const handle = setTimeout(() => {
+        setCostPreview(null);
+        setCostPreviewLoading(false);
+        lastPreviewUrlRef.current = "";
+        cachedDurationRef.current = null;
+      }, 0);
+      return () => clearTimeout(handle);
     }
 
     const canonical = normalizePreviewUrl(cleanUrl);
@@ -493,9 +476,11 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
         userBalance,
         hardsub
       );
-      setCostPreview(instantPreview);
-      setCostPreviewLoading(false);
-      return;
+      const handle = setTimeout(() => {
+        setCostPreview(instantPreview);
+        setCostPreviewLoading(false);
+      }, 0);
+      return () => clearTimeout(handle);
     }
 
     const handle = setTimeout(() => {
@@ -723,7 +708,20 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
         setIsLoading(false);
       }
     },
-    [url, audioMode, voice, logoCoordinates, subtitleMask, costPreview, updateCreditBalance, refreshUserCredit, resetResultState],
+    [
+      url,
+      audioMode,
+      voice,
+      logoCoordinates,
+      subtitleMask,
+      costPreview,
+      refreshUserCredit,
+      resetResultState,
+      sourceLanguage,
+      targetLanguage,
+      hardsub,
+      syncProfile,
+    ],
   );
 
   useEffect(() => {
@@ -961,6 +959,75 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                     </div>
                   );
                 })()}
+              </div>
+
+              {/* Optional visual filters. These controls were previously
+                  disconnected from the crop modal, making the backend
+                  feature impossible to select from the dashboard. */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-sm font-semibold text-zinc-300">
+                    Bộ lọc hình ảnh
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    +{PRICING.visualFilterPerMinute} credit/phút khi có khung
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {VISUAL_FILTERS.map((filter) => {
+                    const value = filter.type === "logo"
+                      ? logoCoordinates
+                      : subtitleMask;
+                    return (
+                    <div
+                      key={filter.type}
+                      className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-zinc-200">
+                            {filter.title}
+                          </p>
+                          <p className="mt-1 truncate font-mono text-[11px] text-slate-500">
+                            {value || "Chưa chọn khung"}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!url.trim() || Boolean(result) || audioMode === "subtitle"}
+                          onClick={() => {
+                            setCropType(filter.type);
+                            setIsCropOpen(true);
+                          }}
+                          className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {value ? "Vẽ lại" : "Vẽ khung"}
+                        </button>
+                      </div>
+                      {value && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (filter.type === "logo") {
+                              setLogoCoordinates("");
+                            } else {
+                              setSubtitleMask("");
+                            }
+                          }}
+                          className="mt-2 text-[11px] font-medium text-rose-300 hover:text-rose-200"
+                        >
+                          Bỏ khung đã chọn
+                        </button>
+                      )}
+                    </div>
+                    );
+                  })}
+                </div>
+                {audioMode === "subtitle" && (
+                  <p className="text-[11px] text-slate-500">
+                    Chế độ chỉ tạo phụ đề không render video nên không áp dụng bộ lọc hình ảnh.
+                  </p>
+                )}
               </div>
 
               {/* Audio mode selector */}
@@ -1279,8 +1346,8 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
           title={cropType === "logo" ? "Vẽ khung xóa Logo cứng" : "Vẽ khung đè phụ đề gốc"}
           description={
             cropType === "logo"
-              ? "Kéo chuột để vẽ một ô vuông bao quanh Logo cứng. Hệ thống sẽ che Logo này bằng thuật toán FFmpeg delogo. Lưu ý: Bạn cần dùng đường dẫn video trực tiếp (ví dụ link đuôi .mp4) để tải được khung hình vẽ."
-              : "Kéo chuột để vẽ một ô chữ nhật dài che phụ đề gốc. Hệ thống sẽ bôi mờ phụ đề cũ và đè phụ đề tiếng Việt mới lên trên. Lưu ý: Bạn cần dùng đường dẫn video trực tiếp (ví dụ link đuôi .mp4) để tải được khung hình vẽ."
+              ? "Kéo chuột để vẽ một ô bao quanh logo cứng. Hệ thống sẽ trích khung hình từ URL và che vùng này khi render."
+              : "Kéo chuột để vẽ một ô chữ nhật che phụ đề gốc. Hệ thống sẽ làm mờ vùng này trước khi render kết quả."
           }
           onConfirm={(coords) => {
             if (cropType === "logo") {
@@ -1469,18 +1536,18 @@ function useElapsedTime(submittedAt, isProcessing) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
-    if (!isProcessing || !submittedAt) {
-      setElapsedSeconds(0);
-      return;
-    }
+    if (!isProcessing || !submittedAt) return undefined;
     const start = new Date(submittedAt).getTime();
     const update = () => {
       const diff = Math.max(0, Math.floor((Date.now() - start) / 1000));
       setElapsedSeconds(diff);
     };
-    update();
+    const initialTimer = setTimeout(update, 0);
     const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(timer);
+    };
   }, [submittedAt, isProcessing]);
 
   if (!isProcessing || elapsedSeconds <= 0) return null;
@@ -1505,7 +1572,11 @@ const ResultPanel = memo(function ResultPanel({
   onVideoError,
   onDownload,
 }) {
-  const output = outputForMode(result.audioMode);
+  const modePolicy = getVideoModePolicy(result.audioMode);
+  const output = {
+    ...modePolicy,
+    label: modePolicy.resultLabel,
+  };
   const isCompleted = result.status === "COMPLETED";
   const isFailed = result.status === "FAILED";
   const missingExpectedOutput = isCompleted

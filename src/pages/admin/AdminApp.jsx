@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { BarChart3, Users, LogOut, Coins, Shield, Loader2, Cookie } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";

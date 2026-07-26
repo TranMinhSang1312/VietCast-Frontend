@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
-  ArrowLeft,
   Coins,
   Loader2,
   AlertCircle,
@@ -89,7 +87,8 @@ export default function TopupHistory() {
   }, []);
 
   useEffect(() => {
-    fetch(true);
+    const id = setTimeout(() => void fetch(true), 0);
+    return () => clearTimeout(id);
   }, [fetch]);
 
   // While there is at least one PENDING row visible, poll so the page

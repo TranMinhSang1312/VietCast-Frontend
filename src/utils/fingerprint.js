@@ -29,7 +29,7 @@ export function getBrowserFingerprint() {
       ctx.fillText("VietCast,fingerprint 123", 4, 17);
       parts.push(canvas.toDataURL());
     }
-  } catch (e) {
+  } catch {
     // Ignore canvas security errors (e.g. if blocked by browser extensions or anti-fingerprinting)
   }
 

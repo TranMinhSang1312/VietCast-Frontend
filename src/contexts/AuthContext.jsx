@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       // If token exists, trigger a background profile sync
       dispatch(fetchProfileThunk());
     }
-  }, [dispatch]);
+  }, [dispatch, token]);
 
   const login = useCallback(
     async ({ emailOrUsername, password, rememberMe }) => {
@@ -126,6 +126,8 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// The provider and its companion hook intentionally share this module.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

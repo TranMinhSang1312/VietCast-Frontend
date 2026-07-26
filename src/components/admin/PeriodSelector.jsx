@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 
 /**
@@ -18,21 +17,11 @@ const PRESETS = Object.freeze([
 ]);
 
 export default function PeriodSelector({ value, onChange }) {
-  const initialId = value?.granularity === "DAY" || value?.granularity === "YEAR"
+  const selectedId = value?.granularity === "DAY" || value?.granularity === "YEAR"
     ? value.granularity
     : "MONTH";
-  const [selectedId, setSelectedId] = useState(initialId);
-
-  // Đồng bộ khi prop `value` thay đổi từ bên ngoài (ví dụ reload).
-  useEffect(() => {
-    if (value && (value.granularity === "DAY" || value.granularity === "YEAR"
-        || value.granularity === "MONTH")) {
-      setSelectedId(value.granularity);
-    }
-  }, [value]);
 
   const handleSelect = (preset) => {
-    setSelectedId(preset.id);
     onChange?.({ granularity: preset.granularity, periods: preset.periods });
   };
 

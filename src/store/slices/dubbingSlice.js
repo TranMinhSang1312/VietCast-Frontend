@@ -156,10 +156,10 @@ const dubbingSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(recoverPendingTask.pending, (state) => {
+      .addCase(recoverPendingTask.pending, () => {
         // Option to flag loading during recovery if needed
       })
-      .addCase(recoverPendingTask.fulfilled, (state, action) => {
+      .addCase(recoverPendingTask.fulfilled, () => {
         // Recovery successfully hydrated state via dispatch actions
       })
       .addCase(recoverPendingTask.rejected, (state, action) => {

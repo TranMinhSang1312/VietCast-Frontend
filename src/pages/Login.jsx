@@ -60,16 +60,6 @@ function validateRegisterForm({ email, password, confirmPassword }) {
   return null;
 }
 
-function signupBenefitFrom(userOrResponse) {
-  if (userOrResponse?.signupBenefitGranted !== true) return null;
-  const amount = Number(userOrResponse?.bonusCreditBalance ?? 0);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  return {
-    amount,
-    expiresAt: userOrResponse?.bonusExpiresAt ?? null,
-  };
-}
-
 const LEFT_COPY = {
   login: {
     eyebrow: "Lồng tiếng AI cho video của bạn",
@@ -113,27 +103,27 @@ export default function Login() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const { user, isAuthenticated, login, register, verifyEmail, googleLogin } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
+  const [error, setError] = useState(() => {
     const lockedMsg = sessionStorage.getItem("vc_account_locked_message");
     if (lockedMsg) {
-      setError(lockedMsg);
       sessionStorage.removeItem("vc_account_locked_message");
-    } else {
-      const existingToken = localStorage.getItem("vc_token");
-      if (isAuthenticated || existingToken) {
-        navigate(postLoginTarget, { replace: true });
-      }
+    }
+    return lockedMsg;
+  });
+
+  const { isAuthenticated, login, register, verifyEmail, googleLogin } = useAuth();
+  const navigate = useNavigate();
+  const postLoginTarget = "/dashboard";
+
+  useEffect(() => {
+    const existingToken = localStorage.getItem("vc_token");
+    if (isAuthenticated || existingToken) {
+      navigate(postLoginTarget, { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleConfigured = Boolean(googleClientId);
-  const postLoginTarget = "/dashboard";
 
   // Six separate inputs so the browser can route keystrokes the way
   // users expect (left-to-right, auto-advance, backspace jumps back).

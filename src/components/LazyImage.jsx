@@ -44,29 +44,19 @@ export default function LazyImage({
     ...rest
 }) {
     const imgRef = useRef(null);
-    // Three states:
-    //   "idle"     — placeholder rendered, observer not yet armed
-    //   "armed"    — observer attached, waiting for viewport entry
-    //   "loaded"   — src attached; once true we never re-arm
-    const [state, setState] = useState("idle");
+    // Store the source that the fallback observer has revealed. Comparing
+    // it with the current prop resets naturally when src changes, without
+    // a synchronous state update in an effect.
+    const [revealedSrc, setRevealedSrc] = useState(null);
+    const supportsNativeLazyLoading =
+        typeof window !== "undefined"
+        && typeof HTMLImageElement !== "undefined"
+        && "loading" in HTMLImageElement.prototype;
 
     useEffect(() => {
-        // Reset on src change so a new image re-arms the observer.
-        setState("idle");
-    }, [src]);
-
-    useEffect(() => {
-        if (state !== "idle") return;
+        if (!src || supportsNativeLazyLoading || revealedSrc === src) return;
         const el = imgRef.current;
         if (!el) return;
-
-        // Honour the native attribute when present. If the browser is
-        // going to lazy-load for us, we don't need the JS observer —
-        // attaching src immediately is fine.
-        if (typeof window !== "undefined" && "loading" in HTMLImageElement.prototype) {
-            setState("loaded");
-            return;
-        }
 
         // Fallback path: IntersectionObserver. This branch handles
         // Electron renderers (which disable native lazy loading) and
@@ -75,15 +65,15 @@ export default function LazyImage({
             // Last-resort fallback: load immediately. Older mobile
             // browsers without IO would otherwise render nothing
             // forever, which is worse than a brief eager fetch.
-            setState("loaded");
-            return;
+            const timer = setTimeout(() => setRevealedSrc(src), 0);
+            return () => clearTimeout(timer);
         }
 
         const observer = new IntersectionObserver(
             (entries) => {
                 for (const entry of entries) {
                     if (entry.isIntersecting) {
-                        setState("loaded");
+                        setRevealedSrc(src);
                         observer.disconnect();
                         return;
                     }
@@ -94,13 +84,12 @@ export default function LazyImage({
         observer.observe(el);
 
         return () => observer.disconnect();
-    }, [state, rootMargin]);
+    }, [revealedSrc, rootMargin, src, supportsNativeLazyLoading]);
 
     const handleError = (e) => {
         // Promote the failed state so the parent can swap in a
         // placeholder if it wants to. We don't auto-retry — that
         // would mask persistent network errors.
-        setState("loaded");
         if (onError) onError(e);
     };
 
@@ -114,7 +103,7 @@ export default function LazyImage({
             loading="lazy"
             decoding="async"
             className={className}
-            src={state === "loaded" ? src : undefined}
+            src={supportsNativeLazyLoading || revealedSrc === src ? src : undefined}
             onLoad={onLoad}
             onError={handleError}
             {...rest}

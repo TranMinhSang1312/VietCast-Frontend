@@ -15,17 +15,11 @@
 // the request/response interceptors to the shared axios instance
 // (Bearer-token injection + error normalisation).
 
-// The Render default URL is `https://<service-name>-<hash>.onrender.com`,
-// which is a moving target per region / per deploy. We keep a placeholder
-// so the dev server boots without any .env file, but production deploys
-// MUST set `VITE_API_BASE_URL` at build time on Render/Vercel — otherwise
-// every API call will 404 against the wrong host.
-//
-// To find your current production URL after a Render deploy:
-//   - Dashboard → vietcast-backend → top right shows "Onrender URL"
-//   - or run: `render services list --output json | jq -r '.[].url'`
-export const PROD_API_BASE_URL = 'https://vietcast-backend.onrender.com';
-export const PROD_WS_BASE_URL  = 'wss://vietcast-backend.onrender.com';
+// Stable production endpoint backed by the Oracle deployment. Vercel should
+// still set the VITE_* values explicitly, while these constants keep builds
+// safe if a deployment environment variable is accidentally omitted.
+export const PROD_API_BASE_URL = 'https://api.vietcast.id.vn';
+export const PROD_WS_BASE_URL  = 'wss://api.vietcast.id.vn';
 
 /** Build-time constant OR hardcoded fallback if no env was inlined. */
 function readViteEnv(key, fallback) {
@@ -87,7 +81,6 @@ export const WS_BASE_URL_PROVIDER = {
 // Diagnostic line — shows up in DevTools console so build issues are obvious.
 if (typeof window !== 'undefined' && window.console) {
   loadRuntimeConfig().then((cfg) => {
-    // eslint-disable-next-line no-console
     console.info('[vietcast] runtime config:', cfg);
   });
 }

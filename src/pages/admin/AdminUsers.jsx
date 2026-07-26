@@ -84,7 +84,10 @@ export default function AdminUsers() {
     }
   }, [page, pageSize, search]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const id = setTimeout(() => void load(), 0);
+    return () => clearTimeout(id);
+  }, [load]);
 
   // ----- Action handlers -----
 

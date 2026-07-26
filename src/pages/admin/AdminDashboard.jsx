@@ -103,11 +103,21 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { loadStats(); }, [loadStats]);
   useEffect(() => {
-    loadSeries(range.granularity, range.periods);
+    const id = setTimeout(() => void loadStats(), 0);
+    return () => clearTimeout(id);
+  }, [loadStats]);
+  useEffect(() => {
+    const id = setTimeout(
+      () => void loadSeries(range.granularity, range.periods),
+      0,
+    );
+    return () => clearTimeout(id);
   }, [loadSeries, range]);
-  useEffect(() => { loadCost(costWindow); }, [loadCost, costWindow]);
+  useEffect(() => {
+    const id = setTimeout(() => void loadCost(costWindow), 0);
+    return () => clearTimeout(id);
+  }, [loadCost, costWindow]);
 
   // Derive revenue type set with stable legend order — backend returns
   // the full set already, but we re-derive defensively so a future
