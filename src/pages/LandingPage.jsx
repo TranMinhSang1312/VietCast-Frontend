@@ -207,28 +207,38 @@ export default function LandingPage() {
         <section id="demo" className="mt-24 scroll-mt-8">
           <div className="max-w-2xl">
             <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300">
-              Demo âm thanh 6 giây
+              Video mẫu thực tế
             </div>
             <h2 className="mt-3 text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white text-balance">
-              Nghe trước khi quyết định nạp credit.
+              Xem bản gốc. So sánh bản dịch.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-400">
-              Cùng một thông điệp, trước bằng tiếng Anh và sau bằng giọng Việt. Đây là đoạn minh họa ngắn được tạo bằng chính giọng đọc dùng trong VietCast.
+              Cùng một video, trước bằng ngôn ngữ gốc và sau khi được VietCast chuyển sang tiếng Việt.
             </p>
           </div>
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-5">
             <DemoVideoCard
-              eyebrow="Trước · tiếng Anh"
-              title="Video nguồn"
-              description="Nghe câu gốc để so sánh nhịp nói và nội dung."
-              src="/demo/original-en.mp4"
+              eyebrow="Video gốc"
+              title="Trước khi xử lý"
+              description="Xem video nguồn để đối chiếu nội dung, nhịp nói và phần âm thanh ban đầu."
+              src="/demo/vietcast-original.mp4"
             />
             <DemoVideoCard
-              eyebrow="Sau · tiếng Việt"
-              title="Bản VietCast"
-              description="Nội dung được chuyển sang tiếng Việt với giọng Nam Minh."
-              src="/demo/vietcast-vi.mp4"
+              eyebrow="Video đã dịch"
+              title="Sau khi xử lý"
+              description="Nội dung đã được chuyển sang tiếng Việt để bạn so sánh trực tiếp với video gốc."
+              src="/demo/vietcast-translated.mp4"
+              accent
+            />
+          </div>
+
+          <div className="mt-5">
+            <DemoVideoCard
+              eyebrow="Che lớp phủ"
+              title="Che logo và che phụ đề có sẵn"
+              description="VietCast có thể che vùng logo hoặc phụ đề cũ trước khi xuất video, giúp bản dịch mới sạch và dễ theo dõi hơn."
+              src="/demo/vietcast-overlay-mask.mp4"
               accent
             />
           </div>
