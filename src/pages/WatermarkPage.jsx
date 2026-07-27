@@ -239,14 +239,14 @@ export default function WatermarkPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-3 py-5 sm:space-y-8 sm:px-4 sm:py-8">
       {/* Title Header */}
       <div className="space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
           <Eraser size={16} weight="duotone" />
           <span>Công cụ Studio Độc lập</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-3xl">
           Xóa Logo & Làm Mờ Phụ Đề Gốc (Delogo Studio)
         </h1>
         <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
@@ -471,8 +471,8 @@ export default function WatermarkPage() {
 
       {/* Cropping Modal Overlay */}
       {activeCropTarget && frameCanvasUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="bg-slate-950 border border-white/[0.1] rounded-2xl p-6 max-w-4xl w-full space-y-4 overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 p-0 backdrop-blur-md sm:items-center sm:p-4">
+          <div className="max-h-[100dvh] w-full max-w-4xl space-y-4 overflow-y-auto rounded-t-2xl border border-white/[0.1] bg-slate-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-h-[90vh] sm:rounded-2xl sm:p-6">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">
                 {activeCropTarget === "logo" ? "🎯 Khoanh vùng Vùng cần xóa Logo" : "📝 Khoanh vùng Vùng che Phụ Đề Gốc"}

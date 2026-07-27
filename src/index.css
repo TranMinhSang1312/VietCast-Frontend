@@ -22,6 +22,14 @@ body {
   background-attachment: fixed;
 }
 
+@media (max-width: 767px) {
+  body {
+    background-attachment: scroll;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 /* Custom scrollbar — slate-on-slate so it stays consistent with the rest of the surface tokens. */
 ::-webkit-scrollbar {
   width: 6px;

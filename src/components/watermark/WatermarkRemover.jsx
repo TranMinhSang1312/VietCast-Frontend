@@ -231,14 +231,14 @@ export default function WatermarkRemover({
       role="dialog"
       aria-modal="true"
       aria-labelledby="watermark-title"
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:px-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && onCancel) onCancel();
       }}
     >
-      <div className="w-full max-w-3xl bg-slate-950 ring-1 ring-white/[0.06] border border-white/[0.06] rounded-2xl shadow-2xl overflow-hidden">
+      <div className="max-h-[100dvh] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-white/[0.06] bg-slate-950 pb-[env(safe-area-inset-bottom)] shadow-2xl ring-1 ring-white/[0.06] sm:max-h-[92dvh] sm:rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5 sm:px-6 sm:py-4.5">
           <div className="flex items-center gap-2.5">
             <Eraser className="w-5 h-5 text-indigo-400" />
             <h2
@@ -261,14 +261,13 @@ export default function WatermarkRemover({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-sm text-zinc-400 leading-relaxed">
             {description}
           </p>
 
           <div
-            className="relative w-full bg-black rounded-xl overflow-hidden flex items-center justify-center border border-white/[0.06]"
-            style={{ minHeight: 360 }}
+            className="relative flex min-h-64 w-full items-center justify-center overflow-hidden rounded-xl border border-white/[0.06] bg-black sm:min-h-[22.5rem]"
           >
             {isLoading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 text-sm font-mono gap-3 bg-slate-950/80">

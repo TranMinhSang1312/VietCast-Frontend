@@ -189,7 +189,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     };
 
     return (
-        <article className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-5 sm:p-6 backdrop-blur-md">
+        <article className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-md sm:rounded-3xl sm:p-6">
             <header className="flex items-start justify-between gap-3 mb-3 select-none">
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                     <div className="shrink-0 w-10 h-10 rounded-lg bg-slate-950 ring-1 ring-white/[0.06] flex items-center justify-center">
@@ -378,18 +378,18 @@ export default function VideoHistory() {
     const hasItems = Array.isArray(history) && history.length > 0;
 
     return (
-        <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-slate-950 font-sans text-slate-100 relative overflow-x-hidden">
+        <div className="relative flex w-full items-start justify-center overflow-x-hidden bg-slate-950 px-3 py-6 font-sans text-slate-100 sm:px-4 sm:py-16">
             {/* Ambient glows */}
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/8 rounded-full blur-[140px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none" />
 
             <div className="w-full max-w-2xl z-10">
                 {/* Header */}
-                <header className="text-center mb-10 select-none">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-indigo-500/10 ring-1 ring-indigo-400/30 mb-4">
+                <header className="mb-6 text-center select-none sm:mb-10">
+                    <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/10 ring-1 ring-indigo-400/30 sm:mb-4 sm:h-14 sm:w-14">
                         <History className="w-7 h-7 text-indigo-400" strokeWidth={2} />
                     </div>
-                    <h1 className="text-3xl font-extrabold tracking-tighter text-white">
+                    <h1 className="text-2xl font-extrabold tracking-tighter text-white sm:text-3xl">
                         Lịch sử Tác vụ
                     </h1>
                 </header>
@@ -434,7 +434,7 @@ export default function VideoHistory() {
 
                 {/* Empty State */}
                 {!isLoading && !error && !hasItems && (
-                    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-10 text-center backdrop-blur-md select-none">
+                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-6 text-center backdrop-blur-md select-none sm:rounded-3xl sm:p-10">
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-950 border border-white/[0.06] mb-4">
                             <Film className="w-6 h-6 text-zinc-500" />
                         </div>

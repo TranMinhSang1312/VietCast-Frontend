@@ -204,7 +204,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="demo" className="mt-24 scroll-mt-8">
+        <section id="demo" className="mt-16 scroll-mt-8 sm:mt-24">
           <div className="max-w-2xl">
             <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300">
               Video mẫu thực tế
@@ -212,12 +212,12 @@ export default function LandingPage() {
             <h2 className="mt-3 text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white text-balance">
               Xem bản gốc. So sánh bản dịch.
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-slate-400">
+            <p className="mt-3 text-sm leading-relaxed text-slate-400 sm:mt-4 sm:text-base">
               Cùng một video, trước bằng ngôn ngữ gốc và sau khi được VietCast chuyển sang tiếng Việt.
             </p>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:gap-5 lg:grid-cols-2">
             <DemoVideoCard
               eyebrow="Video gốc"
               title="Trước khi xử lý"
@@ -233,7 +233,7 @@ export default function LandingPage() {
             />
           </div>
 
-          <div className="mt-5">
+          <div className="mt-4 sm:mt-5">
             <DemoVideoCard
               eyebrow="Che lớp phủ"
               title="Che logo và che phụ đề có sẵn"
@@ -405,22 +405,22 @@ function PolicyCard({ icon: Icon, title, body }) {
 
 function DemoVideoCard({ eyebrow, title, description, src, accent = false }) {
   return (
-    <article className={`${SURFACE} overflow-hidden ${accent ? "border-emerald-400/25" : ""}`}>
-      <div className="flex justify-center bg-slate-950 p-2 sm:p-3">
+    <article className={`${SURFACE} overflow-hidden rounded-2xl sm:rounded-3xl ${accent ? "border-emerald-400/25" : ""}`}>
+      <div className="flex justify-center px-3 pt-3 sm:px-4 sm:pt-4">
         <video
           controls
           preload="metadata"
           src={src}
           aria-label={`${title}: ${description}`}
-          className="block h-auto max-h-[26rem] w-auto max-w-full object-contain sm:max-h-[32rem]"
+          className="block h-auto max-h-[26rem] w-auto max-w-[16rem] rounded-xl border border-white/[0.08] bg-slate-950 object-contain sm:max-h-[32rem] sm:max-w-[18rem]"
         />
       </div>
-      <div className="p-5 sm:p-6">
+      <div className="p-4 sm:p-6">
         <div className={`text-[10px] font-mono uppercase tracking-[0.2em] ${accent ? "text-emerald-300" : "text-slate-500"}`}>
           {eyebrow}
         </div>
-        <h3 className="mt-2 text-lg font-bold text-white">{title}</h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{description}</p>
+        <h3 className="mt-1.5 text-base font-bold text-white sm:mt-2 sm:text-lg">{title}</h3>
+        <p className="mt-1 text-xs leading-relaxed text-slate-400 sm:mt-1.5 sm:text-sm">{description}</p>
       </div>
     </article>
   );

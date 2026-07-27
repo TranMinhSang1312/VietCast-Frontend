@@ -876,17 +876,17 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
   }, [isProcessing, result?.audioMode, result?.status]);
 
   return (
-    <div className="w-full flex flex-col items-center bg-slate-950 font-sans text-zinc-100 px-4 py-8 sm:py-12 relative overflow-x-hidden">
+    <div className="relative flex w-full flex-col items-center overflow-x-hidden bg-slate-950 px-3 py-5 font-sans text-zinc-100 sm:px-4 sm:py-12">
       {/* Ambient backgrounds */}
       <div className="absolute top-[-20%] right-[-10%] w-[720px] h-[720px] bg-indigo-600/10 rounded-full blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[-25%] left-[-15%] w-[520px] h-[520px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="w-full max-w-6xl z-10">
         {/* Workspace Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 items-start gap-4 sm:gap-8 lg:grid-cols-12">
           {/* Left Column: Form Controls */}
-          <section className="lg:col-span-7 rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-6 sm:p-8">
-            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <section className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-8 lg:col-span-7">
+            <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6" noValidate>
               {/* URL input */}
               <div>
                 <label htmlFor="video-url" className="block text-sm font-semibold text-zinc-300 mb-2">
@@ -1154,7 +1154,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
 
               {/* Source Language Selection (Speed Optimization Tip) */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <label htmlFor="source-lang" className="block text-sm font-semibold text-zinc-300">
                     Ngôn ngữ gốc của Video (Đầu vào)
                   </label>
@@ -1412,7 +1412,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
           role="dialog"
           aria-modal="true"
           aria-labelledby="credit-warning-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowCreditWarning(false);
           }}
@@ -1619,7 +1619,7 @@ const ResultPanel = memo(function ResultPanel({
   const elapsedText = useElapsedTime(result.submittedAt, isProcessing);
 
   return (
-    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-6 flex flex-col h-full justify-between">
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-6">
       <div>
         <div className="flex items-start justify-between gap-3 mb-6 select-none">
           <div className="flex items-center gap-3">

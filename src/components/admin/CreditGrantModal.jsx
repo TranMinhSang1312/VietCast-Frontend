@@ -53,11 +53,11 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-0 sm:items-center sm:px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-white/[0.06] bg-slate-900 shadow-2xl">
-        <header className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+      <div className="max-h-[100dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-white/[0.06] bg-slate-900 pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-h-[92dvh] sm:rounded-2xl">
+        <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3.5 sm:px-5 sm:py-4">
           <div className="flex items-center gap-2">
             <Coins className="w-5 h-5 text-yellow-300" />
             <h2 className="text-base font-semibold text-slate-100">Cộng credit</h2>
@@ -72,7 +72,7 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
           </button>
         </header>
 
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4 sm:px-5">
           <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-sm">
             <span className="text-slate-400">User: </span>
             <span className="font-medium text-slate-100">{user.username || user.email}</span>
@@ -132,7 +132,7 @@ export default function CreditGrantModal({ user, onClose, onSuccess }) {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-2 max-[359px]:flex-col-reverse max-[359px]:items-stretch">
             <button
               type="button"
               onClick={onClose}

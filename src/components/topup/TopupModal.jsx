@@ -107,14 +107,14 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
       role="dialog"
       aria-modal="true"
       aria-labelledby="topup-title"
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:px-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-3xl border border-white/[0.06] bg-slate-950 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] shadow-black/40 font-sans text-zinc-100">
+      <div className="max-h-[100dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-white/[0.06] bg-slate-950 pb-[env(safe-area-inset-bottom)] font-sans text-zinc-100 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] shadow-black/40 sm:max-h-[92dvh] sm:rounded-3xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2 select-none">
             <Coins className="w-5 h-5 text-yellow-300" />
             <h2
@@ -136,7 +136,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5">
           {/* Promo Bonus Banner */}
           <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3.5 text-xs text-yellow-200 space-y-1">
             <div className="flex items-center gap-2 font-bold text-yellow-300">

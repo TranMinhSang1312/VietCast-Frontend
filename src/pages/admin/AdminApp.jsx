@@ -42,11 +42,11 @@ export default function AdminApp() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100">
+    <div className="min-h-full w-full bg-slate-950 text-slate-100">
       <nav className="sticky top-0 z-10 backdrop-blur-xl bg-slate-950/70 border-b border-slate-800/60">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500/10 border border-violet-500/30 px-2.5 py-1 text-xs font-semibold text-violet-300">
                 <Shield className="w-3.5 h-3.5" />
                 ADMIN
@@ -58,7 +58,7 @@ export default function AdminApp() {
               >
                 ← Về app
               </Link>
-              <div className="inline-flex rounded-xl bg-slate-900/60 border border-white/[0.06] p-1 ml-2">
+              <div className="order-last flex w-full gap-1 overflow-x-auto rounded-xl border border-white/[0.06] bg-slate-900/60 p-1 sm:order-none sm:ml-2 sm:w-auto">
                 {TABS.map((tab) => {
                   const Icon = tab.icon;
                   const active = activeTabId === tab.id;
@@ -73,14 +73,14 @@ export default function AdminApp() {
                       }`}
                     >
                       <Icon className="w-4 h-4" />
-                      <span>{tab.label}</span>
+                      <span className="whitespace-nowrap">{tab.label}</span>
                     </Link>
                   );
                 })}
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-4">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-white/[0.06]">
                 <Coins className="w-4 h-4 text-yellow-300" />
                 <span className="text-sm font-medium text-slate-200">

@@ -210,8 +210,8 @@ export default function PaymentSuccess() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      <div className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/40 p-8 text-center">
+    <div className="flex min-h-[100dvh] w-full items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-3 py-6 sm:px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5 text-center shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-8">
         {credited ? (
           <CheckCircle2
             className="w-16 h-16 mx-auto text-emerald-400"
@@ -265,7 +265,7 @@ export default function PaymentSuccess() {
           </div>
         )}
 
-        <div className="mt-7 flex items-center justify-center gap-3">
+        <div className="mt-7 flex items-center justify-center gap-2 max-[359px]:flex-col max-[359px]:items-stretch sm:gap-3">
           <button
             type="button"
             onClick={() => navigate("/dashboard", { replace: true })}

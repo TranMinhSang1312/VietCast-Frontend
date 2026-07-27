@@ -105,15 +105,15 @@ export default function TopupHistory() {
   const hasItems = Array.isArray(orders) && orders.length > 0;
 
   return (
-    <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-slate-950 font-sans text-slate-100 relative overflow-x-hidden">
+    <div className="relative flex w-full items-start justify-center overflow-x-hidden bg-slate-950 px-3 py-6 font-sans text-slate-100 sm:px-4 sm:py-16">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/8 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="w-full max-w-2xl z-10">
-        <header className="text-center mb-10 select-none">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-yellow-400/10 border border-yellow-400/30 mb-4">
+        <header className="mb-6 text-center select-none sm:mb-10">
+          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-yellow-400/30 bg-yellow-400/10 sm:mb-4 sm:h-14 sm:w-14">
             <Receipt className="w-7 h-7 text-yellow-300" strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tighter text-white">
+          <h1 className="text-2xl font-extrabold tracking-tighter text-white sm:text-3xl">
             Lịch sử nạp credit
           </h1>
         </header>
@@ -147,7 +147,7 @@ export default function TopupHistory() {
         )}
 
         {!isLoading && !error && !hasItems && (
-          <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-10 text-center backdrop-blur-md select-none">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-6 text-center backdrop-blur-md select-none sm:rounded-3xl sm:p-10">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-950 border border-white/[0.06] mb-4">
               <Coins className="w-6 h-6 text-zinc-500" />
             </div>
@@ -168,7 +168,7 @@ export default function TopupHistory() {
               return (
                 <article
                   key={o.orderCode}
-                  className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-5 sm:p-6 backdrop-blur-md"
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-md sm:rounded-3xl sm:p-6"
                 >
                   <header className="flex items-start justify-between gap-3 mb-3 select-none">
                     <div className="min-w-0 flex-1">
@@ -197,7 +197,7 @@ export default function TopupHistory() {
                     </div>
                   </header>
 
-                  <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div className="mt-4 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 sm:gap-3">
                     <div className="rounded-xl bg-slate-950/60 border border-white/[0.06] px-4 py-3">
                       <div className="text-[10px] uppercase tracking-wider font-mono text-zinc-500 mb-1">
                         Số tiền

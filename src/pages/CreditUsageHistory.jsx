@@ -105,15 +105,15 @@ export default function CreditUsageHistory() {
   const hasItems = Array.isArray(txns) && txns.length > 0;
 
   return (
-    <div className="w-full flex items-start justify-center px-4 py-10 sm:py-16 bg-slate-950 font-sans text-slate-100 relative overflow-x-hidden">
+    <div className="relative flex w-full items-start justify-center overflow-x-hidden bg-slate-950 px-3 py-6 font-sans text-slate-100 sm:px-4 sm:py-16">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-500/3 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-2xl z-10">
-        <header className="text-center mb-10 select-none">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-violet-500/10 border border-violet-500/20 mb-4">
+        <header className="mb-6 text-center select-none sm:mb-10">
+          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 sm:mb-4 sm:h-14 sm:w-14">
             <Wallet className="w-7 h-7 text-violet-300" strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tighter text-white">
+          <h1 className="text-2xl font-extrabold tracking-tighter text-white sm:text-3xl">
             Lịch sử sử dụng credit
           </h1>
         </header>
@@ -147,7 +147,7 @@ export default function CreditUsageHistory() {
         )}
 
         {!isLoading && !error && !hasItems && (
-          <div className="rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl p-10 text-center backdrop-blur-md select-none">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-6 text-center backdrop-blur-md select-none sm:rounded-3xl sm:p-10">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-950 border border-white/[0.06] mb-4">
               <History className="w-6 h-6 text-zinc-500" />
             </div>

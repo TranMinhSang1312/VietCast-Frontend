@@ -11,7 +11,7 @@ import {
 } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
-import Sidebar from "./components/layout/Sidebar";
+import Sidebar, { MobileBottomNav } from "./components/layout/Sidebar";
 import CreditPill from "./components/layout/CreditPill";
 import TopupModal from "./components/topup/TopupModal";
 import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
@@ -142,19 +142,19 @@ function AppShell() {
   }, [user?.bonusCreditBalance, syncProfile]);
 
   return (
-    <div className="h-screen w-full bg-slate-950 text-slate-100 flex overflow-hidden">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100">
       <Sidebar
         collapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed((v) => !v)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
+      <div className="flex h-[100dvh] min-w-0 flex-1 flex-col">
         {/* Top bar — slim and quiet. Only balance + topup + admin chip
             + username + logout live here. Navigation lives in the
             sidebar. The bar uses subtle white/[0.04] borders to stay
             consistent with the rest of the new design system. */}
         <header className="shrink-0 z-10 bg-slate-950/80 border-b border-white/[0.06] backdrop-blur-xl">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+          <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3">
             {/* Mobile-only brand. */}
             <div className="md:hidden flex items-center gap-2 select-none">
               <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -167,7 +167,7 @@ function AppShell() {
                   <path d="M12 2 14.39 8.26 21 9.27l-5 4.87L17.18 21 12 17.77 6.82 21 8 14.14l-5-4.87 6.61-1.01L12 2Z" />
                 </svg>
               </div>
-              <span className="text-sm font-bold tracking-tight text-white">
+              <span className="hidden text-sm font-bold tracking-tight text-white min-[360px]:inline">
                 VietCast
               </span>
             </div>
@@ -190,6 +190,16 @@ function AppShell() {
                   block so the user can see their total available
                   credit at a glance. */}
               <CreditPill user={user} onTopup={() => setIsTopupOpen(true)} />
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/[0.06] hover:text-white active:scale-[0.96] md:hidden"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
 
               <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/[0.06]">
                 <div className="hidden md:block text-sm text-slate-400 font-mono">
@@ -244,6 +254,7 @@ function AppShell() {
             <Outlet />
           </Suspense>
         </main>
+        <MobileBottomNav />
       </div>
 
       {isTopupOpen && (

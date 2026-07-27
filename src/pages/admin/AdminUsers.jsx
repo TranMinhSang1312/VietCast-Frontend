@@ -154,8 +154,8 @@ export default function AdminUsers() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto overscroll-x-contain rounded-lg">
+          <table className="min-w-[760px] w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-800">
                 <th className="py-2 pr-4">Username</th>
@@ -318,7 +318,7 @@ export default function AdminUsers() {
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed bottom-4 right-4 z-50 rounded-lg border px-4 py-3 text-sm shadow-lg flex items-center gap-2 ${
+          className={`fixed bottom-20 left-3 right-3 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg md:bottom-4 md:left-auto md:right-4 ${
             toast.type === "success"
               ? "border-emerald-700/50 bg-emerald-900/60 text-emerald-100"
               : "border-rose-700/50 bg-rose-900/60 text-rose-100"
@@ -356,10 +356,10 @@ export default function AdminUsers() {
       {/* Inline unlock confirm */}
       {unlockConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-0 sm:items-center sm:px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setUnlockConfirm(null); }}
         >
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.06] bg-slate-900 shadow-2xl">
+          <div className="w-full max-w-sm rounded-t-2xl border border-white/[0.06] bg-slate-900 pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl">
             <div className="px-5 py-4 space-y-3">
               <h2 className="text-base font-semibold text-slate-100">Mở khóa tài khoản?</h2>
               <p className="text-sm text-slate-300">

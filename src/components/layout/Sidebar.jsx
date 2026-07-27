@@ -13,12 +13,12 @@ import { Eraser } from "@phosphor-icons/react";
 // Single source of truth for the user-facing sidebar. Adding a new entry
 // here automatically renders a NavLink with active styling.
 const NAV = [
-  { id: "dashboard",     label: "Lồng tiếng",        icon: Wand2,   path: "/dashboard"          },
-  { id: "watermark",     label: "Xóa Logo / Phụ đề", icon: Eraser,  path: "/watermark-remover"  },
-  { id: "video-history", label: "Lịch sử video",     icon: Film,    path: "/video-history"      },
-  { id: "topup",         label: "Lịch sử nạp",       icon: Receipt, path: "/topup-history"      },
-  { id: "credit",        label: "Lịch sử tiêu",      icon: Wallet,  path: "/credit-usage"       },
-  { id: "pricing",       label: "Phí dịch vụ",       icon: Coins,   path: "/pricing"            },
+  { id: "dashboard",     label: "Lồng tiếng",        mobileLabel: "Dịch",     icon: Wand2,   path: "/dashboard"          },
+  { id: "watermark",     label: "Xóa Logo / Phụ đề", mobileLabel: "Xóa logo", icon: Eraser,  path: "/watermark-remover"  },
+  { id: "video-history", label: "Lịch sử video",     mobileLabel: "Video",    icon: Film,    path: "/video-history"      },
+  { id: "topup",         label: "Lịch sử nạp",       mobileLabel: "Nạp",      icon: Receipt, path: "/topup-history"      },
+  { id: "credit",        label: "Lịch sử tiêu",      mobileLabel: "Chi tiêu", icon: Wallet,  path: "/credit-usage"       },
+  { id: "pricing",       label: "Phí dịch vụ",       mobileLabel: "Bảng phí", icon: Coins,   path: "/pricing"            },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
@@ -104,5 +104,36 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
     </aside>
+  );
+}
+
+export function MobileBottomNav() {
+  return (
+    <nav
+      aria-label="Điều hướng chính"
+      className="md:hidden shrink-0 border-t border-white/[0.08] bg-slate-950/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl"
+    >
+      <div className="grid grid-cols-6">
+        {NAV.map(({ id, mobileLabel, icon: Icon, path }) => (
+          <NavLink
+            key={id}
+            to={path}
+            className={({ isActive }) =>
+              [
+                "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-[9px] font-medium transition active:scale-[0.96]",
+                isActive ? "bg-indigo-500/12 text-indigo-200" : "text-slate-500",
+              ].join(" ")
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <Icon className={`h-[18px] w-[18px] ${isActive ? "text-indigo-300" : "text-slate-500"}`} />
+                <span className="w-full truncate text-center">{mobileLabel}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
   );
 }

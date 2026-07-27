@@ -272,7 +272,7 @@ export default function AdminDashboard() {
               Margin theo chế độ
             </h3>
             <div className="overflow-x-auto rounded-lg border border-white/[0.05]">
-              <table className="w-full text-sm">
+              <table className="min-w-[560px] w-full text-sm">
                 <thead>
                   <tr className="bg-slate-950/60 text-[10px] font-mono uppercase tracking-[0.16em] text-slate-500">
                     <th className="text-left px-4 py-2 font-medium">Chế độ</th>
@@ -319,7 +319,7 @@ export default function AdminDashboard() {
               Job margin thấp gần đây
             </h3>
             <div className="overflow-x-auto rounded-lg border border-white/[0.05]">
-              <table className="w-full text-sm">
+              <table className="min-w-[760px] w-full text-sm">
                 <thead>
                   <tr className="bg-slate-950/60 text-[10px] font-mono uppercase tracking-[0.16em] text-slate-500">
                     <th className="text-left px-4 py-2 font-medium">Task ID</th>
