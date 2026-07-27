@@ -406,13 +406,13 @@ function PolicyCard({ icon: Icon, title, body }) {
 function DemoVideoCard({ eyebrow, title, description, src, accent = false }) {
   return (
     <article className={`${SURFACE} overflow-hidden ${accent ? "border-emerald-400/25" : ""}`}>
-      <div className="aspect-video bg-slate-950">
+      <div className="flex justify-center bg-slate-950 p-2 sm:p-3">
         <video
           controls
           preload="metadata"
           src={src}
           aria-label={`${title}: ${description}`}
-          className="h-full w-full object-cover"
+          className="block h-auto max-h-[26rem] w-auto max-w-full object-contain sm:max-h-[32rem]"
         />
       </div>
       <div className="p-5 sm:p-6">
