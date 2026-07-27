@@ -435,16 +435,20 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
 
   const lastPreviewUrlRef = useRef("");
   const cachedDurationRef = useRef(null);
+  const previewRequestIdRef = useRef(0);
 
   // Debounced fetch of the cost preview whenever the URL or audioMode change.
   // Optimization: If the video duration is already probed for this URL,
   // mode switching (e.g. "dub" <-> "mix" or "subtitle") instantly recalculates cost
   // client-side without making redundant preview-cost API calls to the server.
   useEffect(() => {
+    const requestId = ++previewRequestIdRef.current;
+
     // If a task is active, processing, or completed (result is present),
     // do NOT fetch or compute cost preview to avoid confusing the user.
     if (result) {
       const handle = setTimeout(() => {
+        if (requestId !== previewRequestIdRef.current) return;
         setCostPreview(null);
         setCostPreviewLoading(false);
         lastPreviewUrlRef.current = "";
@@ -456,6 +460,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
     const cleanUrl = extractUrl(url);
     if (!cleanUrl) {
       const handle = setTimeout(() => {
+        if (requestId !== previewRequestIdRef.current) return;
         setCostPreview(null);
         setCostPreviewLoading(false);
         lastPreviewUrlRef.current = "";
@@ -477,14 +482,15 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
         hardsub
       );
       const handle = setTimeout(() => {
+        if (requestId !== previewRequestIdRef.current) return;
         setCostPreview(instantPreview);
         setCostPreviewLoading(false);
       }, 0);
       return () => clearTimeout(handle);
     }
 
+    const controller = new AbortController();
     const handle = setTimeout(() => {
-      const controller = new AbortController();
       setCostPreviewLoading(true);
       axios
         .get(`${API_BASE_URL}/api/v1/videos/preview-cost`, {
@@ -499,6 +505,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
           timeout: 30000,
         })
         .then((res) => {
+          if (requestId !== previewRequestIdRef.current) return;
           setCostPreview(res.data);
           if (res.data?.durationSeconds) {
             lastPreviewUrlRef.current = canonical;
@@ -507,14 +514,18 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
         })
         .catch((err) => {
           if (axios.isCancel(err)) return;
+          if (requestId !== previewRequestIdRef.current) return;
           setCostPreview(null);
         })
         .finally(() => {
+          if (requestId !== previewRequestIdRef.current) return;
           setCostPreviewLoading(false);
         });
-      return () => controller.abort();
     }, 600);
-    return () => clearTimeout(handle);
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
   }, [url, audioMode, logoCoordinates, subtitleMask, hardsub, user?.creditBalance, user?.bonusCreditBalance, result]);
 
   const refreshUserCredit = useCallback(async () => {

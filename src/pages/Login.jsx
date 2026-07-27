@@ -227,10 +227,8 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    console.log("🔑 Google Credential Token received:", credentialResponse?.credential);
+  const handleGoogleSuccess = useCallback(async (credentialResponse) => {
     if (!credentialResponse?.credential) {
-      console.warn("⚠️ Google response missing credential property:", credentialResponse);
       setError("Đăng nhập với Google thất bại. Không nhận được token từ Google.");
       return;
     }
@@ -244,11 +242,11 @@ export default function Login() {
     } finally {
       setIsGoogleLoading(false);
     }
-  };
+  }, [googleLogin, navigate]);
 
-  const handleGoogleError = () => {
+  const handleGoogleError = useCallback(() => {
     setError("Đăng nhập với Google thất bại. Vui lòng thử lại.");
-  };
+  }, []);
 
   // OTP input wiring — type/digit/backspace/auto-advance/paste.
   const handleOtpChange = (index, value) => {
