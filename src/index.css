@@ -28,6 +28,14 @@ body {
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
+
+  .app-scroll-region {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Custom scrollbar — slate-on-slate so it stays consistent with the rest of the surface tokens. */

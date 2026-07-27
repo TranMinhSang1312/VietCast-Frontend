@@ -218,7 +218,7 @@ function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-950">
+        <main className="app-scroll-region flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-950">
           {welcomeBenefit && (
             <div
               role="status"
