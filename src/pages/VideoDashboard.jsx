@@ -12,6 +12,7 @@ import {
   PRIMARY_VIDEO_MODE_IDS,
   SECONDARY_VIDEO_MODE_IDS,
 } from "../config/videoModes";
+import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 
 const MODE_ICONS = Object.freeze({
   dub: MagicWand,
@@ -108,7 +109,12 @@ const TASK_RECOVERY_LOOKBACK_MS = 10 * 60 * 1000;
 function extractUrl(raw) {
   if (!raw || !raw.trim()) return null;
   const match = raw.trim().match(/https?:\/\/\S+/);
-  if (match) return match[0].replace(/\/+$/, "");
+  if (match) {
+    // Share captions from Douyin/TikTok often append sentence punctuation
+    // directly after the URL. Keep a legitimate trailing path slash, but
+    // remove characters that cannot be part of the shared link.
+    return match[0].replace(/[)\]}>.,;!?，。；！？、"'`]+$/u, "");
+  }
   return null;
 }
 
@@ -315,6 +321,23 @@ export default function VideoDashboard() {
       if (error) setError(null);
     },
     [result, url, error, resetResultState],
+  );
+
+  const handleUrlPaste = useCallback(
+    (e) => {
+      const pastedText = e.clipboardData?.getData("text") || "";
+      const pastedUrl = extractUrl(pastedText);
+      if (!pastedUrl) return;
+
+      // Display the actual URL instead of leaving the full social share
+      // caption in the field. The same clean value is used by preview-cost
+      // and by the eventual /process submission.
+      e.preventDefault();
+      handleUrlChange({
+        target: { value: normalizePreviewUrl(pastedUrl) },
+      });
+    },
+    [handleUrlChange],
   );
 
   const handleModeChange = useCallback(
@@ -876,6 +899,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                   placeholder="Dán link video tại đây..."
                   value={url}
                   onChange={handleUrlChange}
+                  onPaste={handleUrlPaste}
                   disabled={isLoading || isProcessing}
                   className="w-full px-4 py-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-zinc-100 placeholder:text-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed text-base font-mono"
                 />
@@ -1403,7 +1427,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                   Không đủ credit để xử lý video này
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Hệ thống sẽ không gửi video vào hàng đợi để tránh lãng phí tài nguyên engine.
+                  Vui lòng nạp thêm credit hoặc chọn video ngắn hơn để tiếp tục.
                 </p>
               </div>
               <button
@@ -1743,6 +1767,12 @@ const ResultPanel = memo(function ResultPanel({
           </div>
         )}
 
+        {isFailed && (
+          <div role="alert" className="rounded-xl border border-rose-400/25 bg-rose-400/[0.05] px-4 py-3 text-xs leading-relaxed text-rose-200">
+            {getPublicTaskFailureMessage(result.message)}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-2.5">
           {output.srt && result.srtUrl && isCompleted && (
             <button
@@ -1773,9 +1803,6 @@ const ResultPanel = memo(function ResultPanel({
         )}
       </div>
 
-      {result.message && (
-        <p className="mt-4 text-xs text-zinc-500 italic text-center select-none">{result.message}</p>
-      )}
     </div>
   );
 });

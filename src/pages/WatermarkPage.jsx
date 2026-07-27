@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
 import { 
   Eraser, 
   UploadSimple, 
@@ -15,17 +16,39 @@ import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { PRICING } from "../config/pricing";
+import { handleApiError } from "../utils/apiError";
+import {
+  DELOGO_PENDING_TASK_KEY,
+  beginDelogoSubmission,
+  resetDelogoState,
+  setDelogoError,
+  setDelogoSubmissionStopped,
+  setDelogoTaskProcessing,
+  setDelogoUploadProgress,
+  setLogoCoords,
+  setSelectedVideo,
+  setSubMaskCoords,
+  setVideoMetadata,
+} from "../store/slices/delogoSlice";
 
 export default function WatermarkPage() {
+  const dispatch = useDispatch();
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [videoObjectUrl, setVideoObjectUrl] = useState(null);
-
-  // Crop Coordinates State
-  const [logoCoords, setLogoCoords] = useState(null);       // {x, y, w, h}
-  const [subMaskCoords, setSubMaskCoords] = useState(null); // {x, y, w, h}
+  const {
+    selectedFile,
+    videoObjectUrl,
+    logoCoords,
+    subMaskCoords,
+    durationSeconds,
+    videoDimensions,
+    isSubmitting,
+    uploadProgressMsg,
+    error,
+    taskInfo,
+  } = useSelector((state) => state.delogo);
+  const taskResult = taskInfo.status === "IDLE" ? null : taskInfo;
+  const taskLocked = taskInfo.status !== "IDLE";
 
   // Active Crop Modal
   const [activeCropTarget, setActiveCropTarget] = useState(null); // 'logo' | 'subMask' | null
@@ -33,44 +56,22 @@ export default function WatermarkPage() {
   const [completedCrop, setCompletedCrop] = useState(null);
   const [frameCanvasUrl, setFrameCanvasUrl] = useState(null);
 
-  // Video metadata
-  const [durationSeconds, setDurationSeconds] = useState(0);
-  const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
-
-  // Processing state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [taskResult, setTaskResult] = useState(null);
-  const [error, setError] = useState(null);
-
-  // Clean up object URLs
-  useEffect(() => {
-    return () => {
-      if (videoObjectUrl) {
-        URL.revokeObjectURL(videoObjectUrl);
-      }
-    };
-  }, [videoObjectUrl]);
-
   // Handle local file selection
   const handleFileChange = (e) => {
+    if (taskLocked) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("video/")) {
-      setError("Vui lòng chọn tệp video hợp lệ (.mp4, .mov, .webm).");
+      dispatch(setDelogoError("Vui lòng chọn tệp video hợp lệ (.mp4, .mov, .webm)."));
       return;
     }
 
-    setError(null);
-    setSelectedFile(file);
     if (videoObjectUrl) {
       URL.revokeObjectURL(videoObjectUrl);
     }
     const url = URL.createObjectURL(file);
-    setVideoObjectUrl(url);
-    setLogoCoords(null);
-    setSubMaskCoords(null);
-    setTaskResult(null);
+    dispatch(setSelectedVideo({ file, objectUrl: url }));
   };
 
   // Video loaded metadata
@@ -79,8 +80,12 @@ export default function WatermarkPage() {
       const dur = videoRef.current.duration || 0;
       const w = videoRef.current.videoWidth || 0;
       const h = videoRef.current.videoHeight || 0;
-      setDurationSeconds(Math.round(dur));
-      setVideoDimensions({ width: w, height: h });
+      dispatch(
+        setVideoMetadata({
+          durationSeconds: Math.round(dur),
+          videoDimensions: { width: w, height: h },
+        })
+      );
     }
   };
 
@@ -88,7 +93,7 @@ export default function WatermarkPage() {
   const captureVideoFrame = (targetType) => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      setError("Hãy tải video và chờ khung hình hiển thị trước khi khoanh vùng.");
+      dispatch(setDelogoError("Hãy tải video và chờ khung hình hiển thị trước khi khoanh vùng."));
       return;
     }
 
@@ -141,9 +146,9 @@ export default function WatermarkPage() {
     const coordsObj = { x, y, w, h, str: `${x}:${y}:${w}:${h}` };
 
     if (activeCropTarget === "logo") {
-      setLogoCoords(coordsObj);
+      dispatch(setLogoCoords(coordsObj));
     } else if (activeCropTarget === "subMask") {
-      setSubMaskCoords(coordsObj);
+      dispatch(setSubMaskCoords(coordsObj));
     }
 
     setActiveCropTarget(null);
@@ -154,23 +159,18 @@ export default function WatermarkPage() {
   const filterCost = Math.round(minutes * PRICING.visualFilterPerMinute);
   const totalCost = Math.max(250, filterCost);
 
-  // Submit task
-  const [uploadProgressMsg, setUploadProgressMsg] = useState("");
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
-      setError("Vui lòng chọn tệp video từ máy tính trước khi khởi tạo.");
+      dispatch(setDelogoError("Vui lòng chọn tệp video từ máy tính trước khi khởi tạo."));
       return;
     }
     if (!logoCoords && !subMaskCoords) {
-      setError("Vui lòng khoanh vùng ít nhất 1 khu vực (Logo hoặc Phụ đề gốc) để xử lý.");
+      dispatch(setDelogoError("Vui lòng khoanh vùng ít nhất 1 khu vực (Logo hoặc Phụ đề gốc) để xử lý."));
       return;
     }
 
-    setError(null);
-    setIsSubmitting(true);
-    setUploadProgressMsg("Đang tải video lên lưu trữ Cloud R2...");
+    dispatch(beginDelogoSubmission());
 
     try {
       // Step 1: Upload direct video file to Backend /api/v1/videos/upload
@@ -188,7 +188,7 @@ export default function WatermarkPage() {
         throw new Error("Không nhận được liên kết video từ lưu trữ Cloud.");
       }
 
-      setUploadProgressMsg("Đang gửi yêu cầu Render...");
+      dispatch(setDelogoUploadProgress("Đang khởi tạo tác vụ..."));
 
       // Step 2: Submit process payload with the real public R2 video URL
       const payload = {
@@ -206,45 +206,36 @@ export default function WatermarkPage() {
       );
 
       const taskId = res.data?.taskId || res.data?.id;
-      setTaskResult({
-        taskId,
-        status: "PROCESSING",
-        videoUrl: null,
-      });
-      setUploadProgressMsg("");
-
-      // Poll task status
-      pollTaskStatus(taskId);
+      if (!taskId) {
+        throw new Error("Không nhận được mã tác vụ từ hệ thống.");
+      }
+      localStorage.setItem(DELOGO_PENDING_TASK_KEY, String(taskId));
+      dispatch(setDelogoTaskProcessing(taskId));
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || err.message || "Không thể khởi tạo tác vụ xóa Logo. Vui lòng thử lại.");
-      setIsSubmitting(false);
-      setUploadProgressMsg("");
+      dispatch(
+        setDelogoError(
+          handleApiError(err).message ||
+            "Không thể khởi tạo tác vụ xóa Logo. Vui lòng thử lại."
+        )
+      );
+      dispatch(setDelogoSubmissionStopped());
     }
   };
 
-  const pollTaskStatus = (taskId) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await axios.get(`${API_BASE_URL_PROVIDER.sync}/api/v1/videos/tasks/${taskId}`);
-        const data = res.data;
-        if (data.status === "SUCCESS" || data.status === "COMPLETED") {
-          setTaskResult({
-            taskId,
-            status: "COMPLETED",
-            videoUrl: data.resultUrl || data.videoUrl,
-          });
-          setIsSubmitting(false);
-          clearInterval(interval);
-        } else if (data.status === "FAILED") {
-          setError(data.errorMessage || "Tác vụ thất bại trong quá trình xử lý.");
-          setIsSubmitting(false);
-          clearInterval(interval);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }, 3000);
+  const handleReset = () => {
+    if (videoObjectUrl) {
+      URL.revokeObjectURL(videoObjectUrl);
+    }
+    localStorage.removeItem(DELOGO_PENDING_TASK_KEY);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setActiveCropTarget(null);
+    setCrop(null);
+    setCompletedCrop(null);
+    setFrameCanvasUrl(null);
+    dispatch(resetDelogoState());
   };
 
   return (
@@ -268,13 +259,20 @@ export default function WatermarkPage() {
         <div className="lg:col-span-7 space-y-6">
           {/* File Upload Zone - Direct Local File Selection */}
           <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-6 text-center bg-indigo-500/[0.02] hover:bg-indigo-500/[0.05] transition cursor-pointer select-none"
+            onClick={() => {
+              if (!taskLocked) fileInputRef.current?.click();
+            }}
+            className={`border-2 border-dashed rounded-2xl p-6 text-center transition select-none ${
+              taskLocked
+                ? "cursor-not-allowed border-white/[0.06] bg-white/[0.02] opacity-60"
+                : "cursor-pointer border-indigo-500/30 bg-indigo-500/[0.02] hover:border-indigo-400/60 hover:bg-indigo-500/[0.05]"
+            }`}
           >
             <input
               ref={fileInputRef}
               type="file"
               accept="video/*"
+              disabled={taskLocked}
               onChange={handleFileChange}
               className="hidden"
             />
@@ -316,8 +314,9 @@ export default function WatermarkPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
+                  disabled={taskLocked}
                   onClick={() => captureVideoFrame("logo")}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Scissors size={18} weight="duotone" />
                   <span>{logoCoords ? "✏️ Sửa vùng Xóa Logo" : "🎯 Khoanh vùng Xóa Logo"}</span>
@@ -325,8 +324,9 @@ export default function WatermarkPage() {
 
                 <button
                   type="button"
+                  disabled={taskLocked}
                   onClick={() => captureVideoFrame("subMask")}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold transition active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Eraser size={18} weight="duotone" />
                   <span>{subMaskCoords ? "✏️ Sửa vùng Che Phụ Đề" : "📝 Khoanh vùng Che Phụ Đề"}</span>
@@ -338,13 +338,13 @@ export default function WatermarkPage() {
                 {logoCoords && (
                   <div className="flex items-center justify-between text-xs bg-indigo-500/10 px-3 py-2 rounded-lg border border-indigo-500/20 text-indigo-300">
                     <span><strong>Logo:</strong> x={logoCoords.x}, y={logoCoords.y}, w={logoCoords.w}, h={logoCoords.h}</span>
-                    <button type="button" onClick={() => setLogoCoords(null)} className="text-slate-400 hover:text-white">✕</button>
+                    <button type="button" disabled={taskLocked} onClick={() => dispatch(setLogoCoords(null))} className="text-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">✕</button>
                   </div>
                 )}
                 {subMaskCoords && (
                   <div className="flex items-center justify-between text-xs bg-purple-500/10 px-3 py-2 rounded-lg border border-purple-500/20 text-purple-300">
                     <span><strong>Phụ đề gốc:</strong> x={subMaskCoords.x}, y={subMaskCoords.y}, w={subMaskCoords.w}, h={subMaskCoords.h}</span>
-                    <button type="button" onClick={() => setSubMaskCoords(null)} className="text-slate-400 hover:text-white">✕</button>
+                    <button type="button" disabled={taskLocked} onClick={() => dispatch(setSubMaskCoords(null))} className="text-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">✕</button>
                   </div>
                 )}
               </div>
@@ -388,11 +388,21 @@ export default function WatermarkPage() {
 
             <button
               type="button"
-              disabled={isSubmitting || (!logoCoords && !subMaskCoords)}
+              disabled={taskLocked || isSubmitting || (!logoCoords && !subMaskCoords)}
               onClick={handleSubmit}
               className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-full bg-emerald-400 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold text-sm shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition select-none"
             >
-              {isSubmitting ? (
+              {taskInfo.status === "COMPLETED" ? (
+                <>
+                  <CheckCircle size={20} weight="fill" />
+                  <span>Video đã xử lý xong</span>
+                </>
+              ) : taskInfo.status === "FAILED" ? (
+                <>
+                  <WarningCircle size={20} weight="fill" />
+                  <span>Tác vụ chưa hoàn tất</span>
+                </>
+              ) : isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span>{uploadProgressMsg || "Đang xử lý Delogo..."}</span>
@@ -408,12 +418,26 @@ export default function WatermarkPage() {
 
           {/* Task Output Result Panel */}
           {taskResult && (
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 space-y-4">
+            <div className={`rounded-2xl border p-6 space-y-4 ${
+              taskResult.status === "FAILED"
+                ? "border-rose-500/30 bg-rose-500/10"
+                : "border-emerald-500/30 bg-emerald-500/10"
+            }`}>
               <div className="flex items-center gap-3">
-                <CheckCircle size={24} weight="fill" className="text-emerald-400" />
+                {taskResult.status === "COMPLETED" ? (
+                  <CheckCircle size={24} weight="fill" className="text-emerald-400" />
+                ) : taskResult.status === "FAILED" ? (
+                  <WarningCircle size={24} weight="fill" className="text-rose-400" />
+                ) : (
+                  <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                )}
                 <div>
                   <h3 className="text-sm font-bold text-white">
-                    {taskResult.status === "COMPLETED" ? "Đã hoàn thành Delogo!" : "Đang xử lý tác vụ trên VPS..."}
+                    {taskResult.status === "COMPLETED"
+                      ? "Video đã xử lý xong!"
+                      : taskResult.status === "FAILED"
+                      ? "Chưa thể hoàn tất video"
+                      : "Đang xử lý video..."}
                   </h3>
                   <p className="text-xs text-emerald-300/80 font-mono">Task #{taskResult.taskId}</p>
                 </div>
@@ -429,6 +453,16 @@ export default function WatermarkPage() {
                   <DownloadSimple size={18} weight="bold" />
                   <span>Tải Video đã xóa Logo</span>
                 </a>
+              )}
+
+              {(taskResult.status === "COMPLETED" || taskResult.status === "FAILED") && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.08]"
+                >
+                  Tạo tác vụ khác
+                </button>
               )}
             </div>
           )}

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   BrowserRouter,
   Routes,
@@ -15,6 +16,11 @@ import CreditPill from "./components/layout/CreditPill";
 import TopupModal from "./components/topup/TopupModal";
 import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
 import { formatCredit, formatCountdown } from "./utils/format";
+import DelogoTaskMonitor from "./components/delogo/DelogoTaskMonitor";
+import {
+  DELOGO_PENDING_TASK_KEY,
+  resetDelogoState,
+} from "./store/slices/delogoSlice";
 
 // Auto-retry helper for dynamic import chunks. When a new deployment occurs,
 // old JS chunks return 404/HTML. This helper automatically reloads the page
@@ -63,6 +69,7 @@ function TabFallback() {
 // Shell rendered for any authenticated user route. Each tab maps to its
 // own URL so deep-linking, browser-back, and shared links all work.
 function AppShell() {
+  const dispatch = useDispatch();
   const [isTopupOpen, setIsTopupOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [topupPrefill, setTopupPrefill] = useState(null);
@@ -72,6 +79,18 @@ function AppShell() {
     () => location.state?.signupBenefit ?? null
   );
   const { user, logout, syncProfile } = useAuth();
+  const delogoVideoObjectUrl = useSelector(
+    (state) => state.delogo.videoObjectUrl
+  );
+
+  const handleLogout = async () => {
+    if (delogoVideoObjectUrl) {
+      URL.revokeObjectURL(delogoVideoObjectUrl);
+    }
+    localStorage.removeItem(DELOGO_PENDING_TASK_KEY);
+    dispatch(resetDelogoState());
+    await logout();
+  };
 
   // Sync profile on mount AND on route navigation so the Header CreditPill
   // always displays the fresh, up-to-date credit balance.
@@ -178,7 +197,7 @@ function AppShell() {
                 </div>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-white/[0.06] transition active:scale-[0.98]"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -238,6 +257,7 @@ function AppShell() {
           prefillAmount={topupPrefill}
         />
       )}
+      <DelogoTaskMonitor onSettled={syncProfile} />
     </div>
   );
 }

@@ -37,7 +37,16 @@ const STACK_TRACE_HINTS = [
   "\n\tat ",
 ];
 
-function looksLikeStackTrace(text) {
+const TECHNICAL_ERROR_PATTERNS = [
+  /https?:\/\//i,
+  /\/api\/v\d+\//i,
+  /\b(?:yt-dlp|ffmpeg|docker|rabbitmq|amqp|vps|engine)\b/i,
+  /\b(?:permanent|temporary)\s+failure\b/i,
+  /\b(?:4|5)\d{2}\s+(?:server|client)\s+error\b/i,
+  /\b(?:connection refused|connectexception|read timed out)\b/i,
+];
+
+function looksLikeTechnicalError(text) {
   if (!text || typeof text !== "string") return false;
   // A real stack trace almost always contains "\n\tat " (new-line +
   // tab + "at ") — common Java formatting. Single-line messages rarely
@@ -50,7 +59,7 @@ function looksLikeStackTrace(text) {
     if (text.includes(hint)) hits += 1;
     if (hits >= 2) return true;
   }
-  return false;
+  return TECHNICAL_ERROR_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 const STATUS_VI = {
@@ -176,7 +185,7 @@ export function handleApiError(err) {
     const useServer =
       typeof serverMessage === "string" &&
       serverMessage.trim().length > 0 &&
-      !looksLikeStackTrace(serverMessage);
+      !looksLikeTechnicalError(serverMessage);
 
     return {
       status,
@@ -190,7 +199,7 @@ export function handleApiError(err) {
   const generic = err && typeof err === "object" && typeof err.message === "string"
     ? err.message
     : null;
-  if (generic && !looksLikeStackTrace(generic)) {
+  if (generic && !looksLikeTechnicalError(generic)) {
     return {
       status: 0,
       code: "UNKNOWN",

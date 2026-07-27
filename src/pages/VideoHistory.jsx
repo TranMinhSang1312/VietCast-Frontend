@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { getVideoModePolicy } from "../config/videoModes";
+import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
@@ -228,7 +229,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             {isFailed && (
                 <div className="mt-3 flex items-start gap-2.5 p-4 rounded-xl bg-rose-950/30 border border-rose-900/40 text-sm text-red-200">
                     <AlertCircle className="w-4.5 h-4.5 mt-0.5 shrink-0 text-rose-400" />
-                    <span>{video.message || "Quá trình xử lý thất bại. Credit đã trừ sẽ được hoàn tự động; bạn có thể thử lại tác vụ."}</span>
+                    <span>{getPublicTaskFailureMessage(video.message)}</span>
                 </div>
             )}
 
