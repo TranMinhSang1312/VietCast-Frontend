@@ -5,7 +5,6 @@ import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaption
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
-import WatermarkRemover from "../components/watermark/WatermarkRemover";
 import { PRICING } from "../config/pricing";
 import {
   getVideoModePolicy,
@@ -48,11 +47,6 @@ const PRIMARY_AUDIO_MODES = PRIMARY_VIDEO_MODE_IDS.map((id) =>
   toModeOption(id, true));
 const SECONDARY_AUDIO_MODES = SECONDARY_VIDEO_MODE_IDS.map((id) =>
   toModeOption(id, false));
-
-const VISUAL_FILTERS = Object.freeze([
-  { type: "logo", title: "Xóa logo cứng" },
-  { type: "subtitle", title: "Che phụ đề gốc" },
-]);
 
 function progressLabel(mode, progress, targetLanguage = "Tiếng Việt") {
   if (progress < 10) return "ĐANG TẢI VIDEO TỪ NGUỒN...";
@@ -190,8 +184,6 @@ export default function VideoDashboard() {
   const [sourceLanguage, setSourceLanguage] = useState(() => {
     return localStorage.getItem("vc_sourceLanguage") || "auto";
   });const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
-  const [logoCoordinates, setLogoCoordinates] = useState(() => localStorage.getItem("vc_logoCoordinates") || "");
-  const [subtitleMask, setSubtitleMask] = useState(() => localStorage.getItem("vc_subtitleMask") || "");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -230,10 +222,6 @@ export default function VideoDashboard() {
   // pop the warning dialog with the missing-credits number.
   const [showCreditWarning, setShowCreditWarning] = useState(false);
 
-  // Crop modal states
-  const [isCropOpen, setIsCropOpen] = useState(false);
-  const [cropType, setCropType] = useState("logo"); // "logo" | "subtitle"
-
   const pollIntervalRef = useRef(null);
   const usageLoggedTaskIdRef = useRef(null);
   const recoveryAttemptedRef = useRef(false);
@@ -257,14 +245,6 @@ export default function VideoDashboard() {
   useEffect(() => {
     localStorage.setItem("vc_sourceLanguage", sourceLanguage);
   }, [sourceLanguage]);
-
-  useEffect(() => {
-    localStorage.setItem("vc_logoCoordinates", logoCoordinates);
-  }, [logoCoordinates]);
-
-  useEffect(() => {
-    localStorage.setItem("vc_subtitleMask", subtitleMask);
-  }, [subtitleMask]);
 
   useEffect(() => {
     if (result) {
@@ -355,8 +335,6 @@ const handleReset = useCallback(() => {
         setUrl("");
         setAudioMode("mix");
         setVoice("vi-VN-NamMinhNeural");
-        setLogoCoordinates("");
-        setSubtitleMask("");
         setResult(null);
         setError(null);
         setVideoReady(false);
@@ -419,7 +397,7 @@ const handleReset = useCallback(() => {
   // effect; the 600ms debounce absorbs "still typing" keystrokes. Worst
   // case is one round-trip per settled URL = ~10s when yt-dlp times
   // out (matches the server timeout). We surface that with a spinner
-function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, userBalance, hardsubFlag = false) {
+function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFlag = false) {
   const seconds = Math.max(0, Number(durationSeconds) || 0);
   const minutes = seconds / 60;
   const policy = getVideoModePolicy(mode);
@@ -428,19 +406,12 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
     Math.round(minutes * policy.perMinuteRate),
   );
 
-  const hasLogo = policy.supportsVisualFilters && Boolean(logoCoords && logoCoords.trim());
-  const hasSubMask = policy.supportsVisualFilters && Boolean(subMask && subMask.trim());
-  let visualFilterCost = 0;
-  if (hasLogo || hasSubMask) {
-    visualFilterCost = Math.round(minutes * PRICING.visualFilterPerMinute);
-  }
-
   let hardsubCost = 0;
   if (hardsubFlag && policy.supportsHardsub) {
     hardsubCost = Math.max(60, Math.round(minutes * 60));
   }
 
-  const estimatedCost = (baseCost + visualFilterCost + hardsubCost) || PRICING.dubPerMinute;
+  const estimatedCost = (baseCost + hardsubCost) || PRICING.dubPerMinute;
   const currentBalance = Number(userBalance) || 0;
   const sufficient = currentBalance >= estimatedCost;
 
@@ -499,8 +470,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
       const instantPreview = computeInstantCostPreview(
         cachedDurationRef.current,
         audioMode,
-        logoCoordinates,
-        subtitleMask,
         userBalance,
         hardsub
       );
@@ -520,8 +489,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
           params: {
             url: canonical,
             audioMode,
-            logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates || null),
-            subtitleMask: audioMode === "subtitle" ? null : (subtitleMask || null),
             hardsub,
           },
           signal: controller.signal,
@@ -549,7 +516,7 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
       clearTimeout(handle);
       controller.abort();
     };
-  }, [url, audioMode, logoCoordinates, subtitleMask, hardsub, user?.creditBalance, user?.bonusCreditBalance, result]);
+  }, [url, audioMode, hardsub, user?.creditBalance, user?.bonusCreditBalance, result]);
 
   const refreshUserCredit = useCallback(async () => {
     try {
@@ -665,8 +632,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
             // Only forward a voice value when the user picked an
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
-            logoCoordinates: audioMode === "subtitle" ? null : (logoCoordinates.trim() || null),
-            subtitleMask: audioMode === "subtitle" ? null : (subtitleMask.trim() || null),
             hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
@@ -746,8 +711,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
       url,
       audioMode,
       voice,
-      logoCoordinates,
-      subtitleMask,
       costPreview,
       refreshUserCredit,
       resetResultState,
@@ -994,75 +957,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
                     </div>
                   );
                 })()}
-              </div>
-
-              {/* Optional visual filters. These controls were previously
-                  disconnected from the crop modal, making the backend
-                  feature impossible to select from the dashboard. */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <label className="block text-sm font-semibold text-zinc-300">
-                    Bộ lọc hình ảnh
-                  </label>
-                  <span className="text-[11px] text-slate-500">
-                    +{PRICING.visualFilterPerMinute} credit/phút khi có khung
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {VISUAL_FILTERS.map((filter) => {
-                    const value = filter.type === "logo"
-                      ? logoCoordinates
-                      : subtitleMask;
-                    return (
-                    <div
-                      key={filter.type}
-                      className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3.5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-zinc-200">
-                            {filter.title}
-                          </p>
-                          <p className="mt-1 truncate font-mono text-[11px] text-slate-500">
-                            {value || "Chưa chọn khung"}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={!url.trim() || Boolean(result) || audioMode === "subtitle"}
-                          onClick={() => {
-                            setCropType(filter.type);
-                            setIsCropOpen(true);
-                          }}
-                          className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.05] px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {value ? "Vẽ lại" : "Vẽ khung"}
-                        </button>
-                      </div>
-                      {value && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (filter.type === "logo") {
-                              setLogoCoordinates("");
-                            } else {
-                              setSubtitleMask("");
-                            }
-                          }}
-                          className="mt-2 text-[11px] font-medium text-rose-300 hover:text-rose-200"
-                        >
-                          Bỏ khung đã chọn
-                        </button>
-                      )}
-                    </div>
-                    );
-                  })}
-                </div>
-                {audioMode === "subtitle" && (
-                  <p className="text-[11px] text-slate-500">
-                    Chế độ chỉ tạo phụ đề không render video nên không áp dụng bộ lọc hình ảnh.
-                  </p>
-                )}
               </div>
 
               {/* Audio mode selector */}
@@ -1373,28 +1267,6 @@ function computeInstantCostPreview(durationSeconds, mode, logoCoords, subMask, u
           </section>
         </div>
       </div>
-
-      {/* Crop Modal */}
-      {isCropOpen && (
-        <WatermarkRemover
-          videoSrc={url || ""}
-          title={cropType === "logo" ? "Vẽ khung xóa Logo cứng" : "Vẽ khung đè phụ đề gốc"}
-          description={
-            cropType === "logo"
-              ? "Kéo chuột để vẽ một ô bao quanh logo cứng. Hệ thống sẽ trích khung hình từ URL và che vùng này khi render."
-              : "Kéo chuột để vẽ một ô chữ nhật che phụ đề gốc. Hệ thống sẽ làm mờ vùng này trước khi render kết quả."
-          }
-          onConfirm={(coords) => {
-            if (cropType === "logo") {
-              setLogoCoordinates(coords);
-            } else {
-              setSubtitleMask(coords);
-            }
-            setIsCropOpen(false);
-          }}
-          onCancel={() => setIsCropOpen(false)}
-        />
-      )}
 
       {/* Insufficient-credit warning popup.
           Triggered when the user tries to submit a render whose cost
