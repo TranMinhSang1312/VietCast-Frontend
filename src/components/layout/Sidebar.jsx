@@ -111,7 +111,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="Điều hướng chính"
-      className="md:hidden shrink-0 border-t border-white/[0.08] bg-slate-950/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-slate-950/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl md:hidden"
     >
       <div className="grid grid-cols-6">
         {NAV.map(({ id, mobileLabel, icon: Icon, path }) => (

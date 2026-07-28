@@ -153,18 +153,18 @@ function AppShell() {
   }, [user?.bonusCreditBalance, syncProfile]);
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex min-h-[100dvh] w-full bg-slate-950 text-slate-100 md:h-[100dvh] md:min-h-0 md:overflow-hidden">
       <Sidebar
         collapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed((v) => !v)}
       />
 
-      <div className="flex h-[100dvh] min-w-0 flex-1 flex-col">
+      <div className="flex min-h-[100dvh] min-w-0 flex-1 flex-col md:h-[100dvh] md:min-h-0">
         {/* Top bar — slim and quiet. Only balance + topup + admin chip
             + username + logout live here. Navigation lives in the
             sidebar. The bar uses subtle white/[0.04] borders to stay
             consistent with the rest of the new design system. */}
-        <header className="shrink-0 z-10 bg-slate-950/80 border-b border-white/[0.06] backdrop-blur-xl">
+        <header className="sticky top-0 z-40 shrink-0 bg-slate-950/95 border-b border-white/[0.06] backdrop-blur-xl md:static md:z-10 md:bg-slate-950/80">
           <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3">
             {/* Mobile-only brand. */}
             <div className="md:hidden flex items-center gap-2 select-none">
@@ -229,7 +229,7 @@ function AppShell() {
           </div>
         </header>
 
-        <main className="app-scroll-region flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-950">
+        <main className="app-scroll-region min-w-0 bg-slate-950 pb-[calc(4rem+env(safe-area-inset-bottom))] md:min-h-0 md:flex-1 md:overflow-y-auto md:pb-0">
           {welcomeBenefit && (
             <div
               role="status"

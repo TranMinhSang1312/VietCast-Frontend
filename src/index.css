@@ -31,18 +31,26 @@ body.app-shell-active #root {
 }
 
 @media (max-width: 767px) {
-  body {
+  html.app-shell-active,
+  body.app-shell-active,
+  body.app-shell-active #root {
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  body.app-shell-active {
     background-attachment: scroll;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
 
   .app-scroll-region {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
+    min-height: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
+    touch-action: auto;
   }
 }
 
