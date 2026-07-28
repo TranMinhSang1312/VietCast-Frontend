@@ -15,9 +15,11 @@ import {
 import { API_BASE_URL_PROVIDER } from "../config";
 import { getVideoModePolicy } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
+import PaginationControls from "../components/history/PaginationControls";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
+const PAGE_SIZE = 10;
 
 const MODE_ICONS = Object.freeze({
     original: Mic,
@@ -305,6 +307,8 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
 
 export default function VideoHistory() {
     const [history, setHistory] = useState([]);
+    const [page, setPage] = useState(0);
+    const [pageInfo, setPageInfo] = useState({ totalItems: 0, totalPages: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const pollTimerRef = useRef(null);
@@ -318,14 +322,18 @@ export default function VideoHistory() {
         if (showSpinner) setIsLoading(true);
         try {
             console.log("[VideoHistory] GET /api/v1/tasks — fetching history…");
-            const { data } = await axios.get(
+            const { data, headers } = await axios.get(
                 `${API_BASE_URL}/api/v1/tasks`,
-                { timeout: 10000 }
+                { timeout: 10000, params: { page, size: PAGE_SIZE } }
             );
             console.log(
                 `[VideoHistory] GET /api/v1/tasks — received ${Array.isArray(data) ? data.length : "?"} task(s)`
             );
             setHistory(Array.isArray(data) ? data : []);
+            setPageInfo({
+                totalItems: Number(headers["x-total-count"] ?? 0),
+                totalPages: Number(headers["x-total-pages"] ?? 0),
+            });
             setError(null);
         } catch (err) {
             console.error("[VideoHistory] GET /api/v1/tasks — FAILED");
@@ -333,7 +341,7 @@ export default function VideoHistory() {
         } finally {
             if (showSpinner) setIsLoading(false);
         }
-    }, []);
+    }, [page]);
 
     const handleRetryTask = useCallback(async (taskId) => {
         try {
@@ -458,6 +466,19 @@ export default function VideoHistory() {
                             />
                         ))}
                     </div>
+                )}
+
+                {!isLoading && !error && (
+                    <PaginationControls
+                        page={page}
+                        totalPages={pageInfo.totalPages}
+                        totalItems={pageInfo.totalItems}
+                        disabled={isLoading}
+                        onChange={(nextPage) => {
+                            setPage(nextPage);
+                            document.querySelector(".app-scroll-region")?.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                    />
                 )}
 
                 {/* Refresh Trigger */}

@@ -83,6 +83,17 @@ function AppShell() {
     (state) => state.delogo.videoObjectUrl
   );
 
+  // The authenticated area scrolls inside <main>. Locking the document
+  // prevents iOS rubber-band scrolling from dragging the entire app shell.
+  useEffect(() => {
+    document.documentElement.classList.add("app-shell-active");
+    document.body.classList.add("app-shell-active");
+    return () => {
+      document.documentElement.classList.remove("app-shell-active");
+      document.body.classList.remove("app-shell-active");
+    };
+  }, []);
+
   const handleLogout = async () => {
     if (delogoVideoObjectUrl) {
       URL.revokeObjectURL(delogoVideoObjectUrl);

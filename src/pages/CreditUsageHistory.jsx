@@ -12,6 +12,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { listMyTransactions, TX_TYPE } from "../services/transactions";
+import PaginationControls from "../components/history/PaginationControls";
 
 // ---------------------------------------------------------------------------
 // CreditUsageHistory — "Lịch sử tiêu credit" page.
@@ -22,6 +23,7 @@ import { listMyTransactions, TX_TYPE } from "../services/transactions";
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 15_000;
+const PAGE_SIZE = 10;
 
 const TYPE_META = {
   [TX_TYPE.TOPUP]: {
@@ -76,21 +78,24 @@ function formatDateTime(value) {
 
 export default function CreditUsageHistory() {
   const [txns, setTxns] = useState([]);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalItems: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetch = useCallback(async (showSpinner = false) => {
     if (showSpinner) setIsLoading(true);
     try {
-      const list = await listMyTransactions({ page: 0, size: 100 });
-      setTxns(list);
+      const result = await listMyTransactions({ page, size: PAGE_SIZE });
+      setTxns(result.items);
+      setPageInfo({ totalItems: result.totalItems, totalPages: result.totalPages });
       setError(null);
     } catch (err) {
       setError(err?.message || "Không thể tải lịch sử sử dụng. Đang thử lại…");
     } finally {
       if (showSpinner) setIsLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     const id = setTimeout(() => void fetch(true), 0);
@@ -216,6 +221,19 @@ export default function CreditUsageHistory() {
               );
             })}
           </div>
+        )}
+
+        {!isLoading && !error && (
+          <PaginationControls
+            page={page}
+            totalPages={pageInfo.totalPages}
+            totalItems={pageInfo.totalItems}
+            disabled={isLoading}
+            onChange={(nextPage) => {
+              setPage(nextPage);
+              document.querySelector(".app-scroll-region")?.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         )}
 
         {!isLoading && hasItems && (

@@ -87,10 +87,14 @@ export async function confirmPayment(orderCode) {
  * }>>}
  */
 export async function listMyTopups({ page = 0, size = 50 } = {}) {
-  const { data } = await axios.get(`${API_BASE_URL}/api/v1/payment/orders`, {
+  const { data, headers } = await axios.get(`${API_BASE_URL}/api/v1/payment/orders`, {
     params: { page, size },
   });
-  return Array.isArray(data) ? data : [];
+  return {
+    items: Array.isArray(data) ? data : [],
+    totalItems: Number(headers["x-total-count"] ?? 0),
+    totalPages: Number(headers["x-total-pages"] ?? 0),
+  };
 }
 
 /**

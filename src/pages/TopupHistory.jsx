@@ -9,6 +9,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { listMyTopups } from "../services/payment";
+import PaginationControls from "../components/history/PaginationControls";
 
 // ---------------------------------------------------------------------------
 // TopupHistory — "Lịch sử nạp credit" page.
@@ -23,6 +24,7 @@ import { listMyTopups } from "../services/payment";
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 15_000;
+const PAGE_SIZE = 10;
 
 const STATUS_STYLES = {
   PENDING: {
@@ -70,21 +72,24 @@ function formatVnd(vnd) {
 
 export default function TopupHistory() {
   const [orders, setOrders] = useState([]);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalItems: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetch = useCallback(async (showSpinner = false) => {
     if (showSpinner) setIsLoading(true);
     try {
-      const list = await listMyTopups({ page: 0, size: 50 });
-      setOrders(list);
+      const result = await listMyTopups({ page, size: PAGE_SIZE });
+      setOrders(result.items);
+      setPageInfo({ totalItems: result.totalItems, totalPages: result.totalPages });
       setError(null);
     } catch (err) {
       setError(err?.message || "Không thể tải lịch sử nạp. Đang thử lại…");
     } finally {
       if (showSpinner) setIsLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     const id = setTimeout(() => void fetch(true), 0);
@@ -220,6 +225,19 @@ export default function TopupHistory() {
               );
             })}
           </div>
+        )}
+
+        {!isLoading && !error && (
+          <PaginationControls
+            page={page}
+            totalPages={pageInfo.totalPages}
+            totalItems={pageInfo.totalItems}
+            disabled={isLoading}
+            onChange={(nextPage) => {
+              setPage(nextPage);
+              document.querySelector(".app-scroll-region")?.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         )}
 
         {!isLoading && hasItems && (
