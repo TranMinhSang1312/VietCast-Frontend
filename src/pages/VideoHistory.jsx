@@ -329,11 +329,21 @@ export default function VideoHistory() {
             console.log(
                 `[VideoHistory] GET /api/v1/tasks — received ${Array.isArray(data) ? data.length : "?"} task(s)`
             );
-            setHistory(Array.isArray(data) ? data : []);
-            setPageInfo({
-                totalItems: Number(headers["x-total-count"] ?? 0),
-                totalPages: Number(headers["x-total-pages"] ?? 0),
-            });
+            const items = Array.isArray(data) ? data : [];
+            const hasPageMetadata = headers["x-total-pages"] !== undefined;
+            const visibleItems = hasPageMetadata
+                ? items
+                : items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+            setHistory(visibleItems);
+            setPageInfo(hasPageMetadata
+                ? {
+                    totalItems: Number(headers["x-total-count"] ?? 0),
+                    totalPages: Number(headers["x-total-pages"] ?? 0),
+                }
+                : {
+                    totalItems: items.length,
+                    totalPages: Math.ceil(items.length / PAGE_SIZE),
+                });
             setError(null);
         } catch (err) {
             console.error("[VideoHistory] GET /api/v1/tasks — FAILED");

@@ -58,9 +58,16 @@ export async function listMyTransactions({ type, page = 0, size = 50 } = {}) {
   const { data, headers } = await axios.get(`${API_BASE_URL}/api/v1/transactions`, {
     params,
   });
+  const items = Array.isArray(data) ? data : [];
+  const totalPagesHeader = headers["x-total-pages"];
+  const totalCountHeader = headers["x-total-count"];
+  const hasPageMetadata = totalPagesHeader !== undefined;
   return {
-    items: Array.isArray(data) ? data : [],
-    totalItems: Number(headers["x-total-count"] ?? 0),
-    totalPages: Number(headers["x-total-pages"] ?? 0),
+    items,
+    totalItems: hasPageMetadata ? Number(totalCountHeader ?? 0) : undefined,
+    totalPages: hasPageMetadata
+      ? Number(totalPagesHeader)
+      : page + (items.length === size ? 2 : 1),
+    hasPageMetadata,
   };
 }
