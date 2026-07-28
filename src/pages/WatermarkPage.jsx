@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { 
@@ -9,7 +9,8 @@ import {
   DownloadSimple, 
   PlayCircle,
   WarningCircle,
-  Sparkle
+  Sparkle,
+  XCircle,
 } from "@phosphor-icons/react";
 import { Loader2 } from "lucide-react";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
@@ -17,6 +18,12 @@ import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { PRICING } from "../config/pricing";
 import { handleApiError } from "../utils/apiError";
+import {
+  isVideoUploadCancelled,
+  requestVideoUploadTicket,
+  uploadVideoToR2,
+  validateVideoUploadFile,
+} from "../services/videoUpload";
 import {
   DELOGO_PENDING_TASK_KEY,
   beginDelogoSubmission,
@@ -35,6 +42,7 @@ export default function WatermarkPage() {
   const dispatch = useDispatch();
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const uploadAbortControllerRef = useRef(null);
   const {
     selectedFile,
     videoObjectUrl,
@@ -43,12 +51,15 @@ export default function WatermarkPage() {
     durationSeconds,
     videoDimensions,
     isSubmitting,
+    isUploading,
+    uploadProgress,
     uploadProgressMsg,
     error,
     taskInfo,
   } = useSelector((state) => state.delogo);
   const taskResult = taskInfo.status === "IDLE" ? null : taskInfo;
   const taskLocked = taskInfo.status !== "IDLE";
+  const fileSelectionLocked = taskLocked || isSubmitting;
 
   // Active Crop Modal
   const [activeCropTarget, setActiveCropTarget] = useState(null); // 'logo' | 'subMask' | null
@@ -56,22 +67,42 @@ export default function WatermarkPage() {
   const [completedCrop, setCompletedCrop] = useState(null);
   const [frameCanvasUrl, setFrameCanvasUrl] = useState(null);
 
-  // Handle local file selection
-  const handleFileChange = (e) => {
-    if (taskLocked) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    return () => uploadAbortControllerRef.current?.abort();
+  }, []);
 
-    if (!file.type.startsWith("video/")) {
-      dispatch(setDelogoError("Vui lòng chọn tệp video hợp lệ (.mp4, .mov, .webm)."));
+  const selectVideoFile = (file) => {
+    if (fileSelectionLocked || !file) return;
+
+    try {
+      validateVideoUploadFile(file);
+    } catch (validationError) {
+      dispatch(setDelogoError(validationError.message));
       return;
     }
 
-    if (videoObjectUrl) {
-      URL.revokeObjectURL(videoObjectUrl);
-    }
+    if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
     const url = URL.createObjectURL(file);
     dispatch(setSelectedVideo({ file, objectUrl: url }));
+  };
+
+  // Handle local file selection
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    selectVideoFile(file);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    if (fileSelectionLocked) return;
+    selectVideoFile(event.dataTransfer.files?.[0]);
+  };
+
+  const handleCancelUpload = () => {
+    if (isUploading) {
+      uploadAbortControllerRef.current?.abort();
+    }
   };
 
   // Video loaded metadata
@@ -162,7 +193,7 @@ export default function WatermarkPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
-      dispatch(setDelogoError("Vui lòng chọn tệp video từ máy tính trước khi khởi tạo."));
+      dispatch(setDelogoError("Vui lòng chọn tệp video từ thiết bị trước khi khởi tạo."));
       return;
     }
     if (!logoCoords && !subMaskCoords) {
@@ -171,24 +202,30 @@ export default function WatermarkPage() {
     }
 
     dispatch(beginDelogoSubmission());
+    const uploadController = new AbortController();
+    uploadAbortControllerRef.current = uploadController;
 
     try {
-      // Step 1: Upload direct video file to Backend /api/v1/videos/upload
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const uploadRes = await axios.post(
-        `${API_BASE_URL_PROVIDER.sync}/api/v1/videos/upload`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+      const uploadTicket = await requestVideoUploadTicket(
+        selectedFile,
+        uploadController.signal
       );
+      const r2VideoUrl = await uploadVideoToR2({
+        file: selectedFile,
+        ticket: uploadTicket,
+        signal: uploadController.signal,
+        onProgress: (percent) => dispatch(setDelogoUploadProgress({
+          progress: percent,
+          message: `Đang tải video lên R2: ${percent}%`,
+        })),
+      });
 
-      const r2VideoUrl = uploadRes.data?.url;
-      if (!r2VideoUrl) {
-        throw new Error("Không nhận được liên kết video từ lưu trữ Cloud.");
-      }
-
-      dispatch(setDelogoUploadProgress("Đang khởi tạo tác vụ..."));
+      uploadAbortControllerRef.current = null;
+      dispatch(setDelogoUploadProgress({
+        progress: 100,
+        isUploading: false,
+        message: "Upload hoàn tất. Đang khởi tạo tác vụ...",
+      }));
 
       // Step 2: Submit process payload with the real public R2 video URL
       const payload = {
@@ -213,6 +250,10 @@ export default function WatermarkPage() {
       dispatch(setDelogoTaskProcessing(taskId));
     } catch (err) {
       console.error(err);
+      if (isVideoUploadCancelled(err, uploadController.signal)) {
+        dispatch(setDelogoSubmissionStopped());
+        return;
+      }
       dispatch(
         setDelogoError(
           handleApiError(err).message ||
@@ -220,6 +261,8 @@ export default function WatermarkPage() {
         )
       );
       dispatch(setDelogoSubmissionStopped());
+    } finally {
+      uploadAbortControllerRef.current = null;
     }
   };
 
@@ -250,7 +293,7 @@ export default function WatermarkPage() {
           Xóa Logo & Làm Mờ Phụ Đề Gốc (Delogo Studio)
         </h1>
         <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-          Tải file video từ máy tính của bạn để khoanh vùng trực tiếp trên khung hình thực tế. Công cụ sẽ tự động loại bỏ watermark, logo hoặc làm mờ dòng chữ phụ đề tiếng Trung/Anh gốc.
+          Chọn video từ thiết bị để khoanh vùng trực tiếp trên khung hình thực tế. Công cụ sẽ tự động loại bỏ watermark, logo hoặc làm mờ phụ đề gốc.
         </p>
       </div>
 
@@ -259,20 +302,36 @@ export default function WatermarkPage() {
         <div className="lg:col-span-7 space-y-6">
           {/* File Upload Zone - Direct Local File Selection */}
           <div
-            onClick={() => {
-              if (!taskLocked) fileInputRef.current?.click();
+            onClick={(event) => {
+              if (!fileSelectionLocked && event.target !== fileInputRef.current) {
+                fileInputRef.current?.click();
+              }
             }}
+            onDragOver={(event) => {
+              if (!fileSelectionLocked) event.preventDefault();
+            }}
+            onDrop={handleDrop}
+            onKeyDown={(event) => {
+              if (!fileSelectionLocked && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            role="button"
+            tabIndex={fileSelectionLocked ? -1 : 0}
+            aria-disabled={fileSelectionLocked}
             className={`border-2 border-dashed rounded-2xl p-6 text-center transition select-none ${
-              taskLocked
+              fileSelectionLocked
                 ? "cursor-not-allowed border-white/[0.06] bg-white/[0.02] opacity-60"
-                : "cursor-pointer border-indigo-500/30 bg-indigo-500/[0.02] hover:border-indigo-400/60 hover:bg-indigo-500/[0.05]"
+                : "cursor-pointer border-indigo-500/30 bg-indigo-500/[0.02] hover:border-indigo-400/60 hover:bg-indigo-500/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
             }`}
           >
             <input
               ref={fileInputRef}
               type="file"
-              accept="video/*"
-              disabled={taskLocked}
+              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+              aria-label="Chọn video để xóa logo hoặc che phụ đề"
+              disabled={fileSelectionLocked}
               onChange={handleFileChange}
               className="hidden"
             />
@@ -280,12 +339,50 @@ export default function WatermarkPage() {
               <UploadSimple size={24} weight="duotone" />
             </div>
             <p className="text-sm font-semibold text-slate-200">
-              {selectedFile ? `Đã chọn: ${selectedFile.name}` : "Nhấp hoặc Kéo thả file Video từ máy tính vào đây"}
+              {selectedFile ? (
+                `Đã chọn: ${selectedFile.name}`
+              ) : (
+                <>
+                  <span className="sm:hidden">Chạm để chọn video từ thư viện</span>
+                  <span className="hidden sm:inline">Nhấp để chọn hoặc kéo thả video vào đây</span>
+                </>
+              )}
             </p>
             <p className="text-xs text-slate-500 mt-1">
-              Hỗ trợ tệp MP4, MOV, WebM (Tự động phát và xem trước khung hình trực tiếp trên trình duyệt)
+              MP4, MOV hoặc WebM. Tối đa 2 GB.
             </p>
           </div>
+
+          {isUploading && (
+            <div className="rounded-xl border border-indigo-400/20 bg-indigo-400/[0.05] p-4">
+              <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+                <span className="truncate font-medium text-indigo-200">
+                  {uploadProgressMsg || "Đang tải video..."}
+                </span>
+                <span className="shrink-0 font-mono font-bold text-white">{uploadProgress}%</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={uploadProgress}
+                className="h-2 overflow-hidden rounded-full bg-white/[0.08]"
+              >
+                <div
+                  className="h-full rounded-full bg-indigo-400 transition-[width] duration-200"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelUpload}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 transition hover:text-white"
+              >
+                <XCircle size={16} weight="bold" />
+                <span>Hủy tải lên</span>
+              </button>
+            </div>
+          )}
 
           {/* Video Player & Frame Scrubbing */}
           {videoObjectUrl && (
@@ -305,6 +402,8 @@ export default function WatermarkPage() {
                   ref={videoRef}
                   src={videoObjectUrl}
                   controls
+                  playsInline
+                  preload="metadata"
                   onLoadedMetadata={handleLoadedMetadata}
                   className="w-full h-full object-contain"
                 />

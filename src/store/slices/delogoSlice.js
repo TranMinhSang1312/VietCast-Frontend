@@ -10,6 +10,8 @@ const createInitialState = () => ({
   durationSeconds: 0,
   videoDimensions: { width: 0, height: 0 },
   isSubmitting: false,
+  isUploading: false,
+  uploadProgress: 0,
   uploadProgressMsg: "",
   error: null,
   taskInfo: {
@@ -45,17 +47,31 @@ const delogoSlice = createSlice({
     },
     beginDelogoSubmission: (state) => {
       state.isSubmitting = true;
-      state.uploadProgressMsg = "Đang tải video an toàn...";
+      state.isUploading = true;
+      state.uploadProgress = 0;
+      state.uploadProgressMsg = "Đang chuẩn bị tải video...";
       state.error = null;
     },
     setDelogoUploadProgress: (state, action) => {
-      state.uploadProgressMsg = action.payload || "";
+      if (typeof action.payload === "string") {
+        state.uploadProgressMsg = action.payload;
+        return;
+      }
+      state.uploadProgressMsg = action.payload?.message || "";
+      if (Number.isFinite(action.payload?.progress)) {
+        state.uploadProgress = Math.max(0, Math.min(100, action.payload.progress));
+      }
+      if (typeof action.payload?.isUploading === "boolean") {
+        state.isUploading = action.payload.isUploading;
+      }
     },
     setDelogoError: (state, action) => {
       state.error = action.payload || null;
     },
     setDelogoSubmissionStopped: (state) => {
       state.isSubmitting = false;
+      state.isUploading = false;
+      state.uploadProgress = 0;
       state.uploadProgressMsg = "";
     },
     setDelogoTaskProcessing: (state, action) => {
@@ -65,6 +81,8 @@ const delogoSlice = createSlice({
         videoUrl: null,
       };
       state.isSubmitting = true;
+      state.isUploading = false;
+      state.uploadProgress = 100;
       state.uploadProgressMsg = "";
       state.error = null;
     },
@@ -76,6 +94,7 @@ const delogoSlice = createSlice({
         videoUrl: null,
       };
       state.isSubmitting = true;
+      state.isUploading = false;
     },
     setDelogoTaskCompleted: (state, action) => {
       state.taskInfo = {
@@ -84,6 +103,7 @@ const delogoSlice = createSlice({
         videoUrl: action.payload.videoUrl || null,
       };
       state.isSubmitting = false;
+      state.isUploading = false;
       state.uploadProgressMsg = "";
       state.error = null;
       state.notification = {
@@ -95,6 +115,7 @@ const delogoSlice = createSlice({
     setDelogoTaskFailed: (state, action) => {
       state.taskInfo.status = "FAILED";
       state.isSubmitting = false;
+      state.isUploading = false;
       state.uploadProgressMsg = "";
       state.error = action.payload;
       state.notification = {
