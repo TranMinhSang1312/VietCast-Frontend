@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
-import { basicVideoPrice, PRICING } from "../config/pricing";
+import { PRICING } from "../config/pricing";
 import { handleApiError } from "../utils/apiError";
 import {
   isVideoUploadCancelled,
@@ -189,10 +189,9 @@ export default function WatermarkPage() {
     setActiveCropTarget(null);
   };
 
-  const billableMinutes = durationSeconds > 0 ? durationSeconds / 60 : 1;
-  const baseCost = basicVideoPrice(durationSeconds);
+  const billableMinutes = Math.max(1, durationSeconds / 60);
   const filterCost = Math.round(billableMinutes * PRICING.visualFilterPerMinute);
-  const totalCost = baseCost + filterCost;
+  const totalCost = Math.max(PRICING.visualFilterPerMinute, filterCost);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -469,12 +468,12 @@ export default function WatermarkPage() {
                 <span className="font-mono text-white font-bold">{durationSeconds} giây</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Video gốc (tối thiểu 500):</span>
-                <span className="font-mono text-white font-bold">{baseCost} credit</span>
+                <span>Phí xử lý video gốc:</span>
+                <span className="font-mono text-emerald-400 font-bold">0 credit</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Bộ lọc (250 credit/phút):</span>
-                <span className="font-mono text-amber-400 font-bold">{filterCost} credit</span>
+                <span>Phí Delogo (250 credit/phút):</span>
+                <span className="font-mono text-amber-400 font-bold">{totalCost} credit</span>
               </div>
               <div className="pt-3 border-t border-white/[0.08] flex justify-between text-sm font-extrabold text-white">
                 <span>Tổng chi phí:</span>
