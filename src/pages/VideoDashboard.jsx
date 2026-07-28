@@ -839,7 +839,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
   }, [isProcessing, result?.audioMode, result?.status]);
 
   return (
-    <div className="relative flex w-full flex-col items-center overflow-x-hidden bg-slate-950 px-3 py-5 font-sans text-zinc-100 sm:px-4 sm:py-12">
+    <div className="relative flex w-full flex-col items-center overflow-x-clip bg-slate-950 px-3 py-5 font-sans text-zinc-100 sm:px-4 sm:py-12">
       {/* Ambient backgrounds */}
       <div className="absolute top-[-20%] right-[-10%] w-[720px] h-[720px] bg-indigo-600/10 rounded-full blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[-25%] left-[-15%] w-[520px] h-[520px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none" />
