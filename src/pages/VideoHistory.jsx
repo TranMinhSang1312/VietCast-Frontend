@@ -16,6 +16,7 @@ import { API_BASE_URL_PROVIDER } from "../config";
 import { getVideoModePolicy } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 import PaginationControls from "../components/history/PaginationControls";
+import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
@@ -140,14 +141,15 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
         }
     };
 
-    // Force-download via the backend's presigned-R2 endpoint. We do
-    // NOT link straight to the public R2 URL because browsers ignore
-    // the `download` attribute on cross-origin links (and even if they
-    // did, R2 serves the file with `inline` disposition — clicking the
-    // link would auto-play the MP4 in a new tab instead of saving it).
+    // Mobile opens the public result inline for the native media viewer.
+    // Desktop keeps the backend's presigned attachment download.
     const handleDownload = async (type) => {
         if (downloadingType) return; // single in-flight per row
         setActionError(null);
+        if (type === "video" && video.videoUrl && shouldOpenVideoInline()) {
+            openVideoInline(video.videoUrl);
+            return;
+        }
         setDownloadingType(type);
         try {
             const resp = await axios.get(
@@ -255,7 +257,14 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                         ) : (
                             <Download className="w-4 h-4" />
                         )}
-                        <span>{downloadingType === "video" ? "Đang tải..." : "Tải video"}</span>
+                        {downloadingType === "video" ? (
+                            <span>Đang tải...</span>
+                        ) : (
+                            <>
+                                <span className="md:hidden">Lưu vào thư viện</span>
+                                <span className="hidden md:inline">Tải video</span>
+                            </>
+                        )}
                     </button>
                 )}
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles } from "lucide-react";
+import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink } from "lucide-react";
 import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
@@ -12,6 +12,7 @@ import {
   SECONDARY_VIDEO_MODE_IDS,
 } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
+import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
 
 const MODE_ICONS = Object.freeze({
   dub: MagicWand,
@@ -346,13 +347,15 @@ const handleReset = useCallback(() => {
         clearPollInterval();
     }, [clearPollInterval]);
 
-    // Force-download via the backend's presigned-R2 endpoint. We do NOT
-    // link straight to the public R2 URL because (a) browsers ignore
-    // `download` on cross-origin links and (b) R2 serves the file with
-    // `inline` disposition by default — clicking would auto-play the
-    // MP4 in a new tab instead of saving it.
+    // Mobile opens the public R2 URL inline so the OS media viewer can
+    // expose its save-to-library action. Desktop keeps the presigned
+    // attachment flow for a conventional file download.
     const handleDownload = useCallback(async (taskId, type) => {
         if (!taskId) return;
+        if (type === "video" && result?.videoUrl && shouldOpenVideoInline()) {
+            openVideoInline(result.videoUrl);
+            return;
+        }
         try {
             const resp = await axios.get(
                 `${API_BASE_URL}/api/v1/videos/${taskId}/download`,
@@ -1251,7 +1254,12 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                 onReset={handleReset}
                 onVideoReady={() => setVideoReady(true)}
                 onVideoError={() => setVideoError(true)}
+                onVideoLoadStart={() => {
+                  setVideoReady(false);
+                  setVideoError(false);
+                }}
                 onDownload={handleDownload}
+                onOpenVideo={() => openVideoInline(result.videoUrl)}
               />
             ) : (
               <div className="h-full min-h-[300px] border border-dashed border-white/[0.08] rounded-2xl flex flex-col items-center justify-center p-8 text-center bg-white/[0.025] backdrop-blur-md select-none">
@@ -1477,7 +1485,9 @@ const ResultPanel = memo(function ResultPanel({
   onReset,
   onVideoReady,
   onVideoError,
+  onVideoLoadStart,
   onDownload,
+  onOpenVideo,
 }) {
   const modePolicy = getVideoModePolicy(result.audioMode);
   const output = {
@@ -1564,16 +1574,20 @@ const ResultPanel = memo(function ResultPanel({
           {videoSrc && isCompleted ? (
             <>
               <video
+                key={videoSrc}
                 controls
+                playsInline
                 preload="metadata"
-                poster=""
                 src={videoSrc}
+                onLoadStart={onVideoLoadStart}
+                onLoadedMetadata={onVideoReady}
+                onCanPlay={onVideoReady}
                 onLoadedData={onVideoReady}
                 onError={onVideoError}
-                className={`w-full h-full object-contain ${videoReady ? "block" : "hidden"}`}
+                className="block h-full w-full object-contain"
               />
               {!videoReady && !videoError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-3 select-none">
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 select-none">
                   <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
                   <span className="text-xs text-zinc-500 font-mono tracking-wider">ĐANG TẢI BẢN XEM TRƯỚC...</span>
                 </div>
@@ -1586,7 +1600,15 @@ const ResultPanel = memo(function ResultPanel({
           {videoError && result.videoUrl && (
             <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center">
               <AlertCircle className="w-6 h-6 text-yellow-400 mb-2" />
-              <p className="text-sm text-zinc-355">Không thể phát trực tiếp video. Hãy thử tải về máy của bạn.</p>
+              <p className="text-sm text-zinc-300">Trình phát nhúng không mở được video này.</p>
+              <button
+                type="button"
+                onClick={onOpenVideo}
+                className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-white/15 active:scale-[0.98]"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Mở video trực tiếp</span>
+              </button>
             </div>
           )}
           </div>
@@ -1663,7 +1685,8 @@ const ResultPanel = memo(function ResultPanel({
               className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-semibold shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span>Tải Video</span>
+              <span className="md:hidden">Lưu vào thư viện</span>
+              <span className="hidden md:inline">Tải Video</span>
             </button>
           )}
         </div>
