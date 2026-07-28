@@ -13,7 +13,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import { Loader2 } from "lucide-react";
-import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
+import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { PRICING } from "../config/pricing";
@@ -145,28 +145,32 @@ export default function WatermarkPage() {
       video.videoHeight
     );
     setCrop(initCrop);
+    setCompletedCrop(null);
     setActiveCropTarget(targetType);
   };
 
   // Confirm crop modal
   const handleConfirmCrop = () => {
-    if (!completedCrop || !videoDimensions.width) return;
+    if (!crop || !videoDimensions.width) return;
 
     const img = document.getElementById("crop-frame-img");
     if (!img) return;
 
     const displayW = img.clientWidth;
     const displayH = img.clientHeight;
+    if (!displayW || !displayH) return;
+
+    const effectiveCrop = completedCrop ?? convertToPixelCrop(crop, displayW, displayH);
     const sourceW = img.naturalWidth || videoDimensions.width;
     const sourceH = img.naturalHeight || videoDimensions.height;
 
     const scaleX = sourceW / displayW;
     const scaleY = sourceH / displayH;
 
-    let x = Math.floor(completedCrop.x * scaleX);
-    let y = Math.floor(completedCrop.y * scaleY);
-    let w = Math.floor(completedCrop.width * scaleX);
-    let h = Math.floor(completedCrop.height * scaleY);
+    let x = Math.floor(effectiveCrop.x * scaleX);
+    let y = Math.floor(effectiveCrop.y * scaleY);
+    let w = Math.floor(effectiveCrop.width * scaleX);
+    let h = Math.floor(effectiveCrop.height * scaleY);
 
     // Clamping
     x = Math.max(0, Math.min(x, sourceW - 1));
