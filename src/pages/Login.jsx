@@ -343,11 +343,6 @@ export default function Login() {
           )}
         </main>
 
-        <footer>
-          <p className="text-xs text-slate-600 font-mono">
-            © 2026 VietCast. All rights reserved.
-          </p>
-        </footer>
       </div>
 
       {/* Right side - Auth form */}

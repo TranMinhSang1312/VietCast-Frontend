@@ -352,9 +352,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <footer className="mt-16 text-center text-xs text-slate-600 font-mono">
-          © 2026 VietCast. All rights reserved.
-        </footer>
       </main>
     </div>
   );

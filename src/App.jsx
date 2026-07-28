@@ -17,6 +17,7 @@ import TopupModal from "./components/topup/TopupModal";
 import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
 import { formatCredit, formatCountdown } from "./utils/format";
 import DelogoTaskMonitor from "./components/delogo/DelogoTaskMonitor";
+import SiteFooter from "./components/layout/SiteFooter";
 import {
   DELOGO_PENDING_TASK_KEY,
   resetDelogoState,
@@ -68,6 +69,15 @@ function TabFallback() {
 
 // Shell rendered for any authenticated user route. Each tab maps to its
 // own URL so deep-linking, browser-back, and shared links all work.
+function PublicPage({ children }) {
+  return (
+    <div className="flex min-h-[100dvh] flex-col bg-slate-950">
+      <div className="flex-1">{children}</div>
+      <SiteFooter />
+    </div>
+  );
+}
+
 function AppShell() {
   const dispatch = useDispatch();
   const [isTopupOpen, setIsTopupOpen] = useState(false);
@@ -264,6 +274,7 @@ function AppShell() {
           <Suspense fallback={<TabFallback />}>
             <Outlet />
           </Suspense>
+          <SiteFooter />
         </main>
         <MobileBottomNav />
       </div>
@@ -312,24 +323,24 @@ function App() {
           <Route
             path="/"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicPage><LandingPage /></PublicPage>
             }
           />
 
           <Route
             path="/login"
             element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
+              isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicPage><Login /></PublicPage>
             }
           />
 
-          <Route path="/payment/success" element={<PaymentSuccess />} />
-          <Route path="/payment/cancel" element={<PaymentCancel />} />
+          <Route path="/payment/success" element={<PublicPage><PaymentSuccess /></PublicPage>} />
+          <Route path="/payment/cancel" element={<PublicPage><PaymentCancel /></PublicPage>} />
 
           {/* Pricing is a public marketing page — anonymous visitors should
               see it without being bounced to /login. Authenticated users
               also land here (it's the same component either way). */}
-          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/pricing" element={<PublicPage><Pricing /></PublicPage>} />
 
           <Route
             element={
