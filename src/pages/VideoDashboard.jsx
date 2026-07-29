@@ -617,6 +617,9 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         status: "PROCESSING",
         url: cleanUrl,
         audioMode,
+        sourceLanguage,
+        targetLanguage,
+        hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
         submittedAt: new Date().toISOString(),
       };
       localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(pendingSubmission));
@@ -644,6 +647,9 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           url: data.url ?? cleanUrl,
           audioMode: data.audioMode ?? audioMode,
           voice: data.voice ?? voice,
+          sourceLanguage: data.sourceLanguage ?? sourceLanguage,
+          targetLanguage: data.targetLanguage ?? targetLanguage,
+          hardsub: data.hardsub ?? pendingSubmission.hardsub,
           submittedAt: pendingSubmission.submittedAt,
         };
         // Persist synchronously: if navigation unmounts this component before
@@ -1173,7 +1179,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        Chèn chữ phụ đề dịch trực tiếp lên khung hình video (font Arial 22pt, nét đẹp). Nếu tắt, video chỉ có âm thanh lồng tiếng AI mà không có chữ in đè.
+                        Chèn phụ đề đúng ngôn ngữ đích trực tiếp lên video. Cỡ chữ và lề được tự động tối ưu cho cả video ngang lẫn video dọc. Nếu tắt, video chỉ có âm thanh lồng tiếng AI.
                       </p>
                     </div>
                     <button
