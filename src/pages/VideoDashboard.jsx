@@ -870,6 +870,10 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
 
   const videoSrc = useMemo(() => {
     if (!result?.videoUrl) return undefined;
+    // Every query parameter is part of an AWS SigV4 presigned request.
+    // Appending our old cache-buster after signing invalidates the request
+    // and R2 correctly returns 403.
+    if (result.videoUrl.includes("X-Amz-Signature=")) return result.videoUrl;
     const sep = result.videoUrl.includes("?") ? "&" : "?";
     return `${result.videoUrl}${sep}t=${result.taskId}`;
   }, [result?.videoUrl, result?.taskId]);
