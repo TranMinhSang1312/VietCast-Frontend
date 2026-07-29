@@ -801,6 +801,50 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result?.taskId]);
 
+  // Completed task data is persisted so users can leave this page without
+  // losing their result. Artifact URLs are now deliberately short-lived,
+  // however, so a URL restored from localStorage may already be expired (or
+  // may predate the private-bucket rollout). Refresh it once from the
+  // ownership-checked status endpoint whenever a completed task is mounted.
+  useEffect(() => {
+    if (!result?.taskId || result.status !== "COMPLETED") return undefined;
+
+    const taskId = result.taskId;
+    let cancelled = false;
+
+    const refreshArtifactUrls = async () => {
+      try {
+        const { data } = await axios.get(
+          `${API_BASE_URL}/api/v1/videos/status/${taskId}`,
+          { timeout: 10000 }
+        );
+        if (cancelled || (data.taskId && data.taskId !== taskId)) return;
+
+        setResult((prev) => {
+          if (!prev || prev.taskId !== taskId) return prev;
+          return {
+            ...prev,
+            status: data.status ?? prev.status,
+            videoUrl: data.videoUrl ?? null,
+            srtUrl: data.srtUrl ?? null,
+            message: data.message ?? prev.message,
+          };
+        });
+        setVideoError(false);
+      } catch (err) {
+        // Keep the existing task card available. The authenticated download
+        // endpoint still obtains a fresh URL independently, and a later page
+        // visit will retry this refresh.
+        console.warn("[artifact-refresh] could not refresh signed URLs", err?.message || err);
+      }
+    };
+
+    refreshArtifactUrls();
+    return () => {
+      cancelled = true;
+    };
+  }, [result?.taskId, result?.status]);
+
   useEffect(() => {
     if (!result?.taskId) return;
     if (result.status !== "COMPLETED" && result.status !== "FAILED") return;
