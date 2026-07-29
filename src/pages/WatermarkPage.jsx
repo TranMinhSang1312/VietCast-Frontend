@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
+import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
 import { PRICING } from "../config/pricing";
 import { handleApiError } from "../utils/apiError";
 import {
@@ -66,10 +67,63 @@ export default function WatermarkPage() {
   const [crop, setCrop] = useState(null);
   const [completedCrop, setCompletedCrop] = useState(null);
   const [frameCanvasUrl, setFrameCanvasUrl] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState(null);
 
   useEffect(() => {
     return () => uploadAbortControllerRef.current?.abort();
   }, []);
+
+  const handleDownloadResult = async () => {
+    if (!taskResult?.taskId || isDownloading) return;
+    setDownloadError(null);
+    if (taskResult.videoUrl && shouldOpenVideoInline()) {
+      openVideoInline(taskResult.videoUrl);
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const resp = await axios.get(
+        `${API_BASE_URL_PROVIDER.sync}/api/v1/videos/${taskResult.taskId}/download`,
+        { params: { type: "video" } }
+      );
+      const { downloadUrl, filename } = resp.data || {};
+      if (!downloadUrl) {
+        throw new Error("Backend did not return a downloadUrl");
+      }
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      if (filename) a.download = filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      const code = err.response?.data?.code;
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+      const fallbackUrl = taskResult.videoUrl;
+      if (code === "FILE_EXPIRED" || status === 410) {
+        setDownloadError(msg || "Tệp này đã hết hạn lưu trữ 7 ngày trên hệ thống.");
+      } else if (code === "UNSUPPORTED_URL" && fallbackUrl) {
+        window.open(fallbackUrl, "_blank", "noopener");
+      } else if (fallbackUrl) {
+        const a = document.createElement("a");
+        a.href = fallbackUrl;
+        a.download = `vietcast_delogo_${taskResult.taskId}.mp4`;
+        a.target = "_blank";
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        console.error("[download] failed", err);
+        setDownloadError(msg || err.message || "Không thể tải file. Vui lòng thử lại.");
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const selectVideoFile = (file) => {
     if (fileSelectionLocked || !file) return;
@@ -546,15 +600,23 @@ export default function WatermarkPage() {
               </div>
 
               {taskResult.videoUrl && (
-                <a
-                  href={taskResult.videoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition"
+                <button
+                  type="button"
+                  onClick={handleDownloadResult}
+                  disabled={isDownloading}
+                  className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition hover:bg-emerald-300 disabled:opacity-50"
                 >
-                  <DownloadSimple size={18} weight="bold" />
-                  <span>Tải Video đã xóa Logo</span>
-                </a>
+                  {isDownloading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
+                  ) : (
+                    <DownloadSimple size={18} weight="bold" />
+                  )}
+                  <span>{isDownloading ? "Đang tải xuống..." : "Tải Video đã xóa Logo"}</span>
+                </button>
+              )}
+
+              {downloadError && (
+                <p className="text-xs text-rose-400 font-medium text-center">{downloadError}</p>
               )}
 
               {(taskResult.status === "COMPLETED" || taskResult.status === "FAILED") && (
