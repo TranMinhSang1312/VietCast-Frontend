@@ -186,33 +186,78 @@ export default function VideoDashboard() {
   const [targetLanguage, setTargetLanguage] = useState(() => {
     return localStorage.getItem("vc_targetLanguage") || "Tiếng Việt";
   });
+  const voiceOptions = LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"];
+  const selectedVoice = voiceOptions.some((option) => option.value === voice)
+    ? voice
+    : (voiceOptions[0]?.value || "");
   const [sourceLanguage, setSourceLanguage] = useState(() => {
     return localStorage.getItem("vc_sourceLanguage") || "auto";
   });const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
   const [isLoading, setIsLoading] = useState(false);
   const [previewingVoice, setPreviewingVoice] = useState(null);
+  const [voicePreviewError, setVoicePreviewError] = useState(null);
+  const voiceAudioRef = useRef(null);
+  const voicePreviewUrlRef = useRef(null);
+  const voicePreviewRequestRef = useRef(0);
 
-  const handlePlayVoicePreview = (voiceValue, e) => {
+  const stopVoicePreview = useCallback(() => {
+    voicePreviewRequestRef.current += 1;
+    if (voiceAudioRef.current) {
+      voiceAudioRef.current.pause();
+      voiceAudioRef.current.src = "";
+      voiceAudioRef.current = null;
+    }
+    if (voicePreviewUrlRef.current) {
+      URL.revokeObjectURL(voicePreviewUrlRef.current);
+      voicePreviewUrlRef.current = null;
+    }
+    setPreviewingVoice(null);
+  }, []);
+
+  const handlePlayVoicePreview = useCallback(async (voiceValue, e) => {
     if (e) e.stopPropagation();
     if (previewingVoice === voiceValue) {
-      if (window._voiceAudio) {
-        window._voiceAudio.pause();
-        window._voiceAudio = null;
-      }
-      setPreviewingVoice(null);
+      stopVoicePreview();
       return;
     }
-    if (window._voiceAudio) {
-      window._voiceAudio.pause();
-      window._voiceAudio = null;
-    }
+    stopVoicePreview();
+    const requestId = voicePreviewRequestRef.current;
     setPreviewingVoice(voiceValue);
-    const audio = new Audio(`${API_BASE_URL}/api/v1/tts/preview?voice=${encodeURIComponent(voiceValue)}`);
-    window._voiceAudio = audio;
-    audio.play().catch(() => setPreviewingVoice(null));
-    audio.onended = () => setPreviewingVoice(null);
-    audio.onerror = () => setPreviewingVoice(null);
-  };
+    setVoicePreviewError(null);
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/tts/preview`,
+        {
+          params: { voice: voiceValue },
+          responseType: "blob",
+          timeout: 30000,
+        },
+      );
+      if (requestId !== voicePreviewRequestRef.current) return;
+      if (!response.data || response.data.size === 0) {
+        throw new Error("empty audio");
+      }
+      const objectUrl = URL.createObjectURL(response.data);
+      voicePreviewUrlRef.current = objectUrl;
+      const audio = new Audio(objectUrl);
+      voiceAudioRef.current = audio;
+      audio.onended = stopVoicePreview;
+      audio.onerror = () => {
+        setVoicePreviewError("Không thể phát giọng mẫu trên trình duyệt này.");
+        stopVoicePreview();
+      };
+      await audio.play();
+    } catch (previewError) {
+      if (requestId !== voicePreviewRequestRef.current) return;
+      stopVoicePreview();
+      setVoicePreviewError(
+        previewError?.response?.data?.message ||
+          "Không thể tải giọng mẫu. Vui lòng thử lại sau.",
+      );
+    }
+  }, [previewingVoice, stopVoicePreview]);
+
+  useEffect(() => () => stopVoicePreview(), [stopVoicePreview]);
 
   useEffect(() => {
     localStorage.setItem("vc_hardsub", hardsub ? "true" : "false");
@@ -263,8 +308,8 @@ export default function VideoDashboard() {
   }, [audioMode]);
 
   useEffect(() => {
-    localStorage.setItem("vc_voice", voice);
-  }, [voice]);
+    localStorage.setItem("vc_voice", selectedVoice);
+  }, [selectedVoice]);
 
   useEffect(() => {
     localStorage.setItem("vc_targetLanguage", targetLanguage);
@@ -362,7 +407,8 @@ export default function VideoDashboard() {
 const handleReset = useCallback(() => {
         setUrl("");
         setAudioMode("mix");
-        setVoice("vi-VN-NamMinhNeural");
+        const options = LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"];
+        setVoice(options[0]?.value || "");
         setResult(null);
         setError(null);
         setVideoReady(false);
@@ -371,8 +417,10 @@ const handleReset = useCallback(() => {
         setCostPreview(null);
         setCostPreviewLoading(false);
         setShowCreditWarning(false);
+        setVoicePreviewError(null);
+        stopVoicePreview();
         clearPollInterval();
-    }, [clearPollInterval]);
+    }, [clearPollInterval, stopVoicePreview, targetLanguage]);
 
     // Mobile opens the public R2 URL inline so the OS media viewer can
     // expose its save-to-library action. Desktop keeps the presigned
@@ -664,7 +712,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
             sourceLanguage,
             // Only forward a voice value when the user picked an
             // AI-dub mode; otherwise the engine skips TTS anyway.
-            voice: (audioMode === "dub" || audioMode === "mix") && voice ? voice : null,
+            voice: (audioMode === "dub" || audioMode === "mix") && selectedVoice ? selectedVoice : null,
             hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
@@ -673,7 +721,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           ...data,
           url: data.url ?? cleanUrl,
           audioMode: data.audioMode ?? audioMode,
-          voice: data.voice ?? voice,
+          voice: data.voice ?? selectedVoice,
           sourceLanguage: data.sourceLanguage ?? sourceLanguage,
           targetLanguage: data.targetLanguage ?? targetLanguage,
           hardsub: data.hardsub ?? pendingSubmission.hardsub,
@@ -746,7 +794,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
     [
       url,
       audioMode,
-      voice,
+      selectedVoice,
       costPreview,
       refreshUserCredit,
       resetResultState,
@@ -1086,89 +1134,35 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                     >
                       Giọng đọc AI ({targetLanguage})
                     </label>
-                    <button
-                      type="button"
-                      onClick={(e) => handlePlayVoicePreview(voice, e)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition border border-indigo-500/30 cursor-pointer shadow-sm active:scale-95"
-                    >
-                      {previewingVoice === voice ? "⏹️ Đang phát..." : "🔊 Nghe thử giọng chọn"}
-                    </button>
+                    {selectedVoice.startsWith("gcp:") && (
+                      <button
+                        type="button"
+                        onClick={(e) => handlePlayVoicePreview(selectedVoice, e)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition border border-indigo-500/30 cursor-pointer shadow-sm active:scale-95"
+                      >
+                        {previewingVoice === selectedVoice ? "⏹️ Đang phát..." : "🔊 Nghe thử giọng đã chọn"}
+                      </button>
+                    )}
                   </div>
 
-                  {/* Select box */}
                   <select
                     id="voice-select"
-                    value={voice}
+                    value={selectedVoice}
                     onChange={(e) => setVoice(e.target.value)}
                     disabled={isLoading || isProcessing}
                     className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
                   >
-                    {(LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"]).map((opt) => (
+                    {voiceOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label} ({opt.provider || "AI"}) — {opt.description}
                       </option>
                     ))}
                   </select>
-
-                  {/* Interactive Voice Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    {(LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"]).map((opt) => {
-                      const checked = voice === opt.value;
-                      const isPreviewing = previewingVoice === opt.value;
-                      return (
-                        <div
-                          key={opt.value}
-                          onClick={() => setVoice(opt.value)}
-                          className={[
-                            "relative text-left rounded-xl border p-3 transition select-none cursor-pointer flex flex-col justify-between",
-                            checked
-                              ? "border-indigo-400 bg-indigo-500/10 ring-1 ring-indigo-400/30 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
-                              : "border-white/[0.06] bg-slate-950/40 hover:border-white/[0.12] hover:bg-white/[0.03]",
-                          ].join(" ")}
-                        >
-                          <div>
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-semibold text-slate-100">
-                                {opt.label}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                {opt.provider && (
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${opt.provider === 'Google AI' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
-                                    {opt.provider}
-                                  </span>
-                                )}
-                                <span
-                                  className={[
-                                    "h-4 w-4 rounded-full border flex items-center justify-center",
-                                    checked
-                                      ? "border-indigo-400 bg-indigo-500"
-                                      : "border-slate-600 bg-transparent",
-                                  ].join(" ")}
-                                  aria-hidden="true"
-                                >
-                                  {checked && (
-                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                              {opt.description}
-                            </p>
-                          </div>
-                          <div className="mt-3 flex justify-end">
-                            <button
-                              type="button"
-                              onClick={(e) => handlePlayVoicePreview(opt.value, e)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white/10 hover:bg-white/20 text-slate-200 transition border border-white/10 active:scale-95"
-                            >
-                              {isPreviewing ? "⏹️ Đang phát" : "🔊 Nghe thử"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {voicePreviewError && (
+                    <p className="text-xs text-rose-300" role="alert">
+                      {voicePreviewError}
+                    </p>
+                  )}
                 </div>
               )}
 

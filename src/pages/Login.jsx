@@ -153,8 +153,22 @@ export default function Login() {
     setError(null);
     setIsLoading(true);
     try {
-      await login({ emailOrUsername: emailOrUsername.trim(), password, rememberMe });
-      navigate(postLoginTarget, { replace: true });
+      const authResult = await login({
+        emailOrUsername: emailOrUsername.trim(),
+        password,
+        rememberMe,
+      });
+      const signupBenefit = authResult?.signupBenefitGranted
+        && Number(authResult?.bonusCreditBalance) > 0
+        ? {
+          amount: Number(authResult.bonusCreditBalance),
+          expiresAt: authResult.bonusExpiresAt ?? null,
+        }
+        : null;
+      navigate(postLoginTarget, {
+        replace: true,
+        state: signupBenefit ? { signupBenefit } : undefined,
+      });
     } catch (err) {
       setError(err?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
@@ -204,8 +218,18 @@ export default function Login() {
     }
     setIsLoading(true);
     try {
-      await verifyEmail({ email: email.trim(), otp: code });
-      navigate(postLoginTarget, { replace: true });
+      const authResult = await verifyEmail({ email: email.trim(), otp: code });
+      const signupBenefit = authResult?.signupBenefitGranted
+        && Number(authResult?.bonusCreditBalance) > 0
+        ? {
+          amount: Number(authResult.bonusCreditBalance),
+          expiresAt: authResult.bonusExpiresAt ?? null,
+        }
+        : null;
+      navigate(postLoginTarget, {
+        replace: true,
+        state: signupBenefit ? { signupBenefit } : undefined,
+      });
     } catch (err) {
       setError(err?.message || "Mã OTP không đúng hoặc đã hết hạn.");
     } finally {
