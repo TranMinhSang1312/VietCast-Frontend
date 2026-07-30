@@ -64,12 +64,10 @@ function progressLabel(mode, progress, targetLanguage = "Tiếng Việt") {
 // Dynamic voice mapping per target language
 const LANGUAGE_VOICE_MAP = {
   "Tiếng Việt": [
-    { value: "gcp:vi-VN-Neural2-A", label: "Google Neural2 Nữ ⚡", provider: "Google AI", description: "Giọng nữ Google Neural2 cao cấp, đọc mượt & chuẩn" },
+    { value: "gcp:vi-VN-Neural2-A", label: "Google Neural2 Nữ ⚡", provider: "Google AI", description: "Giọng nữ Google Neural2 cao cấp, đọc mượt & chuẩn Studio" },
     { value: "gcp:vi-VN-Neural2-D", label: "Google Neural2 Nam ⚡", provider: "Google AI", description: "Giọng nam Google Neural2 cao cấp, trầm ấm" },
     { value: "gcp:vi-VN-Wavenet-A", label: "Google WaveNet Nữ", provider: "Google AI", description: "Giọng nữ Google WaveNet chuẩn" },
     { value: "gcp:vi-VN-Wavenet-B", label: "Google WaveNet Nam", provider: "Google AI", description: "Giọng nam Google WaveNet chuẩn" },
-    { value: "vi-VN-NamMinhNeural", label: "Nam Minh (Edge)", provider: "Microsoft Edge", description: "Giọng nam miền Bắc tự nhiên" },
-    { value: "vi-VN-HoaiMyNeural", label: "Hoài My (Edge)", provider: "Microsoft Edge", description: "Giọng nữ miền Bắc truyền cảm" },
   ],
   "English": [
     { value: "en-US-ChristopherNeural", label: "Christopher (nam)", description: "Giọng nam Mỹ tự nhiên, chuẩn tin tức" },
@@ -194,7 +192,7 @@ export default function VideoDashboard() {
   const { user, syncProfile } = useAuth();
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
-  const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "vi-VN-NamMinhNeural");
+  const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "gcp:vi-VN-Neural2-A");
   const [targetLanguage, setTargetLanguage] = useState(() => {
     return localStorage.getItem("vc_targetLanguage") || "Tiếng Việt";
   });
