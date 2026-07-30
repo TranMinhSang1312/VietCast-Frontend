@@ -64,8 +64,12 @@ function progressLabel(mode, progress, targetLanguage = "Tiếng Việt") {
 // Dynamic voice mapping per target language
 const LANGUAGE_VOICE_MAP = {
   "Tiếng Việt": [
-    { value: "vi-VN-NamMinhNeural", label: "Nam Minh (nam, mặc định)", description: "Giọng nam miền Bắc tự nhiên, truyền cảm" },
-    { value: "vi-VN-HoaiMyNeural", label: "Hoài My (nữ)", description: "Giọng nữ miền Bắc truyền cảm, ấm áp" },
+    { value: "gcp:vi-VN-Neural2-A", label: "Google Neural2 Nữ ⚡", provider: "Google AI", description: "Giọng nữ Google Neural2 cao cấp, đọc mượt & chuẩn" },
+    { value: "gcp:vi-VN-Neural2-D", label: "Google Neural2 Nam ⚡", provider: "Google AI", description: "Giọng nam Google Neural2 cao cấp, trầm ấm" },
+    { value: "gcp:vi-VN-Wavenet-A", label: "Google WaveNet Nữ", provider: "Google AI", description: "Giọng nữ Google WaveNet chuẩn" },
+    { value: "gcp:vi-VN-Wavenet-B", label: "Google WaveNet Nam", provider: "Google AI", description: "Giọng nam Google WaveNet chuẩn" },
+    { value: "vi-VN-NamMinhNeural", label: "Nam Minh (Edge)", provider: "Microsoft Edge", description: "Giọng nam miền Bắc tự nhiên" },
+    { value: "vi-VN-HoaiMyNeural", label: "Hoài My (Edge)", provider: "Microsoft Edge", description: "Giọng nữ miền Bắc truyền cảm" },
   ],
   "English": [
     { value: "en-US-ChristopherNeural", label: "Christopher (nam)", description: "Giọng nam Mỹ tự nhiên, chuẩn tin tức" },
@@ -186,6 +190,29 @@ export default function VideoDashboard() {
     return localStorage.getItem("vc_sourceLanguage") || "auto";
   });const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
   const [isLoading, setIsLoading] = useState(false);
+  const [previewingVoice, setPreviewingVoice] = useState(null);
+
+  const handlePlayVoicePreview = (voiceValue, e) => {
+    if (e) e.stopPropagation();
+    if (previewingVoice === voiceValue) {
+      if (window._voiceAudio) {
+        window._voiceAudio.pause();
+        window._voiceAudio = null;
+      }
+      setPreviewingVoice(null);
+      return;
+    }
+    if (window._voiceAudio) {
+      window._voiceAudio.pause();
+      window._voiceAudio = null;
+    }
+    setPreviewingVoice(voiceValue);
+    const audio = new Audio(`${API_BASE_URL}/api/v1/tts/preview?voice=${encodeURIComponent(voiceValue)}`);
+    window._voiceAudio = audio;
+    audio.play().catch(() => setPreviewingVoice(null));
+    audio.onended = () => setPreviewingVoice(null);
+    audio.onerror = () => setPreviewingVoice(null);
+  };
 
   useEffect(() => {
     localStorage.setItem("vc_hardsub", hardsub ? "true" : "false");
@@ -1051,52 +1078,94 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
 
               {/* Voice Selection */}
               {(audioMode === "dub" || audioMode === "mix") && (
-                <div className="space-y-2">
-                  <label
-                    htmlFor="voice-select"
-                    className="block text-sm font-semibold text-zinc-300 mb-3"
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="voice-select"
+                      className="block text-sm font-semibold text-zinc-300"
+                    >
+                      Giọng đọc AI ({targetLanguage})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={(e) => handlePlayVoicePreview(voice, e)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition border border-indigo-500/30 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      {previewingVoice === voice ? "⏹️ Đang phát..." : "🔊 Nghe thử giọng chọn"}
+                    </button>
+                  </div>
+
+                  {/* Select box */}
+                  <select
+                    id="voice-select"
+                    value={voice}
+                    onChange={(e) => setVoice(e.target.value)}
+                    disabled={isLoading || isProcessing}
+                    className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
                   >
-                    Giọng đọc bản ngữ ({targetLanguage})
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"]).map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label} ({opt.provider || "AI"}) — {opt.description}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Interactive Voice Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     {(LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"]).map((opt) => {
                       const checked = voice === opt.value;
+                      const isPreviewing = previewingVoice === opt.value;
                       return (
-                        <button
+                        <div
                           key={opt.value}
-                          type="button"
-                          disabled={isLoading || isProcessing}
                           onClick={() => setVoice(opt.value)}
                           className={[
-                            "relative text-left rounded-xl border p-3 transition select-none",
-                            "active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed",
+                            "relative text-left rounded-xl border p-3 transition select-none cursor-pointer flex flex-col justify-between",
                             checked
                               ? "border-indigo-400 bg-indigo-500/10 ring-1 ring-indigo-400/30 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
                               : "border-white/[0.06] bg-slate-950/40 hover:border-white/[0.12] hover:bg-white/[0.03]",
                           ].join(" ")}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold text-slate-100">
-                              {opt.label}
-                            </span>
-                            <span
-                              className={[
-                                "h-4 w-4 rounded-full border flex items-center justify-center",
-                                checked
-                                  ? "border-indigo-400 bg-indigo-500"
-                                  : "border-slate-600 bg-transparent",
-                              ].join(" ")}
-                              aria-hidden="true"
-                            >
-                              {checked && (
-                                <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                              )}
-                            </span>
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-slate-100">
+                                {opt.label}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {opt.provider && (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${opt.provider === 'Google AI' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+                                    {opt.provider}
+                                  </span>
+                                )}
+                                <span
+                                  className={[
+                                    "h-4 w-4 rounded-full border flex items-center justify-center",
+                                    checked
+                                      ? "border-indigo-400 bg-indigo-500"
+                                      : "border-slate-600 bg-transparent",
+                                  ].join(" ")}
+                                  aria-hidden="true"
+                                >
+                                  {checked && (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+                              {opt.description}
+                            </p>
                           </div>
-                          <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                            {opt.description}
-                          </p>
-                        </button>
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => handlePlayVoicePreview(opt.value, e)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white/10 hover:bg-white/20 text-slate-200 transition border border-white/10 active:scale-95"
+                            >
+                              {isPreviewing ? "⏹️ Đang phát" : "🔊 Nghe thử"}
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
