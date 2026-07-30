@@ -203,9 +203,16 @@ export default function VideoDashboard() {
   const stopVoicePreview = useCallback(() => {
     voicePreviewRequestRef.current += 1;
     if (voiceAudioRef.current) {
-      voiceAudioRef.current.pause();
-      voiceAudioRef.current.src = "";
+      const audio = voiceAudioRef.current;
       voiceAudioRef.current = null;
+      // Clearing an audio source can emit a browser `error` event. Detach the
+      // handlers first so a normal playback completion is not shown as a
+      // provider/playback failure.
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
     }
     if (voicePreviewUrlRef.current) {
       URL.revokeObjectURL(voicePreviewUrlRef.current);
