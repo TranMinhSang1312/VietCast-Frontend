@@ -69,34 +69,13 @@ const LANGUAGE_VOICE_MAP = {
     { value: "gcp:vi-VN-Wavenet-A", label: "Google WaveNet Nữ", provider: "Google AI", description: "Giọng nữ Google WaveNet chuẩn" },
     { value: "gcp:vi-VN-Wavenet-B", label: "Google WaveNet Nam", provider: "Google AI", description: "Giọng nam Google WaveNet chuẩn" },
   ],
-  "English": [
-    { value: "en-US-ChristopherNeural", label: "Christopher (nam)", description: "Giọng nam Mỹ tự nhiên, chuẩn tin tức" },
-    { value: "en-US-JennyNeural", label: "Jenny (nữ)", description: "Giọng nữ Mỹ truyền cảm, rõ ràng" },
-  ],
-  "日本語": [
-    { value: "ja-JP-KeitaNeural", label: "Keita 啓太 (nam)", description: "Giọng nam Nhật Bản chuẩn" },
-    { value: "ja-JP-NanamiNeural", label: "Nanami 七海 (nữ)", description: "Giọng nữ Nhật Bản ngọt ngào" },
-  ],
-  "한국어": [
-    { value: "ko-KR-InJoonNeural", label: "InJoon 인준 (nam)", description: "Giọng nam Hàn Quốc tự nhiên" },
-    { value: "ko-KR-SunHiNeural", label: "SunHi 선희 (nữ)", description: "Giọng nữ Hàn Quốc truyền cảm" },
-  ],
-  "Español": [
-    { value: "es-ES-AlvaroNeural", label: "Alvaro (nam)", description: "Giọng nam Tây Ban Nha" },
-    { value: "es-ES-ElviraNeural", label: "Elvira (nữ)", description: "Giọng nữ Tây Ban Nha" },
-  ],
-  "Français": [
-    { value: "fr-FR-HenriNeural", label: "Henri (nam)", description: "Giọng nam Pháp" },
-    { value: "fr-FR-DeniseNeural", label: "Denise (nữ)", description: "Giọng nữ Pháp" },
-  ],
-  "Deutsch": [
-    { value: "de-DE-ConradNeural", label: "Conrad (nam)", description: "Giọng nam Đức" },
-    { value: "de-DE-KatjaNeural", label: "Katja (nữ)", description: "Giọng nữ Đức" },
-  ],
-  "中文": [
-    { value: "zh-CN-YunjianNeural", label: "Yunjian 云健 (nam)", description: "Giọng nam Trung Quốc chuẩn" },
-    { value: "zh-CN-XiaoxiaoNeural", label: "Xiaoxiao 晓晓 (nữ)", description: "Giọng nữ Trung Quốc nhẹ nhàng" },
-  ],
+  "English": [],
+  "日本語": [],
+  "한국어": [],
+  "Español": [],
+  "Français": [],
+  "Deutsch": [],
+  "中文": [],
 };
 
 const TRANSLATION_STYLES = [
@@ -109,16 +88,8 @@ const TRANSLATION_STYLES = [
   { value: "triet_ly", label: "🕯️ Tâm Trạng / Triết Lý", description: "Sâu lắng, đồng cảm, chữa lành" },
 ];
 
-const EDGE_VOICE_PREVIEW_URLS = Object.freeze({
-  "vi-VN-NamMinhNeural":
-    "/audio/voice-previews/vi-VN-NamMinhNeural.mp3",
-  "vi-VN-HoaiMyNeural":
-    "/audio/voice-previews/vi-VN-HoaiMyNeural.mp3",
-});
-
 function supportsVoicePreview(voiceValue) {
-  return voiceValue.startsWith("gcp:")
-    || Boolean(EDGE_VOICE_PREVIEW_URLS[voiceValue]);
+  return voiceValue.startsWith("gcp:");
 }
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
@@ -258,23 +229,20 @@ export default function VideoDashboard() {
     setPreviewingVoice(voiceValue);
     setVoicePreviewError(null);
     try {
-      let audioSource = EDGE_VOICE_PREVIEW_URLS[voiceValue];
-      if (!audioSource) {
-        const response = await axios.get(
-          `${API_BASE_URL}/api/v1/tts/preview`,
-          {
-            params: { voice: voiceValue },
-            responseType: "blob",
-            timeout: 30000,
-          },
-        );
-        if (requestId !== voicePreviewRequestRef.current) return;
-        if (!response.data || response.data.size === 0) {
-          throw new Error("empty audio");
-        }
-        audioSource = URL.createObjectURL(response.data);
-        voicePreviewUrlRef.current = audioSource;
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/tts/preview`,
+        {
+          params: { voice: voiceValue },
+          responseType: "blob",
+          timeout: 30000,
+        },
+      );
+      if (requestId !== voicePreviewRequestRef.current) return;
+      if (!response.data || response.data.size === 0) {
+        throw new Error("empty audio");
       }
+      const audioSource = URL.createObjectURL(response.data);
+      voicePreviewUrlRef.current = audioSource;
       const audio = new Audio(audioSource);
       voiceAudioRef.current = audio;
       audio.onended = stopVoicePreview;
@@ -703,6 +671,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       const cleanUrl = extractUrl(raw);
       if (!cleanUrl) {
         setError("Không tìm thấy đường dẫn video hợp lệ trong nội dung bạn dán.");
+        return;
+      }
+
+      if ((audioMode === "dub" || audioMode === "mix") && !selectedVoice) {
+        setError("Ngôn ngữ này chưa có giọng Google TTS để lồng tiếng. Vui lòng chọn Tiếng Việt hoặc dùng chế độ chỉ tạo phụ đề.");
         return;
       }
 
@@ -1189,6 +1162,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                     disabled={isLoading || isProcessing}
                     className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
                   >
+                    {voiceOptions.length === 0 && (
+                      <option value="">
+                        Chưa có giọng Google TTS cho ngôn ngữ này
+                      </option>
+                    )}
                     {voiceOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label} ({opt.provider || "AI"}) — {opt.description}
@@ -1335,10 +1313,13 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                 // source of truth.
                 const previewFailedBalance =
                   costPreview && costPreview.sufficient === false;
+                const voiceUnavailable =
+                  (audioMode === "dub" || audioMode === "mix") && !selectedVoice;
                 const isDisabled =
                   isLoading ||
                   previewFailedBalance ||
-                  costPreviewLoading;
+                  costPreviewLoading ||
+                  voiceUnavailable;
                 return (
                   <>
                     <button
@@ -1347,6 +1328,8 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                       title={
                         previewFailedBalance
                           ? "Bạn không đủ credit. Vui lòng nạp thêm trước khi bắt đầu."
+                          : voiceUnavailable
+                          ? "Ngôn ngữ này chưa có giọng Google TTS để lồng tiếng."
                           : costPreviewLoading
                           ? "Đang tính chi phí..."
                           : undefined
@@ -1372,6 +1355,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
                           <span>{costPreviewLoading && !isLoading ? "Đang tính chi phí..." : "Đang phân tích..."}</span>
+                        </>
+                      ) : voiceUnavailable ? (
+                        <>
+                          <AlertCircle className="w-5 h-5" />
+                          <span>Chưa có giọng Google cho ngôn ngữ này</span>
                         </>
                       ) : previewFailedBalance ? (
                         <>
