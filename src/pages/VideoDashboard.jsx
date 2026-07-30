@@ -99,6 +99,16 @@ const LANGUAGE_VOICE_MAP = {
   ],
 };
 
+const TRANSLATION_STYLES = [
+  { value: "default", label: "✨ Mặc định", description: "Bám sát nội dung gốc, chuẩn mực & tự nhiên" },
+  { value: "review_phim", label: "🍿 Review Phim", description: "Kịch tính, lôi cuốn, giọng văn giật gân" },
+  { value: "co_trang", label: "⚔️ Cổ Trang / Kiếm Hiệp", description: "Văn phong Hán Việt cổ kính, huynh đệ, nương tử" },
+  { value: "gioi_tre", label: "🤡 Giới Trẻ / TikTok", description: "Hài hước, cà khịa, bắt trend sôi động" },
+  { value: "tong_tai", label: "🌹 Tổng Tài / Ngôn Tình", description: "Ngọt ngào, kịch tính, sến sẩm" },
+  { value: "tieu_lam", label: "🤣 Tiếu Lâm / Hài Bựa", description: "Đời thường, gây cười, bất ngờ" },
+  { value: "triet_ly", label: "🕯️ Tâm Trạng / Triết Lý", description: "Sâu lắng, đồng cảm, chữa lành" },
+];
+
 const EDGE_VOICE_PREVIEW_URLS = Object.freeze({
   "vi-VN-NamMinhNeural":
     "/audio/voice-previews/vi-VN-NamMinhNeural.mp3",
@@ -195,6 +205,9 @@ export default function VideoDashboard() {
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "gcp:vi-VN-Neural2-A");
   const [targetLanguage, setTargetLanguage] = useState(() => {
     return localStorage.getItem("vc_targetLanguage") || "Tiếng Việt";
+  });
+  const [translationStyle, setTranslationStyle] = useState(() => {
+    return localStorage.getItem("vc_translationStyle") || "default";
   });
   const voiceOptions = LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"];
   const selectedVoice = voiceOptions.some((option) => option.value === voice)
@@ -733,6 +746,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
             audioMode,
             targetLanguage,
             sourceLanguage,
+            translationStyle,
             // Only forward a voice value when the user picked an
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && selectedVoice ? selectedVoice : null,
@@ -1247,6 +1261,29 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                   <option value="Français">🇫🇷 Français (Tiếng Pháp)</option>
                   <option value="Deutsch">🇩🇪 Deutsch (Tiếng Đức)</option>
                   <option value="中文">🇨🇳 中文 (Tiếng Trung)</option>
+                </select>
+              </div>
+
+              {/* Translation Style Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2 flex items-center justify-between">
+                  <span>Phong cách dịch AI</span>
+                  <span className="text-xs text-indigo-400 font-normal">Sắc thái & Văn phong</span>
+                </label>
+                <select
+                  value={translationStyle}
+                  onChange={(e) => {
+                    setTranslationStyle(e.target.value);
+                    localStorage.setItem("vc_translationStyle", e.target.value);
+                  }}
+                  disabled={isLoading || isProcessing}
+                  className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
+                >
+                  {TRANSLATION_STYLES.map((style) => (
+                    <option key={style.value} value={style.value}>
+                      {style.label} — {style.description}
+                    </option>
+                  ))}
                 </select>
               </div>
 
