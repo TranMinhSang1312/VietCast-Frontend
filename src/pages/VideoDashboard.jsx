@@ -101,6 +101,18 @@ const LANGUAGE_VOICE_MAP = {
   ],
 };
 
+const EDGE_VOICE_PREVIEW_URLS = Object.freeze({
+  "vi-VN-NamMinhNeural":
+    "/audio/voice-previews/vi-VN-NamMinhNeural.mp3",
+  "vi-VN-HoaiMyNeural":
+    "/audio/voice-previews/vi-VN-HoaiMyNeural.mp3",
+});
+
+function supportsVoicePreview(voiceValue) {
+  return voiceValue.startsWith("gcp:")
+    || Boolean(EDGE_VOICE_PREVIEW_URLS[voiceValue]);
+}
+
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const ACTIVE_TASK_STORAGE_KEY = "vc_active_task";
 const TASK_RECOVERY_LOOKBACK_MS = 10 * 60 * 1000;
@@ -192,7 +204,10 @@ export default function VideoDashboard() {
     : (voiceOptions[0]?.value || "");
   const [sourceLanguage, setSourceLanguage] = useState(() => {
     return localStorage.getItem("vc_sourceLanguage") || "auto";
-  });const [hardsub, setHardsub] = useState(() => localStorage.getItem("vc_hardsub") === "true");
+  });
+  const [hardsub, setHardsub] = useState(
+    () => localStorage.getItem("vc_hardsub") === "true",
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const [voicePreviewError, setVoicePreviewError] = useState(null);
@@ -232,21 +247,24 @@ export default function VideoDashboard() {
     setPreviewingVoice(voiceValue);
     setVoicePreviewError(null);
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/api/v1/tts/preview`,
-        {
-          params: { voice: voiceValue },
-          responseType: "blob",
-          timeout: 30000,
-        },
-      );
-      if (requestId !== voicePreviewRequestRef.current) return;
-      if (!response.data || response.data.size === 0) {
-        throw new Error("empty audio");
+      let audioSource = EDGE_VOICE_PREVIEW_URLS[voiceValue];
+      if (!audioSource) {
+        const response = await axios.get(
+          `${API_BASE_URL}/api/v1/tts/preview`,
+          {
+            params: { voice: voiceValue },
+            responseType: "blob",
+            timeout: 30000,
+          },
+        );
+        if (requestId !== voicePreviewRequestRef.current) return;
+        if (!response.data || response.data.size === 0) {
+          throw new Error("empty audio");
+        }
+        audioSource = URL.createObjectURL(response.data);
+        voicePreviewUrlRef.current = audioSource;
       }
-      const objectUrl = URL.createObjectURL(response.data);
-      voicePreviewUrlRef.current = objectUrl;
-      const audio = new Audio(objectUrl);
+      const audio = new Audio(audioSource);
       voiceAudioRef.current = audio;
       audio.onended = stopVoicePreview;
       audio.onerror = () => {
@@ -1141,7 +1159,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                     >
                       Giọng đọc AI ({targetLanguage})
                     </label>
-                    {selectedVoice.startsWith("gcp:") && (
+                    {supportsVoicePreview(selectedVoice) && (
                       <button
                         type="button"
                         onClick={(e) => handlePlayVoicePreview(selectedVoice, e)}
