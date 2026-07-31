@@ -532,7 +532,7 @@ export default function WatermarkPage() {
                   type="button"
                   disabled={taskLocked}
                   onClick={() => captureVideoFrame("logo")}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition-ultra hover:scale-[1.02] active:scale-[0.97] hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Scissors size={18} weight="duotone" />
                   <span>{logoCoords ? "✏️ Sửa vùng Xóa Logo" : "🎯 Khoanh vùng Xóa Logo"}</span>
@@ -542,7 +542,7 @@ export default function WatermarkPage() {
                   type="button"
                   disabled={taskLocked}
                   onClick={() => captureVideoFrame("subMask")}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold transition-ultra hover:scale-[1.02] active:scale-[0.97] hover:shadow-[0_0_20px_rgba(168,85,247,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Eraser size={18} weight="duotone" />
                   <span>{subMaskCoords ? "✏️ Sửa vùng Che Phụ Đề" : "📝 Khoanh vùng Che Phụ Đề"}</span>
@@ -606,7 +606,7 @@ export default function WatermarkPage() {
               type="button"
               disabled={taskLocked || isSubmitting || (!logoCoords && !subMaskCoords)}
               onClick={handleSubmit}
-              className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-full bg-emerald-400 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold text-sm shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition select-none"
+              className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-full bg-emerald-400 hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold text-sm shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] hover:shadow-[0_22px_70px_-15px_rgba(16,185,129,0.7)] hover:-translate-y-0.5 active:scale-[0.97] transition-ultra select-none cursor-pointer"
             >
               {taskInfo.status === "COMPLETED" ? (
                 <>
@@ -634,10 +634,10 @@ export default function WatermarkPage() {
 
           {/* Task Output Result Panel */}
           {taskResult && (
-            <div className={`rounded-2xl border p-6 space-y-4 ${
+            <div className={`rounded-2xl border p-6 space-y-4 animate-scale-in transition-ultra ${
               taskResult.status === "FAILED"
-                ? "border-rose-500/30 bg-rose-500/10"
-                : "border-emerald-500/30 bg-emerald-500/10"
+                ? "border-rose-500/30 bg-rose-500/10 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.2)]"
+                : "border-emerald-500/30 bg-emerald-500/10 shadow-[0_10px_30px_-10px_rgba(16,185,129,0.2)]"
             }`}>
               <div className="flex items-center gap-3">
                 {taskResult.status === "COMPLETED" ? (
