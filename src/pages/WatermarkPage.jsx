@@ -11,6 +11,7 @@ import {
   WarningCircle,
   Sparkle,
   XCircle,
+  FileText,
 } from "@phosphor-icons/react";
 import { Loader2 } from "lucide-react";
 import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react-image-crop";
@@ -62,7 +63,7 @@ export default function WatermarkPage() {
   const taskLocked = taskInfo.status !== "IDLE";
   const fileSelectionLocked = taskLocked || isSubmitting;
 
-  // Active Crop Modal
+  const [selectedSrtFile, setSelectedSrtFile] = useState(null);
   const [activeCropTarget, setActiveCropTarget] = useState(null); // 'logo' | 'subMask' | null
   const [crop, setCrop] = useState(null);
   const [completedCrop, setCompletedCrop] = useState(null);
@@ -284,13 +285,24 @@ export default function WatermarkPage() {
         message: "Upload hoàn tất. Đang khởi tạo tác vụ...",
       }));
 
-      // Step 2: Submit process payload with the real public R2 video URL
+      // Step 2: Read optional custom .srt file content
+      let srtText = null;
+      if (selectedSrtFile) {
+        try {
+          srtText = await selectedSrtFile.text();
+        } catch (srtErr) {
+          console.warn("Could not read SRT file content:", srtErr);
+        }
+      }
+
+      // Step 3: Submit process payload with the real public R2 video URL
       const payload = {
         url: r2VideoUrl,
         audioMode: "original",
         logoCoordinates: logoCoords ? logoCoords.str : null,
         subtitleMask: subMaskCoords ? subMaskCoords.str : null,
-        hardsub: false,
+        hardsub: Boolean(selectedSrtFile && srtText),
+        srtContent: srtText,
       };
 
       const res = await axios.post(
@@ -331,6 +343,7 @@ export default function WatermarkPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    setSelectedSrtFile(null);
     setActiveCropTarget(null);
     setCrop(null);
     setCompletedCrop(null);
@@ -408,6 +421,53 @@ export default function WatermarkPage() {
             <p className="text-xs text-slate-500 mt-1">
               MP4, MOV hoặc WebM. Tối đa 2 GB.
             </p>
+          </div>
+
+          {/* Optional Subtitle (.srt) File Upload Zone */}
+          <div className="rounded-2xl border border-white/[0.08] bg-slate-950/60 p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <FileText size={18} weight="duotone" className="text-emerald-400" />
+                <span>Tải lên file Phụ đề Việt (.srt) [Tùy chọn]</span>
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                Miễn phí chèn sub khi Delogo
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Nếu bạn có sẵn file <code className="text-emerald-300 font-mono">.srt</code> (ví dụ tải từ trang Lồng tiếng AI), chọn file vào đây để vừa <b>Xóa Logo / Che Sub cũ</b> vừa <b>Chèn phụ đề mới</b> lên video cùng lúc trong 1 lần render!
+            </p>
+
+            {selectedSrtFile ? (
+              <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2.5 rounded-xl text-xs text-emerald-300 font-mono">
+                <div className="flex items-center gap-2 truncate">
+                  <span>📄 {selectedSrtFile.name}</span>
+                  <span className="text-[10px] text-slate-400">({(selectedSrtFile.size / 1024).toFixed(1)} KB)</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={fileSelectionLocked}
+                  onClick={() => setSelectedSrtFile(null)}
+                  className="text-slate-400 hover:text-white transition font-bold font-mono"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 border border-dashed border-white/[0.12] hover:border-emerald-500/40 bg-white/[0.02] hover:bg-emerald-500/[0.03] p-3 rounded-xl cursor-pointer text-xs font-semibold text-slate-300 transition">
+                <input
+                  type="file"
+                  accept=".srt"
+                  disabled={fileSelectionLocked}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setSelectedSrtFile(file);
+                  }}
+                  className="hidden"
+                />
+                <span>📁 Chọn file .srt từ máy tính để đè phụ đề mới</span>
+              </label>
+            )}
           </div>
 
           {isUploading && (
