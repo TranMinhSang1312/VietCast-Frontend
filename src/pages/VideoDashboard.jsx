@@ -1345,10 +1345,12 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         }
                       }}
                       className={
-                        "w-full inline-flex items-center justify-center gap-2 rounded-full px-5 py-4 text-base font-semibold text-white shadow-[0_18px_60px_-18px_rgba(244,63,94,0.55)] active:scale-[0.98] transition select-none " +
+                        "w-full inline-flex items-center justify-center gap-2.5 rounded-2xl px-6 py-4 text-base font-bold transition-ultra cursor-pointer shadow-lg select-none hover-lift " +
                         (previewFailedBalance
-                          ? "bg-rose-500/80 hover:bg-rose-500 border border-rose-400/50"
-                          : "bg-emerald-400 hover:bg-emerald-300 text-slate-950")
+                          ? "bg-rose-500/80 hover:bg-rose-500 text-white border border-rose-400/50 shadow-rose-500/20"
+                          : isDisabled
+                          ? "bg-slate-800 text-slate-400 opacity-50 cursor-not-allowed"
+                          : "shimmer-btn bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-300 text-slate-950 shadow-[0_18px_50px_-15px_rgba(16,185,129,0.6)] hover:shadow-[0_22px_60px_-10px_rgba(16,185,129,0.8)] active:scale-[0.97]")
                       }
                     >
                       {isLoading || costPreviewLoading ? (
@@ -1368,8 +1370,8 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         </>
                       ) : (
                         <>
-                          <MagicWand size={20} weight="fill" />
-                          <span>Bắt đầu xử lý video</span>
+                          <MagicWand size={22} weight="fill" />
+                          <span>Bắt đầu Lồng tiếng & Dịch Video</span>
                         </>
                       )}
                     </button>
@@ -1556,14 +1558,14 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
 
   return (
     <label
-      className={`relative cursor-pointer rounded-xl border p-3.5 transition-all duration-200 flex items-start gap-3 select-none ${
+      className={`relative cursor-pointer rounded-2xl border p-4 transition-ultra hover-lift flex items-start gap-3 select-none ${
         checked
           ? isPrimary
-            ? "border-indigo-400/90 bg-gradient-to-br from-indigo-500/15 via-purple-500/10 to-indigo-950/40 shadow-[0_0_25px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-400/40"
-            : "border-indigo-400 bg-indigo-500/10 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
+            ? "border-indigo-400/90 bg-gradient-to-br from-indigo-500/20 via-purple-500/15 to-indigo-950/50 shadow-[0_0_30px_-5px_rgba(99,102,241,0.45)] ring-1 ring-indigo-400/50 scale-[1.01]"
+            : "border-indigo-400 bg-indigo-500/15 shadow-[0_8px_30px_-10px_rgba(99,102,241,0.45)] ring-1 ring-indigo-400/30 scale-[1.01]"
           : isPrimary
-          ? "border-indigo-500/25 bg-slate-950/60 hover:border-indigo-400/50 hover:bg-white/[0.04] shadow-[0_4px_20px_-10px_rgba(99,102,241,0.15)]"
-          : "border-white/[0.06] bg-slate-950/40 hover:border-white/[0.12] hover:bg-white/[0.02]"
+          ? "border-indigo-500/30 bg-slate-900/60 hover:border-indigo-400/60 hover:bg-white/[0.04] shadow-[0_4px_20px_-10px_rgba(99,102,241,0.2)]"
+          : "border-white/[0.08] bg-slate-900/40 hover:border-white/[0.16] hover:bg-white/[0.03]"
       } ${disabled ? "opacity-40 pointer-events-none" : "active:scale-[0.98]"}`}
     >
       <input
@@ -1576,15 +1578,15 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
         className="sr-only"
       />
       <div
-        className={`shrink-0 mt-0.5 w-8.5 h-8.5 rounded-lg flex items-center justify-center transition-transform duration-200 ${
+        className={`shrink-0 mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center transition-ultra ${
           checked
-            ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/30 scale-105"
+            ? "bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 text-white shadow-lg shadow-indigo-500/40 scale-110"
             : isPrimary
-            ? "bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20"
-            : "bg-slate-950 text-slate-400 ring-1 ring-white/[0.08]"
+            ? "bg-indigo-500/15 text-indigo-400 ring-1 ring-indigo-500/30"
+            : "bg-slate-950 text-slate-400 ring-1 ring-white/[0.1]"
         }`}
       >
-        <Icon size={20} weight={checked ? "fill" : "duotone"} />
+        <Icon size={22} weight={checked ? "fill" : "duotone"} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1593,20 +1595,20 @@ const AudioModeOption = memo(function AudioModeOption({ mode, checked, disabled,
               {mode.label}
             </span>
             {mode.badge && (
-              <span className={`px-1.5 py-0.5 text-[9px] font-extrabold rounded border tracking-wider uppercase ${mode.badgeColor}`}>
+              <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded-full border tracking-wider uppercase ${mode.badgeColor}`}>
                 {mode.badge}
               </span>
             )}
           </div>
           <span
-            className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-              checked ? "border-indigo-400 bg-indigo-500/20" : "border-slate-700"
+            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-ultra ${
+              checked ? "border-indigo-400 bg-indigo-500/30" : "border-slate-700"
             }`}
           >
-            {checked && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_1px_rgba(129,140,248,0.8)]" />}
+            {checked && <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_2px_rgba(129,140,248,0.9)]" />}
           </span>
         </div>
-        <p className="text-[11px] text-slate-400 mt-1 leading-normal font-medium">{mode.description}</p>
+        <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed font-medium">{mode.description}</p>
       </div>
     </label>
   );
