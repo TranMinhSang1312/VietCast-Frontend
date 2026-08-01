@@ -7,8 +7,10 @@ import { API_BASE_URL_PROVIDER } from "../../config";
 import { getPublicTaskFailureMessage } from "../../utils/taskMessages";
 import {
   VIDEO_TASK_NOTIFICATION_KEY,
+  VIDEO_TASK_STORAGE_KEY,
   getPipelineProgress,
   getPipelineStageLabel,
+  publishActiveVideoTask,
   publishVideoTaskStatus,
   readActiveVideoTask,
   sameTaskId,
@@ -93,7 +95,7 @@ export default function VideoTaskMonitor({ onSettled }) {
   const persistStatus = useCallback((nextTask) => {
     taskRef.current = nextTask;
     setTask(nextTask);
-    localStorage.setItem("vc_active_task", JSON.stringify(nextTask));
+    publishActiveVideoTask(nextTask);
     publishVideoTaskStatus(nextTask);
   }, []);
 
@@ -103,7 +105,12 @@ export default function VideoTaskMonitor({ onSettled }) {
       setTask(null);
       return;
     }
-    if (incoming.taskId && taskRef.current?.taskId && !sameTaskId(incoming.taskId, taskRef.current.taskId)) {
+    if (
+      incoming.taskId
+      && taskRef.current?.taskId
+      && !sameTaskId(incoming.taskId, taskRef.current.taskId)
+      && !isTerminal(taskRef.current.status)
+    ) {
       return;
     }
     taskRef.current = incoming;
@@ -113,7 +120,7 @@ export default function VideoTaskMonitor({ onSettled }) {
   useEffect(() => {
     const onTaskUpdated = (event) => acceptIncomingTask(event.detail ?? readActiveVideoTask());
     const onStorage = (event) => {
-      if (event.key === "vc_active_task") acceptIncomingTask(readActiveVideoTask());
+      if (event.key === VIDEO_TASK_STORAGE_KEY) acceptIncomingTask(readActiveVideoTask());
       if (event.key === VIDEO_TASK_NOTIFICATION_KEY) setNotification(readNotification());
     };
     window.addEventListener("vietcast:video-task-updated", onTaskUpdated);
@@ -195,7 +202,8 @@ export default function VideoTaskMonitor({ onSettled }) {
       clearTimeout(pollTimerRef.current);
       pollTimerRef.current = null;
     }
-    if (!user || !task?.taskId || isTerminal(task.status)) return undefined;
+    const currentTask = taskRef.current;
+    if (!user || !currentTask || isTerminal(currentTask.status)) return undefined;
 
     let cancelled = false;
     const schedule = () => {

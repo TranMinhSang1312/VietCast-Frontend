@@ -17,6 +17,13 @@ import { getVideoModePolicy } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 import PaginationControls from "../components/history/PaginationControls";
 import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
+import {
+    getPipelineProgress,
+    getPipelineStageLabel,
+    publishActiveVideoTask,
+    readActiveVideoTask,
+    sameTaskId,
+} from "../utils/videoTaskProgress";
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
@@ -81,31 +88,49 @@ const StatusPill = memo(function StatusPill({ status }) {
     );
 });
 
-const ProgressBar = memo(function ProgressBar({ value }) {
-    const pct = typeof value === "number" ? Math.max(0, Math.min(100, value)) : 0;
+const ProgressBar = memo(function ProgressBar({ video }) {
+    const pct = typeof video?.progress === "number"
+        ? Math.max(0, Math.min(100, video.progress))
+        : 0;
+    const pipeline = getPipelineProgress(video || {});
+    const stageLabel = getPipelineStageLabel(video || {});
     return (
         <div className="mt-4 select-none">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
-                <span>TIẾN ĐỘ</span>
-                <span className="text-zinc-200">{pct}%</span>
+                <span className="truncate pr-3">{stageLabel}</span>
+                <span className="shrink-0 text-zinc-200">{pct}%</span>
             </div>
             <div
                 role="progressbar"
                 aria-valuenow={pct}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-valuetext={`${pct}% hoàn thành`}
+                aria-valuetext={pct + "% hoàn thành"}
                 className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden"
             >
                 <div
                     className="h-full bg-indigo-500 transition-all duration-500 shadow-[0_0_8px_2px_rgba(99,102,241,0.5)]"
-                    style={{ width: `${pct}%` }}
+                    style={{ width: pct + "%" }}
                 />
+            </div>
+            <div className="mt-3 flex gap-1.5">
+                {pipeline.steps.map((step, index) => (
+                    <span
+                        key={step.key}
+                        title={step.label}
+                        className={"h-1.5 flex-1 rounded-full transition-colors " + (
+                            index < pipeline.completedCount
+                                ? "bg-emerald-400"
+                                : index === pipeline.activeIndex
+                                    ? "bg-indigo-300/80 animate-pulse"
+                                    : "bg-white/10"
+                        )}
+                    />
+                ))}
             </div>
         </div>
     );
 });
-
 const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const status = video.status;
     const isCompleted = status === "COMPLETED";
@@ -228,7 +253,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                 <span className="font-semibold text-slate-200">{mode.output}</span>
             </div>
 
-            {isProcessing && <ProgressBar value={video.progress ?? 0} />}
+            {isProcessing && <ProgressBar video={video} />}
 
             {isFailed && (
                 <div className="mt-3 flex items-start gap-2.5 p-4 rounded-xl bg-rose-950/30 border border-rose-900/40 text-sm text-red-200">
@@ -343,7 +368,18 @@ export default function VideoHistory() {
             const visibleItems = hasPageMetadata
                 ? items
                 : items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-            setHistory(visibleItems);
+            const active = readActiveVideoTask();
+            const hydratedItems = visibleItems.map((item) => (
+                active && sameTaskId(item?.taskId, active.taskId)
+                    ? {
+                        ...item,
+                        ...active,
+                        taskId: item.taskId,
+                        originalUrl: item.originalUrl ?? active.originalUrl ?? active.url,
+                    }
+                    : item
+            ));
+            setHistory(hydratedItems);
             setPageInfo(hasPageMetadata
                 ? {
                     totalItems: Number(headers["x-total-count"] ?? 0),
@@ -365,6 +401,21 @@ export default function VideoHistory() {
     const handleRetryTask = useCallback(async (taskId) => {
         try {
             await axios.post(`${API_BASE_URL}/api/v1/videos/${taskId}/retry`);
+            const previous = historyRef.current.find((item) => sameTaskId(item?.taskId, taskId));
+            const retryTask = {
+                ...(previous || {}),
+                taskId: String(taskId),
+                status: "PROCESSING",
+                progress: 0,
+                message: "Đang xếp hàng để xử lý lại...",
+                submittedAt: new Date().toISOString(),
+                videoUrl: null,
+                srtUrl: null,
+            };
+            publishActiveVideoTask(retryTask);
+            setHistory((current) => current.map((item) => (
+                sameTaskId(item?.taskId, taskId) ? { ...item, ...retryTask } : item
+            )));
             fetchHistory(false);
         } catch (err) {
             const serverMessage = err.response?.data?.message || err.message || "Không thể chạy lại tác vụ. Vui lòng thử lại sau.";
@@ -372,6 +423,17 @@ export default function VideoHistory() {
         }
     }, [fetchHistory]);
 
+    useEffect(() => {
+        const onBackgroundStatus = (event) => {
+            const next = event.detail;
+            if (!next?.taskId) return;
+            setHistory((current) => current.map((item) => (
+                sameTaskId(item?.taskId, next.taskId) ? { ...item, ...next } : item
+            )));
+        };
+        window.addEventListener("vietcast:video-task-status", onBackgroundStatus);
+        return () => window.removeEventListener("vietcast:video-task-status", onBackgroundStatus);
+    }, []);
     const clearPollInterval = useCallback(() => {
         if (pollTimerRef.current) {
             clearInterval(pollTimerRef.current);

@@ -13,6 +13,13 @@ import {
 } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
+import {
+  VIDEO_TASK_STORAGE_KEY,
+  getPipelineProgress,
+  getPipelineStageLabel,
+  publishActiveVideoTask,
+  sameTaskId,
+} from "../utils/videoTaskProgress";
 
 const MODE_ICONS = Object.freeze({
   dub: MagicWand,
@@ -49,17 +56,6 @@ const PRIMARY_AUDIO_MODES = PRIMARY_VIDEO_MODE_IDS.map((id) =>
 const SECONDARY_AUDIO_MODES = SECONDARY_VIDEO_MODE_IDS.map((id) =>
   toModeOption(id, false));
 
-function progressLabel(mode, progress, targetLanguage = "Tiếng Việt") {
-  if (progress < 10) return "ĐANG TẢI VIDEO TỪ NGUỒN...";
-  if (mode === "original" || mode === "mute") {
-    return progress < 90 ? "ĐANG XỬ LÝ VIDEO..." : "ĐANG TẢI KẾT QUẢ LÊN...";
-  }
-  if (progress < 35) return "ĐANG TRÍCH XUẤT ÂM THANH...";
-  if (progress < 70) return mode === "subtitle" ? "ĐANG NHẬN DẠNG LỜI NÓI..." : `ĐANG DỊCH SANG ${(targetLanguage || "TIẾNG VIỆT").toUpperCase()}...`;
-  if (mode === "subtitle") return "ĐANG HOÀN THIỆN FILE SRT...";
-  return progress < 90 ? "ĐANG TỔNG HỢP GIỌNG ĐỌC AI..." : "ĐANG RENDER VIDEO CUỐI CÙNG...";
-}
-
 // Whitelist kept in sync with backend VideoRequest.@Pattern on `voice`.
 // Dynamic voice mapping per target language
 const LANGUAGE_VOICE_MAP = {
@@ -93,7 +89,7 @@ function supportsVoicePreview(voiceValue) {
 }
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
-const ACTIVE_TASK_STORAGE_KEY = "vc_active_task";
+const ACTIVE_TASK_STORAGE_KEY = VIDEO_TASK_STORAGE_KEY;
 const TASK_RECOVERY_LOOKBACK_MS = 10 * 60 * 1000;
 
 function extractUrl(raw) {
@@ -324,11 +320,7 @@ export default function VideoDashboard() {
   }, [sourceLanguage]);
 
   useEffect(() => {
-    if (result) {
-      localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(result));
-    } else {
-      localStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
-    }
+    publishActiveVideoTask(result);
   }, [result]);
 
   useEffect(() => {
@@ -343,7 +335,7 @@ export default function VideoDashboard() {
   }, []);
 
   const resetResultState = useCallback(() => {
-    localStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
+    publishActiveVideoTask(null);
     setResult(null);
     setProgress(0);
     setVideoReady(false);
@@ -623,7 +615,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
     recoverSubmittedTask(pending)
       .then((recovered) => {
         if (recovered) {
-          localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(recovered));
+          publishActiveVideoTask(recovered);
           if (!cancelled) {
             setResult(recovered);
             setProgress(
@@ -639,7 +631,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           return;
         }
 
-        localStorage.removeItem(ACTIVE_TASK_STORAGE_KEY);
+        publishActiveVideoTask(null);
         if (!cancelled) {
           setResult(null);
           setProgress(0);
@@ -706,7 +698,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
         submittedAt: new Date().toISOString(),
       };
-      localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(pendingSubmission));
+      publishActiveVideoTask(pendingSubmission);
       setResult(pendingSubmission);
       setVideoReady(false);
       setVideoError(false);
@@ -739,7 +731,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         };
         // Persist synchronously: if navigation unmounts this component before
         // React applies setResult, the next mount still has the real taskId.
-        localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(acceptedResult));
+        publishActiveVideoTask(acceptedResult);
         setResult(acceptedResult);
         refreshUserCredit();
       } catch (err) {
@@ -754,7 +746,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           try {
             const recovered = await recoverSubmittedTask(pendingSubmission);
             if (recovered) {
-              localStorage.setItem(ACTIVE_TASK_STORAGE_KEY, JSON.stringify(recovered));
+              publishActiveVideoTask(recovered);
               setResult(recovered);
               setProgress(
                 recovered.status === "COMPLETED"
@@ -810,88 +802,33 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       resetResultState,
       sourceLanguage,
       targetLanguage,
+      translationStyle,
       hardsub,
       syncProfile,
     ],
   );
 
   useEffect(() => {
-    if (!result?.taskId) return;
-    if (result.status !== "PROCESSING") return;
-
-    const taskId = result.taskId;
-    // Snapshot the starting status so a transient COMPLETED→PROCESSING
-    // flicker (e.g. retry/rollback) doesn't tear down the polling
-    // interval and freeze the UI on the last value seen. We gate the
-    // poll on a stable taskId only, and the poll itself decides when
-    // to stop based on the latest server status.
-
-    const fetchStatus = async () => {
-      try {
-        const { data } = await axios.get(
-          `${API_BASE_URL}/api/v1/videos/status/${taskId}`,
-          { timeout: 10000 }
-        );
-        if (data.taskId && data.taskId !== taskId) {
-          return;
-        }
-        setResult((prev) => ({
-          ...prev,
-          taskId: data.taskId ?? prev.taskId,
-          status: data.status,
-          videoUrl: data.videoUrl ?? null,
-          srtUrl: data.srtUrl ?? null,
-          message: data.message ?? prev.message,
-        }));
-
-        const serverProgress = typeof data.progress === "number" ? data.progress : 0;
-        if (data.status === "COMPLETED") {
-          setProgress(100);
-        } else if (data.status === "FAILED") {
-          setProgress(0);
-        } else {
-          setProgress((prev) => (serverProgress > prev ? serverProgress : prev));
-        }
-
-        if (data.status === "COMPLETED" || data.status === "FAILED") {
-          clearPollInterval();
-          refreshUserCredit();
-        }
-      } catch (err) {
-        const status = err.response?.status;
-        if (status === 404) {
-          clearPollInterval();
-          resetResultState();
-          setError("Tác vụ không tồn tại hoặc CSDL đã được làm mới.");
-        }
+    const onBackgroundStatus = (event) => {
+      const next = event.detail;
+      if (!next?.taskId) return;
+      setResult((prev) => {
+        if (prev?.taskId && !sameTaskId(prev.taskId, next.taskId)) return prev;
+        return { ...prev, ...next };
+      });
+      if (next.status === "COMPLETED") setProgress(100);
+      else if (next.status === "FAILED") setProgress(0);
+      else if (typeof next.progress === "number") {
+        setProgress((prev) => Math.max(prev, next.progress));
+      }
+      if (next.status === "COMPLETED" || next.status === "FAILED") {
+        refreshUserCredit();
+        setVideoError(false);
       }
     };
-
-    fetchStatus();
-    pollIntervalRef.current = setInterval(fetchStatus, 2000);
-
-    // Pause polling when the tab is hidden — saves backend cycles and
-    // avoids waking the user's laptop. Resume on visibility change.
-    const onVisibility = () => {
-      if (document.visibilityState === "visible" && !pollIntervalRef.current) {
-        fetchStatus();
-        pollIntervalRef.current = setInterval(fetchStatus, 2000);
-      } else if (document.visibilityState !== "visible" && pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      clearPollInterval();
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-    // Depend ONLY on taskId — depending on status caused the interval
-    // to be torn down + recreated on every status tick (C-1 race).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result?.taskId]);
-
+    window.addEventListener("vietcast:video-task-status", onBackgroundStatus);
+    return () => window.removeEventListener("vietcast:video-task-status", onBackgroundStatus);
+  }, [refreshUserCredit]);
   // Completed task data is persisted so users can leave this page without
   // losing their result. Artifact URLs are now deliberately short-lived,
   // however, so a URL restored from localStorage may already be expired (or
@@ -1413,7 +1350,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                 result={result}
                 isProcessing={isProcessing}
                 progress={progress}
-                targetLanguage={targetLanguage}
                 videoReady={videoReady}
                 videoError={videoError}
                 videoSrc={videoSrc}
@@ -1644,7 +1580,6 @@ const ResultPanel = memo(function ResultPanel({
   result,
   isProcessing,
   progress,
-  targetLanguage = "Tiếng Việt",
   videoReady,
   videoError,
   videoSrc,
@@ -1666,6 +1601,8 @@ const ResultPanel = memo(function ResultPanel({
   const missingExpectedOutput = isCompleted
     && ((output.video && !result.videoUrl) || (output.srt && !result.srtUrl));
   const elapsedText = useElapsedTime(result.submittedAt, isProcessing);
+  const pipeline = getPipelineProgress({ ...result, progress });
+  const stageLabel = getPipelineStageLabel({ ...result, progress });
 
   return (
     <div className="flex h-full flex-col justify-between rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-6">
@@ -1707,7 +1644,7 @@ const ResultPanel = memo(function ResultPanel({
           <div className="mb-6 select-none">
             <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mb-1.5">
               <span>
-                {progressLabel(result.audioMode, progress, result?.targetLanguage || targetLanguage || "Tiếng Việt")}
+                {stageLabel}
               </span>
               <div className="flex items-center gap-2.5">
                 {elapsedText && (
@@ -1730,6 +1667,28 @@ const ResultPanel = memo(function ResultPanel({
                 className="bg-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_2px_rgba(99,102,241,0.5)]"
                 style={{ width: `${progress}%` }}
               />
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {pipeline.steps.map((step, index) => {
+                const completed = index < pipeline.completedCount;
+                const active = index === pipeline.activeIndex;
+                const tone = completed
+                  ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+                  : active
+                    ? "border-indigo-400/25 bg-indigo-500/10 text-indigo-100"
+                    : "border-white/[0.05] bg-white/[0.02] text-zinc-500";
+                return (
+                  <div
+                    key={step.key}
+                    className={"flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] transition-colors " + tone}
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current/30 font-mono text-[10px]">
+                      {completed ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
+                    </span>
+                    <span className="truncate">{step.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

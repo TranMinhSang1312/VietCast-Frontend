@@ -49,7 +49,8 @@ function stepFromMessage(message, steps) {
   if (/(download|tai video|source video|tai xuong)/.test(text)) return 0;
   if (/(extract|tach audio|audio)/.test(text)) return Math.min(1, steps.length - 1);
   if (/(transcrib|stt|nhan dang|speech)/.test(text)) {
-    return Math.min(steps.findIndex((step) => step.key === "stt"), steps.length - 1);
+    const index = steps.findIndex((step) => step.key === "stt");
+    return index >= 0 ? index : Math.min(steps.length - 1, 1);
   }
   if (/(translat|dich|subtitle|phu de)/.test(text)) {
     const index = steps.findIndex((step) => step.key === "translate");
