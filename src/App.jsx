@@ -17,6 +17,7 @@ import TopupModal from "./components/topup/TopupModal";
 import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
 import { formatCredit, formatCountdown } from "./utils/format";
 import DelogoTaskMonitor from "./components/delogo/DelogoTaskMonitor";
+import VideoTaskMonitor from "./components/tasks/VideoTaskMonitor";
 import SiteFooter from "./components/layout/SiteFooter";
 import {
   DELOGO_PENDING_TASK_KEY,
@@ -290,6 +291,7 @@ function AppShell() {
           prefillAmount={topupPrefill}
         />
       )}
+      <VideoTaskMonitor onSettled={syncProfile} />
       <DelogoTaskMonitor onSettled={syncProfile} />
     </div>
   );
