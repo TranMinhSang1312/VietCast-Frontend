@@ -100,15 +100,15 @@ export default function LandingPage() {
 
       {/* Top nav. Slim: logo left, primary CTA right. No second CTA in
           the nav so the eye lands on the hero. */}
-      <header className="w-full z-10 px-6 sm:px-10 pt-7">
+      <header className="w-full z-10 px-6 sm:px-10 pt-6 sm:pt-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 select-none group">
+          <Link to="/" className="flex items-center gap-3.5 select-none group">
             <img
               src="/logo.png"
               alt="VietCast Logo"
-              className="w-9 h-9 object-contain drop-shadow-[0_0_12px_rgba(99,102,241,0.5)] group-hover:scale-105 transition-transform"
+              className="h-12 w-12 sm:h-14 sm:w-14 rounded-[17px] object-cover border border-white/10 drop-shadow-[0_0_18px_rgba(99,102,241,0.55)] group-hover:scale-105 transition-transform"
             />
-            <span className="text-lg font-bold tracking-tight text-white">
+            <span className="text-xl sm:text-2xl font-extrabold tracking-[-0.03em] text-white">
               VietCast
             </span>
           </Link>
