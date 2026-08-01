@@ -3,7 +3,6 @@ import axios from "axios";
 import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink } from "lucide-react";
 import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { recordUsageLog } from "../services/history";
 import { PRICING, estimateProcessingTime, formatVnd } from "../config/pricing";
@@ -85,41 +84,6 @@ const TRANSLATION_STYLES = [
   { value: "triet_ly", label: "🕯️ Tâm Trạng / Triết Lý", description: "Sâu lắng, đồng cảm, chữa lành" },
 ];
 
-const VIDEO_PRESETS = Object.freeze([
-  Object.freeze({
-    id: "short-social",
-    label: "TikTok / Douyin",
-    description: "Giữ nhạc nền, lồng tiếng Việt và in phụ đề gọn cho video dọc.",
-    audioMode: "mix",
-    hardsub: true,
-    translationStyle: "gioi_tre",
-    sourceLanguage: "auto",
-  }),
-  Object.freeze({
-    id: "youtube",
-    label: "YouTube",
-    description: "Giữ nhịp tự nhiên, nhạc nền và phụ đề dễ đọc trên màn hình ngang.",
-    audioMode: "mix",
-    hardsub: true,
-    translationStyle: "default",
-    sourceLanguage: "auto",
-  }),
-  Object.freeze({
-    id: "subtitle-only",
-    label: "Chỉ dịch phụ đề",
-    description: "Không tạo giọng hay render video; nhận file SRT nhanh và tiết kiệm.",
-    audioMode: "subtitle",
-    hardsub: false,
-    translationStyle: "default",
-    sourceLanguage: "auto",
-  }),
-  Object.freeze({
-    id: "watermark",
-    label: "Xóa watermark",
-    description: "Mở công cụ đơn giản để khoanh vùng logo hoặc phụ đề cũ.",
-    route: "/watermark-remover",
-  }),
-]);
 
 function supportsVoicePreview(voiceValue) {
   return voiceValue.startsWith("gcp:");
@@ -204,8 +168,6 @@ async function recoverSubmittedTask(submission, attempts = 3) {
 
 export default function VideoDashboard() {
   const { user, syncProfile } = useAuth();
-  const navigate = useNavigate();
-  const [selectedPreset, setSelectedPreset] = useState(() => localStorage.getItem("vc_videoPreset") || "");
 
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
@@ -432,8 +394,6 @@ export default function VideoDashboard() {
   const handleModeChange = useCallback(
     (mode) => {
       setAudioMode(mode);
-      setSelectedPreset("");
-      localStorage.removeItem("vc_videoPreset");
       if (error) setError(null);
       if (result && mode !== audioMode) {
         resetResultState();
@@ -442,33 +402,10 @@ export default function VideoDashboard() {
     [result, audioMode, error, resetResultState],
   );
 
-  const handlePresetSelect = useCallback(
-    (preset) => {
-      if (preset.route) {
-        navigate(preset.route);
-        return;
-      }
-      if (result) return;
-
-      setSelectedPreset(preset.id);
-      localStorage.setItem("vc_videoPreset", preset.id);
-      setAudioMode(preset.audioMode);
-      setHardsub(Boolean(preset.hardsub));
-      setTranslationStyle(preset.translationStyle || "default");
-      setSourceLanguage(preset.sourceLanguage || "auto");
-      setTargetLanguage("Tiếng Việt");
-      const options = LANGUAGE_VOICE_MAP["Tiếng Việt"];
-      setVoice(options[0]?.value || "");
-      if (error) setError(null);
-    },
-    [navigate, result, error],
-  );
 
 const handleReset = useCallback(() => {
         setUrl("");
         setAudioMode("mix");
-        setSelectedPreset("");
-        localStorage.removeItem("vc_videoPreset");
         const options = LANGUAGE_VOICE_MAP[targetLanguage] || LANGUAGE_VOICE_MAP["Tiếng Việt"];
         setVoice(options[0]?.value || "");
         setResult(null);
@@ -996,40 +933,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           {/* Left Column: Form Controls */}
           <section className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-8 lg:col-span-7">
             <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6" noValidate>
-              <section aria-labelledby="video-presets-heading" className="rounded-2xl bg-slate-950/45 p-3.5 ring-1 ring-white/[0.06] sm:p-4">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h2 id="video-presets-heading" className="text-sm font-semibold text-white">Chọn nhanh theo nhu cầu</h2>
-                    <p className="mt-1 text-xs text-slate-500">Chọn một mục, VietCast tự cấu hình phần còn lại.</p>
-                  </div>
-                  <span className="hidden text-[10px] font-mono uppercase tracking-[0.16em] text-emerald-300 sm:inline">Không cần hiểu kỹ thuật</span>
-                </div>
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {VIDEO_PRESETS.map((preset) => {
-                    const selected = selectedPreset === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handlePresetSelect(preset)}
-                        disabled={isLoading || isProcessing || (!preset.route && Boolean(result))}
-                        className={`group rounded-xl px-3.5 py-3 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-45 ${selected ? "bg-emerald-400/[0.08] ring-1 ring-emerald-300/40" : "bg-white/[0.025] ring-1 ring-white/[0.06] hover:bg-white/[0.05] hover:ring-white/[0.12] active:scale-[0.99]"}`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-slate-100">{preset.label}</span>
-                          {selected && <span className="text-[10px] font-semibold text-emerald-300">Đã chọn</span>}
-                        </span>
-                        <span className="mt-1.5 block text-xs leading-relaxed text-slate-500 group-hover:text-slate-400">
-                          {preset.description}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-                  Preset chỉ điền sẵn lựa chọn. Bạn vẫn có thể đổi giọng, ngôn ngữ hoặc phụ đề trước khi chạy.
-                </p>
-              </section>
               {/* URL input */}
               <div>
                 <label htmlFor="video-url" className="block text-sm font-semibold text-zinc-300 mb-2">
@@ -1207,8 +1110,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                     value={selectedVoice}
                     onChange={(e) => {
                       setVoice(e.target.value);
-                      setSelectedPreset("");
-                      localStorage.removeItem("vc_videoPreset");
                     }}
                     disabled={isLoading || isProcessing}
                     className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
@@ -1247,8 +1148,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                   value={sourceLanguage}
                   onChange={(e) => {
                     setSourceLanguage(e.target.value);
-                    setSelectedPreset("");
-                    localStorage.removeItem("vc_videoPreset");
                   }}
                   disabled={isLoading || isProcessing}
                   className="w-full rounded-xl border border-white/[0.1] bg-slate-950/60 text-slate-100 p-3 text-sm font-medium focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400/30 transition cursor-pointer"
@@ -1278,8 +1177,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                 <select
                   value={targetLanguage}
                   onChange={(e) => {
-                    setSelectedPreset("");
-                    localStorage.removeItem("vc_videoPreset");
                     const newLang = e.target.value;
                     setTargetLanguage(newLang);
                     const opts = LANGUAGE_VOICE_MAP[newLang] || LANGUAGE_VOICE_MAP["Tiếng Việt"];
@@ -1308,8 +1205,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                 <select
                   value={translationStyle}
                   onChange={(e) => {
-                    setSelectedPreset("");
-                    localStorage.removeItem("vc_videoPreset");
                     setTranslationStyle(e.target.value);
                     localStorage.setItem("vc_translationStyle", e.target.value);
                   }}
@@ -1349,8 +1244,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                       disabled={isLoading || isProcessing}
                       onClick={() => {
                         setHardsub(!hardsub);
-                        setSelectedPreset("");
-                        localStorage.removeItem("vc_videoPreset");
                       }}
                       className={[
                         "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50",
