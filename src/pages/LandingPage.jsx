@@ -17,7 +17,7 @@ import {
   Layers3,
   FileText,
 } from "lucide-react";
-import { PRICING } from "../config/pricing";
+import { PRICING, estimateProcessingTime, formatVnd } from "../config/pricing";
 
 // Reused across the page so the surface tokens stay consistent.
 const SURFACE = "rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl";
@@ -25,7 +25,7 @@ const SURFACE = "rounded-3xl border border-white/[0.06] bg-white/[0.025] backdro
 const HERO_PROOFS = [
   {
     label: "Tính phí trước",
-    value: "Xem credit ước tính trước khi bấm xử lý.",
+    value: "Xem giá và thời gian dự kiến trước khi xử lý.",
   },
   {
     label: "Đầu ra rõ ràng",
@@ -56,8 +56,8 @@ const HOW_IT_WORKS = [
 ];
 
 const VALUE_POINTS = [
-  "Không cần hiểu pipeline",
-  "Hoàn credit nếu lỗi",
+  "Không cần hiểu kỹ thuật",
+  "Tự động hoàn số dư nếu lỗi",
   "SRT đi kèm ở các chế độ phù hợp",
   "Hiển thị tiến độ rõ ràng",
 ];
@@ -232,9 +232,9 @@ export default function LandingPage() {
                       Phí ước tính
                     </div>
                     <div className="mt-1.5 text-2xl font-extrabold tracking-tight text-emerald-300">
-                      {(12 * PRICING.dubPerMinute).toLocaleString("vi-VN")}
+                      {formatVnd(12 * PRICING.dubPerMinute)}
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">credit</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">cho tác vụ mẫu</div>
                   </div>
                 </div>
 
@@ -245,10 +245,16 @@ export default function LandingPage() {
                   </span>
                 </div>
 
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-white/[0.06] bg-slate-950/35 px-3.5 py-2.5 text-xs text-slate-300">
+                  <Clock3 className="h-4 w-4 shrink-0 text-emerald-300" />
+                  <span>Dự kiến hoàn tất:</span>
+                  <span className="font-mono font-semibold text-white">{estimateProcessingTime(12 * 60, "dub")?.label}</span>
+                </div>
+
                 <div className="mt-5 flex items-center justify-between text-[11px] text-slate-500">
                   <span className="inline-flex items-center gap-1.5">
                     <RefreshCcw className="w-3 h-3" />
-                    Hoàn credit nếu lỗi
+                    Hoàn số dư nếu lỗi
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <ShieldCheck className="w-3 h-3" />
@@ -398,14 +404,14 @@ export default function LandingPage() {
           <FeatureCard
             icon={VolumeX}
             title="Giữ tiếng gốc / Video câm"
-            body={`${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Chỉ tải và xử lý âm thanh, không chạy dịch hoặc tạo giọng AI.`}
+            body={`${formatVnd(PRICING.mutePerMinute)}/phút, tối thiểu ${formatVnd(PRICING.basicMinimum)}/tác vụ. Chỉ tải và xử lý âm thanh, không chạy dịch hoặc tạo giọng AI.`}
             accent="slate"
             className="md:col-span-4"
           />
           <FeatureCard
             icon={Mic}
             title="Lồng tiếng AI"
-            body={`${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Lồng tiếng đè giọng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ.`}
+            body={`${formatVnd(PRICING.dubPerMinute)}/phút, tối thiểu ${formatVnd(PRICING.dubPerMinute)}/tác vụ. Lồng tiếng mới hoặc giữ nhạc nền gốc. Tặng kèm phụ đề SRT song ngữ.`}
             accent="indigo"
             highlight
             className="md:col-span-5"
@@ -413,7 +419,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={Subtitles}
             title="Dịch phụ đề"
-            body={`${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT tiếng Việt mà không tạo giọng đọc hoặc render lại video.`}
+            body={`${formatVnd(PRICING.subtitlePerMinute)}/phút, tối thiểu ${formatVnd(PRICING.subtitlePerMinute)}/tác vụ. Nhận file SRT tiếng Việt mà không tạo giọng đọc hoặc render lại video.`}
             accent="slate"
             className="md:col-span-3"
           />
@@ -426,8 +432,8 @@ export default function LandingPage() {
             title="Đặt cọc trước"
             body={
               <>
-                Hệ thống kiểm tra số dư trước khi bắt đầu job. Cần đúng số
-                credit tối thiểu cho từng chế độ.
+                Hệ thống kiểm tra số dư trước khi bắt đầu. Bạn luôn thấy giá
+                tối thiểu và tổng dự kiến của từng tác vụ.
               </>
             }
           />
@@ -437,7 +443,7 @@ export default function LandingPage() {
             body={
               <>
                 Job thất bại ở bất kỳ bước nào? Hệ thống tự hoàn lại toàn bộ
-                credit đã trừ, có mã tham chiếu để đối chiếu.
+                số dư đã trừ, có mã tham chiếu để đối chiếu.
               </>
             }
           />
@@ -446,8 +452,8 @@ export default function LandingPage() {
             title="Minh bạch & an toàn"
             body={
               <>
-                Tỉ lệ quy đổi cố định 1 VND = 1 credit. Không gói tháng, không
-                phí ẩn.
+                Giá hiển thị bằng VNĐ, tính theo thời lượng thực tế. Không gói
+                tháng và không có phí ẩn.
               </>
             }
           />
@@ -483,7 +489,7 @@ export default function LandingPage() {
                 Sẵn sàng bắt đầu
               </div>
               <h2 className="mt-5 text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white">
-                Nạp credit. Dịch. Xuất.
+                Dán link. Chọn nhu cầu. Nhận kết quả.
               </h2>
               <p className="mt-4 max-w-xl mx-auto text-base text-slate-400 leading-relaxed">
                 Đăng nhập, dán URL và xem chi phí trước khi bấm xử lý. Bắt đầu

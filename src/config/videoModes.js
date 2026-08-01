@@ -1,4 +1,4 @@
-import { PRICING } from "./pricing";
+import { PRICING, formatVnd } from "./pricing";
 
 /**
  * Frontend mirror of backend VideoModePolicy.
@@ -20,7 +20,7 @@ export const VIDEO_MODE_POLICIES = Object.freeze({
     usesAiVoice: false,
     perMinuteRate: PRICING.originalPerMinute,
     minimumPrice: PRICING.basicMinimum,
-    description: `${PRICING.originalPerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit.`,
+    description: `${formatVnd(PRICING.originalPerMinute)}/phút, tối thiểu ${formatVnd(PRICING.basicMinimum)}/tác vụ.`,
   }),
   mute: Object.freeze({
     id: "mute",
@@ -34,7 +34,7 @@ export const VIDEO_MODE_POLICIES = Object.freeze({
     usesAiVoice: false,
     perMinuteRate: PRICING.mutePerMinute,
     minimumPrice: PRICING.basicMinimum,
-    description: `${PRICING.mutePerMinute} credit/phút, tối thiểu ${PRICING.basicMinimum} credit. Bỏ âm thanh.`,
+    description: `${formatVnd(PRICING.mutePerMinute)}/phút, tối thiểu ${formatVnd(PRICING.basicMinimum)}/tác vụ. Bỏ âm thanh.`,
   }),
   subtitle: Object.freeze({
     id: "subtitle",
@@ -48,7 +48,7 @@ export const VIDEO_MODE_POLICIES = Object.freeze({
     usesAiVoice: false,
     perMinuteRate: PRICING.subtitlePerMinute,
     minimumPrice: PRICING.subtitlePerMinute,
-    description: `${PRICING.subtitlePerMinute} credit/phút, tối thiểu ${PRICING.subtitlePerMinute} credit. Nhận file SRT.`,
+    description: `${formatVnd(PRICING.subtitlePerMinute)}/phút, tối thiểu ${formatVnd(PRICING.subtitlePerMinute)}/tác vụ. Nhận file SRT.`,
   }),
   dub: Object.freeze({
     id: "dub",
@@ -62,7 +62,7 @@ export const VIDEO_MODE_POLICIES = Object.freeze({
     usesAiVoice: true,
     perMinuteRate: PRICING.dubPerMinute,
     minimumPrice: PRICING.dubPerMinute,
-    description: `${PRICING.dubPerMinute} credit/phút, tối thiểu ${PRICING.dubPerMinute} credit. Giọng Việt bản ngữ truyền cảm và file SRT song ngữ.`,
+    description: `${formatVnd(PRICING.dubPerMinute)}/phút, tối thiểu ${formatVnd(PRICING.dubPerMinute)}/tác vụ. Giọng Việt tự nhiên và file SRT song ngữ.`,
   }),
   mix: Object.freeze({
     id: "mix",
@@ -76,7 +76,7 @@ export const VIDEO_MODE_POLICIES = Object.freeze({
     usesAiVoice: true,
     perMinuteRate: PRICING.mixPerMinute,
     minimumPrice: PRICING.mixPerMinute,
-    description: `${PRICING.mixPerMinute} credit/phút, tối thiểu ${PRICING.mixPerMinute} credit. Giữ 30% nhạc nền gốc và thêm 120% giọng AI.`,
+    description: `${formatVnd(PRICING.mixPerMinute)}/phút, tối thiểu ${formatVnd(PRICING.mixPerMinute)}/tác vụ. Giữ nhạc nền và thêm giọng Việt.`,
   }),
 });
 

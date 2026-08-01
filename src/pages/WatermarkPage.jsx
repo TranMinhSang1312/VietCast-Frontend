@@ -18,7 +18,7 @@ import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
 import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
-import { PRICING } from "../config/pricing";
+import { PRICING, estimateProcessingTime, formatVnd } from "../config/pricing";
 import { handleApiError } from "../utils/apiError";
 import {
   isVideoUploadCancelled,
@@ -119,7 +119,7 @@ export default function WatermarkPage() {
         document.body.removeChild(a);
       } else {
         console.error("[download] failed", err);
-        setDownloadError(msg || err.message || "Không thể tải file. Vui lòng thử lại.");
+        setDownloadError("Không thể tải tệp lúc này. Vui lòng thử lại sau.");
       }
     } finally {
       setIsDownloading(false);
@@ -247,6 +247,7 @@ export default function WatermarkPage() {
   const billableMinutes = Math.max(1, durationSeconds / 60);
   const filterCost = Math.round(billableMinutes * PRICING.visualFilterPerMinute);
   const totalCost = Math.max(PRICING.visualFilterPerMinute, filterCost);
+  const processingEta = estimateProcessingTime(durationSeconds, "original", true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -580,18 +581,22 @@ export default function WatermarkPage() {
               <div className="flex justify-between text-slate-400">
                 <span>Thời lượng video:</span>
                 <span className="font-mono text-white font-bold">{durationSeconds} giây</span>
+              <div className="flex justify-between text-slate-400">
+                <span>Thời gian xử lý dự kiến:</span>
+                <span className="font-mono text-white font-bold">{processingEta?.label || "Chờ đọc thời lượng"}</span>
+              </div>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Phí xử lý video gốc:</span>
-                <span className="font-mono text-emerald-400 font-bold">0 credit</span>
+                <span className="font-mono text-emerald-400 font-bold">Miễn phí (0đ)</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Phí Delogo (250 credit/phút):</span>
-                <span className="font-mono text-amber-400 font-bold">{totalCost} credit</span>
+                <span>Phí xóa logo / che phụ đề ({formatVnd(PRICING.visualFilterPerMinute)}/phút):</span>
+                <span className="font-mono text-amber-400 font-bold">{formatVnd(totalCost)}</span>
               </div>
               <div className="pt-3 border-t border-white/[0.08] flex justify-between text-sm font-extrabold text-white">
                 <span>Tổng chi phí:</span>
-                <span className="text-emerald-400 font-mono text-base">{totalCost} credit</span>
+                <span className="text-emerald-400 font-mono text-base">{formatVnd(totalCost)}</span>
               </div>
             </div>
 
