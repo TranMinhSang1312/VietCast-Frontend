@@ -369,16 +369,23 @@ export default function VideoHistory() {
                 ? items
                 : items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
             const active = readActiveVideoTask();
-            const hydratedItems = visibleItems.map((item) => (
-                active && sameTaskId(item?.taskId, active.taskId)
+            const hydratedItems = visibleItems.map((item) => {
+                const normalized = {
+                    ...item,
+                    status: item?.status === "PENDING" ? "PROCESSING" : item?.status,
+                    message: item?.message ?? (
+                        item?.status === "PENDING" ? "Đang chờ worker nhận tác vụ..." : null
+                    ),
+                };
+                return active && sameTaskId(item?.taskId, active.taskId)
                     ? {
-                        ...item,
+                        ...normalized,
                         ...active,
                         taskId: item.taskId,
                         originalUrl: item.originalUrl ?? active.originalUrl ?? active.url,
                     }
-                    : item
-            ));
+                    : normalized;
+            });
             setHistory(hydratedItems);
             setPageInfo(hasPageMetadata
                 ? {
