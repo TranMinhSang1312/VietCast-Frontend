@@ -13,11 +13,54 @@ import {
   Clock3,
   Database,
   Headphones,
+  CheckCircle2,
+  Layers3,
+  FileText,
 } from "lucide-react";
 import { PRICING } from "../config/pricing";
 
 // Reused across the page so the surface tokens stay consistent.
 const SURFACE = "rounded-3xl border border-white/[0.06] bg-white/[0.025] backdrop-blur-xl";
+
+const HERO_PROOFS = [
+  {
+    label: "Tính phí trước",
+    value: "Xem credit ước tính trước khi bấm xử lý.",
+  },
+  {
+    label: "Đầu ra rõ ràng",
+    value: "Video, SRT hoặc cả hai theo từng chế độ.",
+  },
+  {
+    label: "Lưu trữ an toàn",
+    value: "Kết quả được giữ trong 7 ngày rồi tự dọn.",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Dán link hoặc tải video lên",
+    body: "Chọn video từ YouTube, TikTok, Douyin hoặc tệp sẵn có để hệ thống lấy khung hình và xác định thời lượng.",
+  },
+  {
+    step: "02",
+    title: "Chọn chế độ bạn cần",
+    body: "Dịch phụ đề, giữ tiếng gốc, lồng tiếng AI hoặc xóa logo. Bạn thấy chi phí trước khi bấm xử lý.",
+  },
+  {
+    step: "03",
+    title: "Nhận video sạch và tải về",
+    body: "Kết quả được trả về theo đúng chế độ đã chọn, có lịch sử để tải lại khi cần.",
+  },
+];
+
+const VALUE_POINTS = [
+  "Không cần hiểu pipeline",
+  "Hoàn credit nếu lỗi",
+  "SRT đi kèm ở các chế độ phù hợp",
+  "Hiển thị tiến độ rõ ràng",
+];
 
 // The hero CTA. Same MagneticCTA pattern as Pricing.jsx so the two
 // pages feel like one brand without re-implementing it here. Kept
@@ -111,6 +154,22 @@ export default function LandingPage() {
               không có gói tháng.
             </p>
 
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {HERO_PROOFS.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3.5"
+                >
+                  <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-500">
+                    {item.label}
+                  </div>
+                  <div className="mt-1.5 text-sm leading-snug text-slate-200">
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="flex flex-wrap items-center gap-3 mt-2">
               <MagneticPrimary>
                 <Play className="w-4 h-4 fill-current" />
@@ -125,20 +184,17 @@ export default function LandingPage() {
               </a>
             </div>
 
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-xs font-medium text-slate-500">
-              <li className="inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.5)]" />
-                Giữ nhạc nền
-              </li>
-              <li className="inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_12px_2px_rgba(129,140,248,0.5)]" />
-                SRT song ngữ
-              </li>
-              <li className="inline-flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shadow-[0_0_12px_2px_rgba(167,139,250,0.5)]" />
-                Hoàn credit khi lỗi
-              </li>
-            </ul>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {VALUE_POINTS.map((point) => (
+                <div
+                  key={point}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.05] bg-white/[0.015] px-4 py-3 text-xs font-medium text-slate-400"
+                >
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" />
+                  {point}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Hero right: a single "trust" card showing the cost of a
@@ -242,6 +298,97 @@ export default function LandingPage() {
               accent
             />
           </div>
+        </section>
+
+        <section className="mt-24 grid grid-cols-1 gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+          <div>
+            <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-indigo-300">
+              Cách hoạt động
+            </div>
+            <h2 className="mt-3 text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white text-balance">
+              Ba bước. Một kết quả rõ ràng.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400 sm:mt-4 sm:text-base">
+              Người dùng chỉ cần chọn video, chọn chế độ và xem kết quả. Phần
+              còn lại — tải, tách âm thanh, dịch, tạo giọng và đóng gói — được
+              xử lý phía sau để bạn không phải chạm vào chi tiết kỹ thuật.
+            </p>
+
+            <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+              {HOW_IT_WORKS.map((item) => (
+                <article
+                  key={item.step}
+                  className={`${SURFACE} p-6 flex flex-col gap-4 hover:border-white/[0.12] transition`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-400/20 bg-indigo-500/10 font-mono text-sm font-bold text-indigo-200">
+                      {item.step}
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white leading-tight text-balance">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-slate-400">
+                    {item.body}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <aside className={`${SURFACE} p-6 sm:p-7`}>
+            <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300">
+              <Layers3 className="h-4 w-4" />
+              Điều người dùng nhận được
+            </div>
+            <div className="mt-4 space-y-4">
+              <div className="rounded-2xl border border-white/[0.06] bg-slate-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-emerald-400/10 p-2 text-emerald-300">
+                    <Mic className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white">Lồng tiếng AI</div>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                      Có bản video thành phẩm, phù hợp khi muốn nội dung nghe như
+                      được nói lại bằng tiếng Việt.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/[0.06] bg-slate-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-indigo-400/10 p-2 text-indigo-300">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white">Phụ đề SRT</div>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                      Dành cho người chỉ cần bản dịch gọn, nhanh, không render lại
+                      video.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/[0.06] bg-slate-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-yellow-400/10 p-2 text-yellow-300">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white">Rõ ràng ngay từ đầu</div>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                      Chi phí, thời lượng và đầu ra hiển thị trước khi chạy, nên
+                      user biết mình sẽ nhận gì.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
         </section>
 
         {/* FEATURE STRIP: three quiet, generous cards. No equal-card
