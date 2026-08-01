@@ -11,9 +11,9 @@ export const VIDEO_TASK_NOTIFICATION_KEY = "vc_task_notification";
 const FULL_PIPELINE = Object.freeze([
   { key: "download", label: "Tải video" },
   { key: "audio", label: "Tách audio" },
-  { key: "stt", label: "Nhận dạng giọng nói (STT)" },
+  { key: "stt", label: "Nhận dạng lời thoại" },
   { key: "translate", label: "Dịch phụ đề" },
-  { key: "tts", label: "Tổng hợp giọng đọc (TTS)" },
+  { key: "tts", label: "Tạo giọng đọc" },
   { key: "render", label: "Render và lưu kết quả" },
 ]);
 
@@ -90,7 +90,7 @@ export function getPipelineProgress({ audioMode, progress = 0, message, status }
 export function getPipelineStageLabel(task) {
   if (!task) return "Đang chuẩn bị...";
   if (task.status === "COMPLETED") return "Đã hoàn tất";
-  if (task.status === "FAILED") return "Đã dừng — credit sẽ được hoàn nếu đủ điều kiện";
+  if (task.status === "FAILED") return "Đã dừng — số dư sẽ được hoàn tự động";
   const state = getPipelineProgress(task);
   return state.steps[state.activeIndex]?.label || "Đang xử lý...";
 }

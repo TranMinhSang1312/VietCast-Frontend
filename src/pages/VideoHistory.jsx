@@ -160,7 +160,8 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
         try {
             await onRetry(video.taskId);
         } catch (err) {
-            setActionError(err?.message || "Không thể chạy lại tác vụ. Vui lòng thử lại sau.");
+            console.error("[video-retry] failed", err);
+            setActionError("Không thể chạy lại tác vụ lúc này. Vui lòng thử lại sau.");
         } finally {
             setIsRetrying(false);
         }
@@ -210,7 +211,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                 window.open(fallbackUrl, "_blank", "noopener");
             } else {
                 console.error("[download] failed", err);
-                setActionError(msg || err.message || "Không thể tải file. Vui lòng thử lại.");
+                setActionError("Không thể tải tệp lúc này. Vui lòng thử lại sau.");
             }
         } finally {
             setDownloadingType(null);
@@ -425,8 +426,8 @@ export default function VideoHistory() {
             )));
             fetchHistory(false);
         } catch (err) {
-            const serverMessage = err.response?.data?.message || err.message || "Không thể chạy lại tác vụ. Vui lòng thử lại sau.";
-            throw new Error(serverMessage, { cause: err });
+            console.error("[video-retry] failed", err);
+            throw new Error("Không thể chạy lại tác vụ lúc này. Vui lòng thử lại sau.", { cause: err });
         }
     }, [fetchHistory]);
 

@@ -121,7 +121,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
               id="topup-title"
               className="text-sm font-bold tracking-tight text-slate-200"
             >
-              Nạp credit
+              Nạp số dư
             </h2>
           </div>
           <button
@@ -141,10 +141,10 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
           <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3.5 text-xs text-yellow-200 space-y-1">
             <div className="flex items-center gap-2 font-bold text-yellow-300">
               <Gift className="w-4 h-4 shrink-0" />
-              <span>🎁 Ưu đãi Đăng ký mới (10.000 Credit Bonus)</span>
+              <span>🎁 Tặng 10.000đ số dư cho tài khoản mới</span>
             </div>
             <p className="text-[11px] leading-relaxed text-yellow-200/90 font-light">
-              Tài khoản mới được tặng <strong className="font-semibold text-white">10.000 credit bonus</strong> (HSD: 3 ngày). Nếu nạp từ <strong className="font-semibold text-white">10.000đ trở lên</strong> trong 3 ngày này, hệ thống sẽ tự động <strong className="font-semibold text-yellow-300">bảo lưu trọn 10.000 credit bonus thành credit vĩnh viễn</strong>!
+              Số dư tặng có hạn 3 ngày. Nếu nạp từ <strong className="font-semibold text-white">10.000đ trở lên</strong> trong thời gian này, hệ thống sẽ tự động <strong className="font-semibold text-yellow-300">bảo lưu trọn 10.000đ thành số dư không hết hạn</strong>.
             </p>
           </div>
 
@@ -203,7 +203,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
               htmlFor="topup-custom"
               className="block text-xs font-mono uppercase tracking-wider text-zinc-400 mb-2 select-none"
             >
-              Hoặc nạp đúng số credit đang thiếu
+              Hoặc nạp đúng số tiền đang thiếu
             </label>
             <input
               id="topup-custom"
@@ -220,8 +220,8 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
           {missingCredits > 0 && (
             <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-3 text-xs leading-relaxed text-emerald-100">
               {missingCredits >= MIN_AMOUNT
-                ? `Đã nhập đúng ${formatVnd(missingCredits)}đ — tương ứng ${formatVnd(missingCredits)} credit bạn đang thiếu.`
-                : `Bạn đang thiếu ${formatVnd(missingCredits)} credit. Mức nạp tối thiểu qua cổng thanh toán là ${formatVnd(MIN_AMOUNT)}đ.`}
+                ? `Đã điền đúng ${formatVnd(missingCredits)}đ bạn đang thiếu.`
+                : `Bạn đang thiếu ${formatVnd(missingCredits)}đ. Mức nạp tối thiểu qua cổng thanh toán là ${formatVnd(MIN_AMOUNT)}đ.`}
             </div>
           )}
 
@@ -235,9 +235,9 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">Số credit nhận được</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">Số dư nhận được</div>
               <div className="text-base font-bold text-yellow-300 mt-0.5">
-                {formatVnd(effectiveCredits)} credit
+                {formatVnd(effectiveCredits)}đ
               </div>
             </div>
             </div>
@@ -251,7 +251,7 @@ export default function TopupModal({ isOpen, onClose, onSuccess, prefillAmount }
                 <div className="mt-0.5 font-semibold text-slate-200">≈ {dubbingMinutes} phút</div>
               </div>
             </div>
-            <p className="mt-2 text-[10px] text-slate-500">Quy đổi hiện tại: 1 VND = 1 credit. Số phút được làm tròn xuống.</p>
+            <p className="mt-2 text-[10px] text-slate-500">Số dư hiển thị tương đương VND. Số phút được làm tròn xuống.</p>
           </div>
 
           {/* Error display */}

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { VND_PER_CREDIT, formatVnd } from "../services/payment";
-import { formatCredit, formatCountdown } from "../utils/format";
+import { formatCountdown } from "../utils/format";
 import { PRICING } from "../config/pricing";
 
 const RATE_PER_MINUTE = PRICING.dubPerMinute;
@@ -31,10 +31,6 @@ const MAX_MINUTES = PRICING.maxMinutes;
 const MIN_MINUTES = 1;
 
 const PRESET_AMOUNTS = [100_000, 200_000, 500_000, 1_000_000, 2_000_000];
-
-function credit(n) {
-  return n.toLocaleString("vi-VN") + " credit";
-}
 
 // Shared glass surface tokens. Keeping these as local strings avoids
 // drifting `bg-white/5` variants across the three cards.
@@ -164,10 +160,8 @@ export default function Pricing() {
             </span>
           </h1>
           <p className="mt-6 max-w-2xl text-base sm:text-lg text-slate-400 leading-relaxed">
-            Mỗi tác vụ AI trên VietCast tiêu tốn một lượng credit theo bảng
-            dưới đây. Bạn nạp VND qua PayOS, hệ thống quy đổi theo tỉ lệ{" "}
-            <span className="font-mono text-slate-200">{formatVnd(VND_PER_CREDIT)} VND</span>{" "}
-            = <span className="font-mono text-slate-200">1 credit</span>.
+            Giá được tính theo phút và theo đúng chức năng bạn chọn. Bạn thanh
+            toán bằng VND qua PayOS, không có gói tháng hay phí ẩn.
           </p>
 
           {/* The yellow hook. The Free SRT pill is the single most
@@ -178,7 +172,7 @@ export default function Pricing() {
               Tặng SRT khi dịch hoặc lồng tiếng
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-              Hoàn credit tự động khi tác vụ lỗi
+              Hoàn số dư tự động khi tác vụ lỗi
             </span>
           </div>
 
@@ -197,7 +191,7 @@ export default function Pricing() {
               <div className="flex items-center gap-2">
                 <Gift className="w-4 h-4" />
                 <span className="text-sm font-semibold">
-                  Bạn đang có {formatCredit(bonusAmount)} credit tặng khi đăng ký
+                  Bạn đang có {formatVnd(bonusAmount)}đ số dư dùng thử
                 </span>
               </div>
               <span className={"text-xs " + (bonusUrgent ? "text-amber-200/90" : "text-emerald-200/90")}>
@@ -219,17 +213,17 @@ export default function Pricing() {
                 Một nền tảng. Mọi bước của video.
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-[1.1]">
-                Lồng tiếng, lọc logo, xuất phụ đề. Tất cả trong một dòng credit.
+                Lồng tiếng, lọc logo, xuất phụ đề. Giá rõ trước khi chạy.
               </h2>
               <p className="text-base text-slate-400 leading-relaxed">
                 Không có gói tháng, không có phí ẩn. Bạn nạp bao nhiêu dùng
-                bấy nhiêu. Hết credit thì nạp tiếp, dừng bất kỳ lúc nào.
+                bấy nhiêu và có thể dừng bất kỳ lúc nào.
               </p>
 
               <ul className="flex flex-col gap-3 mt-2">
                 {[
                   "Mỗi chức năng có mức giá riêng theo đúng tài nguyên sử dụng",
-                  `Giữ tiếng gốc / video câm chỉ ${BASIC_RATE_PER_MINUTE} credit/phút, tối thiểu ${BASIC_MINIMUM} credit`,
+                  `Giữ tiếng gốc / video câm chỉ ${formatVnd(BASIC_RATE_PER_MINUTE)}đ/phút, tối thiểu ${formatVnd(BASIC_MINIMUM)}đ/tác vụ`,
                   "Giới hạn " + MAX_MINUTES + " phút / lần — video dài hơn vui lòng cắt trước khi xử lý",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2.5 text-sm text-slate-300">
@@ -242,7 +236,7 @@ export default function Pricing() {
               <div className="mt-auto pt-4">
                 <MagneticCTA className="w-full sm:w-auto" onClick={() => navigate(startPath)}>
                   <Coins className="w-4 h-4" />
-                  Nạp credit ngay
+                  Nạp số dư ngay
                 </MagneticCTA>
                 <p className="mt-3 text-[11px] text-slate-500">
                   Tối thiểu {formatVnd(10_000)} VND. Thanh toán qua PayOS.
@@ -286,10 +280,10 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-2">
                   <span className="text-6xl font-extrabold tracking-[-0.04em] text-white">
-                    {RATE_PER_MINUTE.toLocaleString("vi-VN")}
+                    {formatVnd(RATE_PER_MINUTE)}
                   </span>
                   <span className="text-base font-medium text-slate-400">
-                    credit / phút
+                    đ / phút
                   </span>
                 </div>
                 <p className="mt-3 text-sm text-slate-400 leading-relaxed">
@@ -315,11 +309,11 @@ export default function Pricing() {
               </div>
 
               <div className="relative flex flex-col gap-3 rounded-2xl border border-white/[0.05] bg-slate-950/40 p-4">
-                <DetailRow icon={Clock} label="Đơn giá" value={`${RATE_PER_MINUTE.toLocaleString("vi-VN")} credit / phút`} />
+                <DetailRow icon={Clock} label="Đơn giá" value={`${formatVnd(RATE_PER_MINUTE)}đ / phút`} />
                 <DetailRow
                   icon={Wallet}
                   label="Số dư tối thiểu để bắt đầu"
-                  value={credit(RATE_PER_MINUTE * MIN_MINUTES)}
+                  value={`${formatVnd(RATE_PER_MINUTE * MIN_MINUTES)}đ / tác vụ`}
                 />
                 <DetailRow
                   icon={ShieldCheck}
@@ -329,16 +323,16 @@ export default function Pricing() {
                 <DetailRow
                   icon={RefreshCcw}
                   label="Cơ chế thu phí"
-                  value="Tính theo giây thực tế, tự động hoàn trả credit dư"
+                  value="Tính theo giây thực tế, tự động hoàn phần dư"
                   accent="text-emerald-300"
                 />
               </div>
 
               <ul className="relative flex flex-col gap-2.5 text-sm text-slate-300">
-                <Bullet text="Lồng tiếng đè giọng mới (mode dub)" />
-                <Bullet text="Lồng tiếng kết hợp giữ nhạc nền (mode mix)" />
-                <Bullet text="Bao trọn gói dịch phụ đề, không thu thêm" />
-                <Bullet text="Hoàn lại tiền cọc khi job thất bại" />
+                <Bullet text="Lồng tiếng thay hoàn toàn giọng gốc" />
+                <Bullet text="Hoặc giữ nhạc nền và trộn thêm giọng Việt" />
+                <Bullet text="Bao gồm dịch phụ đề và file SRT" />
+                <Bullet text="Hoàn lại toàn bộ số dư nếu xử lý thất bại" />
               </ul>
 
               <div className="relative mt-auto pt-2">
@@ -365,10 +359,10 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold tracking-[-0.03em] text-white">
-                    {BASIC_RATE_PER_MINUTE.toLocaleString("vi-VN")}
+                    {formatVnd(BASIC_RATE_PER_MINUTE)}
                   </span>
                   <span className="text-sm font-medium text-slate-400">
-                    credit / phút
+                    đ / phút
                   </span>
                 </div>
               </div>
@@ -376,7 +370,7 @@ export default function Pricing() {
               <ul className="relative flex flex-col gap-2 text-sm text-slate-300">
                 <Bullet text="Tải và giữ nguyên âm thanh gốc của video" />
                 <Bullet text="Loại bỏ âm thanh để xuất video câm" />
-                <Bullet text={`Phí tối thiểu ${BASIC_MINIMUM.toLocaleString("vi-VN")} credit mỗi tác vụ`} />
+                <Bullet text={`Tối thiểu ${formatVnd(BASIC_MINIMUM)}đ mỗi tác vụ`} />
                 <Bullet text={`Tối đa ${MAX_MINUTES} phút mỗi video`} />
                 <Bullet text="Tự động hoàn tiền 100% khi xử lý thất bại" />
               </ul>
@@ -406,10 +400,10 @@ export default function Pricing() {
               <div className="relative">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold tracking-[-0.03em] text-white">
-                    {SUBTITLE_RATE_PER_MINUTE.toLocaleString("vi-VN")}
+                    {formatVnd(SUBTITLE_RATE_PER_MINUTE)}
                   </span>
                   <span className="text-sm font-medium text-slate-400">
-                    credit / phút
+                    đ / phút
                   </span>
                 </div>
               </div>
@@ -418,7 +412,7 @@ export default function Pricing() {
                 <Bullet text="Nhận dạng lời nói và dịch sang tiếng Việt" />
                 <Bullet text="Xuất file SRT, không tạo giọng đọc AI" />
                 <Bullet text="Không render hoặc upload lại video" />
-                <Bullet text={`Phí tối thiểu ${SUBTITLE_RATE_PER_MINUTE.toLocaleString("vi-VN")} credit mỗi tác vụ`} />
+                <Bullet text={`Tối thiểu ${formatVnd(SUBTITLE_RATE_PER_MINUTE)}đ mỗi tác vụ`} />
                 <Bullet text="Tự động hoàn tiền 100% khi xử lý thất bại" />
               </ul>
 
@@ -436,9 +430,9 @@ export default function Pricing() {
             title="Đặt cọc trước"
             body={
               <>
-                Hệ thống kiểm tra số dư trước khi xử lý. Bạn cần có{" "}
-                <strong className="text-slate-200">đủ số credit được báo trước</strong>{" "}
-                để bắt đầu; giữ tiếng gốc/video câm có mức tối thiểu {credit(BASIC_MINIMUM)}.
+                Hệ thống báo trước chi phí và chỉ bắt đầu khi số dư của bạn đủ.
+                Giữ tiếng gốc hoặc video câm có mức tối thiểu{" "}
+                <strong className="text-slate-200">{formatVnd(BASIC_MINIMUM)}đ/tác vụ</strong>.
               </>
             }
           />
@@ -447,8 +441,8 @@ export default function Pricing() {
             title="Hoàn tiền khi lỗi"
             body={
               <>
-                Nếu job thất bại ở bất kỳ bước nào, hệ thống tự hoàn lại toàn
-                bộ credit đã trừ và ghi dòng <code className="text-slate-300 font-mono">HOAN_CREDIT</code> trong lịch sử tiêu.
+                Nếu tác vụ thất bại ở bất kỳ bước nào, hệ thống tự hoàn toàn bộ
+                số dư đã trừ. Bạn có thể kiểm tra lại trong lịch sử tiêu.
               </>
             }
           />
@@ -457,9 +451,9 @@ export default function Pricing() {
             title="Minh bạch & an toàn"
             body={
               <>
-                Mỗi giao dịch trừ hoặc hoàn credit đều có mã tham chiếu (job id)
-                để đối chiếu. Tỉ lệ quy đổi cố định {formatVnd(VND_PER_CREDIT)}{" "}
-                VND = 1 credit. Xử lý hình ảnh cộng {credit(FILTER_RATE_PER_MINUTE)}/phút.
+                Mỗi giao dịch trừ hoặc hoàn đều có mã đối chiếu. Xử lý hình ảnh
+                như xóa logo hoặc che phụ đề có giá thêm{" "}
+                <strong className="text-slate-200">{formatVnd(FILTER_RATE_PER_MINUTE)}đ/phút</strong>.
               </>
             }
           />
@@ -486,9 +480,9 @@ export default function Pricing() {
               <thead>
                 <tr className="bg-slate-950/60 text-[10px] font-mono uppercase tracking-[0.18em] text-slate-500">
                   <th className="text-left px-5 py-3 font-medium">Số tiền thanh toán</th>
-                  <th className="text-right px-5 py-3 font-medium">Credit nhận được</th>
+                  <th className="text-right px-5 py-3 font-medium">Phút phụ đề</th>
                   <th className="text-right px-5 py-3 font-medium hidden sm:table-cell">
-                    Tương đương
+                    Phút lồng tiếng
                   </th>
                 </tr>
               </thead>
@@ -502,12 +496,10 @@ export default function Pricing() {
                       {formatVnd(vnd)} VND
                     </td>
                     <td className="px-5 py-3 text-right font-bold text-emerald-300">
-                      {c.toLocaleString("vi-VN")} credit
+                      ≈ {Math.floor(c / SUBTITLE_RATE_PER_MINUTE)} phút
                     </td>
                     <td className="px-5 py-3 text-right text-xs text-slate-500 hidden sm:table-cell">
-                      ≈ {Math.floor(c / SUBTITLE_RATE_PER_MINUTE)} phút phụ đề{" "}
-                      <span className="text-slate-700">·</span>{" "}
-                      {Math.floor(c / RATE_PER_MINUTE)} phút lồng tiếng
+                      ≈ {Math.floor(c / RATE_PER_MINUTE)} phút
                     </td>
                   </tr>
                 ))}
@@ -525,23 +517,23 @@ export default function Pricing() {
               a={
                 <>
                   VietCast chỉ chạy những bước chức năng đã chọn. Giữ tiếng
-                  gốc/video câm không dùng STT, dịch hoặc tạo giọng nên có giá{" "}
-                  <strong className="text-slate-200">{BASIC_RATE_PER_MINUTE} credit/phút</strong>.
-                  Phụ đề dùng STT và dịch nên có giá {SUBTITLE_RATE_PER_MINUTE} credit/phút;
-                  lồng tiếng chạy đầy đủ pipeline nên có giá {RATE_PER_MINUTE} credit/phút.
+                  gốc/video câm không cần nhận dạng, dịch hoặc tạo giọng nên có giá{" "}
+                  <strong className="text-slate-200">{formatVnd(BASIC_RATE_PER_MINUTE)}đ/phút</strong>.
+                  Phụ đề có giá {formatVnd(SUBTITLE_RATE_PER_MINUTE)}đ/phút;
+                  lồng tiếng có giá {formatVnd(RATE_PER_MINUTE)}đ/phút.
                 </>
               }
               open={openFaq === 0}
               onToggle={() => setOpenFaq(openFaq === 0 ? -1 : 0)}
             />
             <Faq
-              q={`Mức tối thiểu ${BASIC_MINIMUM} credit nghĩa là gì?`}
+              q={`Mức tối thiểu ${formatVnd(BASIC_MINIMUM)}đ nghĩa là gì?`}
               a={
                 <>
-                  Giữ tiếng gốc và video câm thu ít nhất {BASIC_MINIMUM} credit
+                  Giữ tiếng gốc và video câm thu ít nhất {formatVnd(BASIC_MINIMUM)}đ
                   cho một tác vụ để bù chi phí kiểm tra URL, tải và upload file.
                   Khi giá theo thời lượng vượt mức này, hệ thống tính đúng theo
-                  {" "}{BASIC_RATE_PER_MINUTE} credit/phút và đối soát đến từng giây.
+                  {" "}{formatVnd(BASIC_RATE_PER_MINUTE)}đ/phút và đối soát đến từng giây.
                 </>
               }
               open={openFaq === 1}
@@ -553,7 +545,7 @@ export default function Pricing() {
                 <>
                   Không. Phí lồng tiếng đã bao gồm nhận dạng, dịch và file SRT.
                   Giữ tiếng gốc/video câm không tạo SRT; nếu chỉ cần phụ đề,
-                  hãy chọn chế độ Dịch phụ đề với giá {SUBTITLE_RATE_PER_MINUTE} credit/phút.
+                  hãy chọn chế độ Dịch phụ đề với giá {formatVnd(SUBTITLE_RATE_PER_MINUTE)}đ/phút.
                 </>
               }
               open={openFaq === 2}
@@ -575,14 +567,12 @@ export default function Pricing() {
               onToggle={() => setOpenFaq(openFaq === 3 ? -1 : 3)}
             />
             <Faq
-              q="Credit là gì và mua bằng cách nào?"
+              q="Nạp tiền và theo dõi số dư như thế nào?"
               a={
                 <>
-                  Credit là đơn vị dùng để trả phí cho các tác vụ AI trên
-                  VietCast. Bạn nạp VND qua PayOS, hệ thống quy đổi theo tỉ lệ{" "}
-                  {formatVnd(VND_PER_CREDIT)} VND = 1 credit. Vào mục "Lịch sử
-                  nạp" hoặc "Lịch sử tiêu" ở sidebar để xem chi tiết từng giao
-                  dịch.
+                  Bạn nạp VND an toàn qua PayOS và dùng số dư đó cho từng tác vụ.
+                  Trước khi xử lý, VietCast luôn báo chi phí dự kiến. Vào mục
+                  "Lịch sử nạp" hoặc "Lịch sử tiêu" để xem chi tiết từng giao dịch.
                 </>
               }
               open={openFaq === 4}
