@@ -16,7 +16,7 @@ import { API_BASE_URL_PROVIDER } from "../config";
 import { getVideoModePolicy } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 import PaginationControls from "../components/history/PaginationControls";
-import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
+import SubtitlePreviewDialog from "../components/tasks/SubtitlePreviewDialog";
 import {
     getPipelineProgress,
     getPipelineStageLabel,
@@ -139,6 +139,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const [isRetrying, setIsRetrying] = useState(false);
     const [downloadingType, setDownloadingType] = useState(null); // 'video' | 'srt' | null
     const [actionError, setActionError] = useState(null);
+    const [subtitlePreviewOpen, setSubtitlePreviewOpen] = useState(false);
 
     const knownMode = Object.hasOwn(MODE_ICONS, video.audioMode);
     const policy = getVideoModePolicy(video.audioMode);
@@ -167,15 +168,9 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
         }
     };
 
-    // Mobile opens the public result inline for the native media viewer.
-    // Desktop keeps the backend's presigned attachment download.
     const handleDownload = async (type) => {
         if (downloadingType) return; // single in-flight per row
         setActionError(null);
-        if (type === "video" && video.videoUrl && shouldOpenVideoInline()) {
-            openVideoInline(video.videoUrl);
-            return;
-        }
         setDownloadingType(type);
         try {
             const resp = await axios.get(
@@ -286,11 +281,19 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                         {downloadingType === "video" ? (
                             <span>Đang tải...</span>
                         ) : (
-                            <>
-                                <span className="md:hidden">Lưu vào thư viện</span>
-                                <span className="hidden md:inline">Tải video</span>
-                            </>
+                            <span>Tải video</span>
                         )}
+                    </button>
+                )}
+
+                {isCompleted && mode.srt && video.srtUrl && (
+                    <button
+                        type="button"
+                        onClick={() => setSubtitlePreviewOpen(true)}
+                        className="inline-flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-400/20 text-indigo-100 text-xs font-semibold active:scale-[0.98] transition select-none cursor-pointer"
+                    >
+                        <Subtitles className="w-4 h-4" />
+                        <span>Xem phụ đề</span>
                     </button>
                 )}
 
@@ -336,6 +339,13 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     </span>
                 )}
             </footer>
+            {subtitlePreviewOpen && (
+                <SubtitlePreviewDialog
+                    taskId={video.taskId}
+                    open
+                    onClose={() => setSubtitlePreviewOpen(false)}
+                />
+            )}
         </article>
     );
 });

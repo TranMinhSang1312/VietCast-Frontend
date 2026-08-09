@@ -14,6 +14,7 @@ import {
 } from "../../store/slices/delogoSlice";
 
 const POLL_INTERVAL_MS = 3000;
+const NOTIFICATION_AUTO_DISMISS_MS = 30 * 1000;
 
 export default function DelogoTaskMonitor({ onSettled }) {
   const dispatch = useDispatch();
@@ -87,7 +88,7 @@ export default function DelogoTaskMonitor({ onSettled }) {
     if (!notification) return undefined;
     const timeoutId = window.setTimeout(() => {
       dispatch(dismissDelogoNotification());
-    }, 10000);
+    }, NOTIFICATION_AUTO_DISMISS_MS);
     return () => window.clearTimeout(timeoutId);
   }, [dispatch, notification]);
 

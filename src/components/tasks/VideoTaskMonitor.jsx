@@ -19,7 +19,7 @@ import {
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const VISIBLE_POLL_MS = 3000;
 const HIDDEN_POLL_MS = 10000;
-const NOTIFICATION_MAX_AGE_MS = 60 * 60 * 1000;
+const NOTIFICATION_AUTO_DISMISS_MS = 30 * 1000;
 
 function normalizeTask(data, previous) {
   const rawStatus = String(data?.status || previous?.status || "PROCESSING").toUpperCase();
@@ -53,7 +53,10 @@ function readNotification() {
     const raw = localStorage.getItem(VIDEO_TASK_NOTIFICATION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.createdAt || Date.now() - Date.parse(parsed.createdAt) > NOTIFICATION_MAX_AGE_MS) {
+    if (
+      !parsed?.createdAt
+      || Date.now() - Date.parse(parsed.createdAt) >= NOTIFICATION_AUTO_DISMISS_MS
+    ) {
       localStorage.removeItem(VIDEO_TASK_NOTIFICATION_KEY);
       return null;
     }
@@ -87,10 +90,26 @@ export default function VideoTaskMonitor({ onSettled }) {
   const taskRef = useRef(task);
   const pollTimerRef = useRef(null);
   const requestInFlightRef = useRef(false);
+  const dismissNotification = useCallback(() => {
+    localStorage.removeItem(VIDEO_TASK_NOTIFICATION_KEY);
+    setNotification(null);
+  }, []);
+
 
   useEffect(() => {
     taskRef.current = task;
   }, [task]);
+
+  useEffect(() => {
+    if (!notification) return undefined;
+
+    const createdAt = Date.parse(notification.createdAt || "");
+    const elapsedMs = Number.isFinite(createdAt) ? Math.max(0, Date.now() - createdAt) : 0;
+    const remainingMs = Math.max(0, NOTIFICATION_AUTO_DISMISS_MS - elapsedMs);
+    const timeoutId = window.setTimeout(dismissNotification, remainingMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [dismissNotification, notification]);
 
   const persistStatus = useCallback((nextTask) => {
     taskRef.current = nextTask;
@@ -231,10 +250,6 @@ export default function VideoTaskMonitor({ onSettled }) {
   const pipeline = useMemo(() => getPipelineProgress(task || {}), [task]);
   const stageLabel = getPipelineStageLabel(task);
   const showBackgroundCard = task?.status === "PROCESSING" && location.pathname !== "/dashboard";
-  const dismissNotification = () => {
-    localStorage.removeItem(VIDEO_TASK_NOTIFICATION_KEY);
-    setNotification(null);
-  };
 
   return (
     <>

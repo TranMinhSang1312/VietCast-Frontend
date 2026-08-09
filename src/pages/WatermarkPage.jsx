@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
-import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
+
 import { PRICING, estimateProcessingTime, formatVnd } from "../config/pricing";
 import { handleApiError } from "../utils/apiError";
 import {
@@ -78,10 +78,7 @@ export default function WatermarkPage() {
   const handleDownloadResult = async () => {
     if (!taskResult?.taskId || isDownloading) return;
     setDownloadError(null);
-    if (taskResult.videoUrl && shouldOpenVideoInline()) {
-      openVideoInline(taskResult.videoUrl);
-      return;
-    }
+
     setIsDownloading(true);
     try {
       const resp = await axios.get(

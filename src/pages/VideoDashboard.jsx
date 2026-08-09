@@ -12,7 +12,8 @@ import {
   SECONDARY_VIDEO_MODE_IDS,
 } from "../config/videoModes";
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
-import { openVideoInline, shouldOpenVideoInline } from "../utils/mobileVideo";
+import { openVideoInline } from "../utils/mobileVideo";
+import SubtitlePreviewDialog from "../components/tasks/SubtitlePreviewDialog";
 import {
   VIDEO_TASK_STORAGE_KEY,
   getPipelineProgress,
@@ -421,15 +422,8 @@ const handleReset = useCallback(() => {
         clearPollInterval();
     }, [clearPollInterval, stopVoicePreview, targetLanguage]);
 
-    // Mobile opens the public R2 URL inline so the OS media viewer can
-    // expose its save-to-library action. Desktop keeps the presigned
-    // attachment flow for a conventional file download.
     const handleDownload = useCallback(async (taskId, type) => {
         if (!taskId) return;
-        if (type === "video" && result?.videoUrl && shouldOpenVideoInline()) {
-            openVideoInline(result.videoUrl);
-            return;
-        }
         try {
             const resp = await axios.get(
                 `${API_BASE_URL}/api/v1/videos/${taskId}/download`,
@@ -1622,6 +1616,7 @@ const ResultPanel = memo(function ResultPanel({
   const elapsedText = useElapsedTime(result.submittedAt, isProcessing);
   const pipeline = getPipelineProgress({ ...result, progress });
   const stageLabel = getPipelineStageLabel({ ...result, progress });
+  const [subtitlePreviewOpen, setSubtitlePreviewOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col justify-between rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-6">
@@ -1814,14 +1809,24 @@ const ResultPanel = memo(function ResultPanel({
 
         <div className="flex flex-col sm:flex-row gap-2.5">
           {output.srt && result.srtUrl && isCompleted && (
-            <button
-              type="button"
-              onClick={() => onDownload(result.taskId, "srt")}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-slate-200 text-sm font-semibold active:scale-[0.98] transition cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Tải phụ đề SRT</span>
-            </button>
+            <div className="flex flex-1 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSubtitlePreviewOpen(true)}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-400/20 text-indigo-100 text-sm font-semibold active:scale-[0.98] transition cursor-pointer"
+              >
+                <Subtitles className="w-4 h-4" />
+                <span>Xem phụ đề</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onDownload(result.taskId, "srt")}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-slate-200 text-sm font-semibold active:scale-[0.98] transition cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Tải SRT</span>
+              </button>
+            </div>
           )}
           {output.video && result.videoUrl && isCompleted && (
             <button
@@ -1830,8 +1835,7 @@ const ResultPanel = memo(function ResultPanel({
               className="flex-1 inline-flex items-center justify-center gap-2 px-4.5 py-3 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-semibold shadow-[0_18px_60px_-18px_rgba(16,185,129,0.55)] active:scale-[0.98] transition cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              <span className="md:hidden">Lưu vào thư viện</span>
-              <span className="hidden md:inline">Tải Video</span>
+              <span>Tải Video</span>
             </button>
           )}
         </div>
@@ -1840,6 +1844,13 @@ const ResultPanel = memo(function ResultPanel({
           <p className="mt-3 text-[11px] text-slate-400/80 text-center select-none font-sans">
             💡 Tệp kết quả (Video & SRT) được tự động lưu trữ trong <strong>7 ngày</strong> trên hệ thống. Hãy tải về máy cá nhân của bạn.
           </p>
+        )}
+        {subtitlePreviewOpen && (
+          <SubtitlePreviewDialog
+            taskId={result.taskId}
+            open
+            onClose={() => setSubtitlePreviewOpen(false)}
+          />
         )}
       </div>
 
