@@ -46,8 +46,7 @@ export function AuthProvider({ children }) {
 
   const googleLogin = useCallback(
     async (idTokenArg) => {
-      const tokenString = typeof idTokenArg === "object" && idTokenArg?.idToken ? idTokenArg.idToken : idTokenArg;
-      const result = await dispatch(googleLoginThunk(tokenString));
+      const result = await dispatch(googleLoginThunk(idTokenArg));
       if (googleLoginThunk.rejected.match(result)) {
         throw new Error(result.payload || "Đăng nhập Google thất bại.");
       }
@@ -56,8 +55,8 @@ export function AuthProvider({ children }) {
     [dispatch]
   );
 
-  const register = useCallback(async ({ email, password }) => {
-    return await registerApi({ email, password });
+  const register = useCallback(async ({ email, password, referralCode }) => {
+    return await registerApi({ email, password, referralCode });
   }, []);
 
   const verifyEmail = useCallback(

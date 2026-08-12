@@ -65,6 +65,8 @@ const LANGUAGE_VOICE_MAP = {
     { value: "gcp:vi-VN-Neural2-D", label: "Google Neural2 Nam ⚡", provider: "Google AI", description: "Giọng nam Google Neural2 cao cấp, trầm ấm" },
     { value: "gcp:vi-VN-Wavenet-A", label: "Google WaveNet Nữ", provider: "Google AI", description: "Giọng nữ Google WaveNet chuẩn" },
     { value: "gcp:vi-VN-Wavenet-B", label: "Google WaveNet Nam", provider: "Google AI", description: "Giọng nam Google WaveNet chuẩn" },
+    { value: "eleven:vi-female", label: "ElevenLabs Nữ ✨", provider: "ElevenLabs", description: "Giọng nữ tự nhiên, giàu cảm xúc" },
+    { value: "eleven:vi-male", label: "ElevenLabs Nam ✨", provider: "ElevenLabs", description: "Giọng nam tự nhiên, rõ và ấm" },
   ],
   "English": [],
   "日本語": [],
@@ -87,7 +89,25 @@ const TRANSLATION_STYLES = [
 
 
 function supportsVoicePreview(voiceValue) {
-  return voiceValue.startsWith("gcp:");
+  return voiceValue.startsWith("gcp:") || voiceValue.startsWith("eleven:");
+}
+
+async function getVoicePreviewErrorMessage(error) {
+  const payload = error?.response?.data;
+  if (payload instanceof Blob) {
+    try {
+      const body = JSON.parse(await payload.text());
+      if (typeof body?.message === "string" && body.message.trim()) {
+        return body.message;
+      }
+    } catch {
+      // The provider error was not JSON; use the customer-safe fallback below.
+    }
+  }
+  if (typeof payload?.message === "string" && payload.message.trim()) {
+    return payload.message;
+  }
+  return "Không thể tải giọng mẫu. Vui lòng thử lại sau.";
 }
 
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
@@ -252,11 +272,9 @@ export default function VideoDashboard() {
       await audio.play();
     } catch (previewError) {
       if (requestId !== voicePreviewRequestRef.current) return;
+      const message = await getVoicePreviewErrorMessage(previewError);
       stopVoicePreview();
-      setVoicePreviewError(
-        previewError?.response?.data?.message ||
-          "Không thể tải giọng mẫu. Vui lòng thử lại sau.",
-      );
+      setVoicePreviewError(message);
     }
   }, [previewingVoice, stopVoicePreview]);
 
@@ -664,7 +682,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       }
 
       if ((audioMode === "dub" || audioMode === "mix") && !selectedVoice) {
-        setError("Ngôn ngữ này chưa có giọng Google TTS để lồng tiếng. Vui lòng chọn Tiếng Việt hoặc dùng chế độ chỉ tạo phụ đề.");
+        setError("Ngôn ngữ này chưa có giọng AI để lồng tiếng. Vui lòng chọn Tiếng Việt hoặc dùng chế độ chỉ tạo phụ đề.");
         return;
       }
 
@@ -1110,7 +1128,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                   >
                     {voiceOptions.length === 0 && (
                       <option value="">
-                        Chưa có giọng Google TTS cho ngôn ngữ này
+                        Chưa có giọng AI cho ngôn ngữ này
                       </option>
                     )}
                     {voiceOptions.map((opt) => (
@@ -1119,6 +1137,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                       </option>
                     ))}
                   </select>
+                  {selectedVoice.startsWith("eleven:") && (
+                    <p className="text-xs text-amber-300/90">
+                      Nếu hạn mức ElevenLabs trong tháng đã hết, VietCast sẽ tự tạo lại toàn bộ giọng đọc bằng Google cùng giới tính và không thu thêm credit.
+                    </p>
+                  )}
                   {voicePreviewError && (
                     <p className="text-xs text-rose-300" role="alert">
                       {voicePreviewError}
@@ -1279,7 +1302,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         previewFailedBalance
                           ? "Số dư chưa đủ. Vui lòng nạp thêm trước khi bắt đầu."
                           : voiceUnavailable
-                          ? "Ngôn ngữ này chưa có giọng Google TTS để lồng tiếng."
+                          ? "Ngôn ngữ này chưa có giọng AI để lồng tiếng."
                           : costPreviewLoading
                           ? "Đang tính chi phí..."
                           : undefined
@@ -1311,7 +1334,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                       ) : voiceUnavailable ? (
                         <>
                           <AlertCircle className="w-5 h-5" />
-                          <span>Chưa có giọng Google cho ngôn ngữ này</span>
+                          <span>Chưa có giọng AI cho ngôn ngữ này</span>
                         </>
                       ) : previewFailedBalance ? (
                         <>

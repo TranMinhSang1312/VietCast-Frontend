@@ -63,11 +63,11 @@ export async function login({ emailOrUsername, password }) {
 /**
  * Step 1 of the LOCAL sign-up flow.
  */
-export async function register({ email, password }) {
+export async function register({ email, password, referralCode }) {
   const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.register,
-    { email, password, deviceFingerprint },
+    { email, password, deviceFingerprint, referralCode: referralCode || undefined },
     { skipAuth: true }
   );
   return data;
@@ -88,12 +88,12 @@ export async function verifyEmail({ email, otp }) {
 /**
  * Google Sign-In.
  */
-export async function loginWithGoogle({ idToken }) {
+export async function loginWithGoogle({ idToken, referralCode }) {
   const tokenString = typeof idToken === "object" && idToken?.idToken ? idToken.idToken : idToken;
   const deviceFingerprint = getBrowserFingerprint();
   const { data } = await axios.post(
     ENDPOINTS.google,
-    { idToken: tokenString, deviceFingerprint },
+    { idToken: tokenString, deviceFingerprint, referralCode: referralCode || undefined },
     {
       skipAuth: true,
       withCredentials: true,

@@ -56,6 +56,7 @@ const CreditUsageHistory = lazyWithRetry(() => import("./pages/CreditUsageHistor
 const Pricing            = lazyWithRetry(() => import("./pages/Pricing"));
 const LandingPage        = lazyWithRetry(() => import("./pages/LandingPage"));
 const WatermarkPage      = lazyWithRetry(() => import("./pages/WatermarkPage"));
+const Referrals          = lazyWithRetry(() => import("./pages/Referrals"));
 
 function TabFallback() {
   return (
@@ -354,6 +355,7 @@ function App() {
             <Route path="/video-history"     element={<VideoHistory />} />
             <Route path="/topup-history" element={<TopupHistory />} />
             <Route path="/credit-usage"  element={<CreditUsageHistory />} />
+            <Route path="/referrals"     element={<Referrals />} />
 
             <Route
               path="/admin/*"

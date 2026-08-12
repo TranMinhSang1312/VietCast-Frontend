@@ -7,6 +7,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Coins,
+  UserRoundPlus,
 } from "lucide-react";
 import { Eraser } from "@phosphor-icons/react";
 
@@ -18,8 +19,11 @@ const NAV = [
   { id: "video-history", label: "Lịch sử video",     mobileLabel: "Video",    icon: Film,    path: "/video-history"      },
   { id: "topup",         label: "Lịch sử nạp",       mobileLabel: "Nạp",      icon: Receipt, path: "/topup-history"      },
   { id: "credit",        label: "Lịch sử tiêu",      mobileLabel: "Chi tiêu", icon: Wallet,  path: "/credit-usage"       },
+  { id: "referrals",     label: "Giới thiệu bạn bè", mobileLabel: "Bạn bè",   icon: UserRoundPlus, path: "/referrals" },
   { id: "pricing",       label: "Phí dịch vụ",       mobileLabel: "Bảng phí", icon: Coins,   path: "/pricing"            },
 ];
+
+const MOBILE_NAV = NAV.filter(({ id }) => id !== "pricing");
 
 export default function Sidebar({ collapsed, onToggle }) {
   return (
@@ -114,7 +118,7 @@ export function MobileBottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-slate-950/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl md:hidden"
     >
       <div className="grid grid-cols-6">
-        {NAV.map(({ id, mobileLabel, icon: Icon, path }) => (
+        {MOBILE_NAV.map(({ id, mobileLabel, icon: Icon, path }) => (
           <NavLink
             key={id}
             to={path}

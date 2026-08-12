@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   LogIn,
@@ -14,6 +14,7 @@ import {
   RotateCcw,
   X,
   ShieldAlert,
+  Ticket,
 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 
@@ -36,7 +37,7 @@ const MemoizedGoogleButton = memo(function MemoizedGoogleButton({ onSuccess, onE
 // first-pass UI check — the backend must still be the source of
 // truth. Returning the message string lets the form render inline
 // errors without the catch-all server roundtrip.
-function validateRegisterForm({ email, password, confirmPassword }) {
+function validateRegisterForm({ email, password, confirmPassword, referralCode }) {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
     return "Email chưa đúng định dạng.";
   }
@@ -56,6 +57,9 @@ function validateRegisterForm({ email, password, confirmPassword }) {
   }
   if (password !== confirmPassword) {
     return "Mật khẩu nhập lại không khớp.";
+  }
+  if (referralCode && !/^[A-Za-z0-9]{3,16}$/.test(referralCode.trim())) {
+    return "Mã giới thiệu phải gồm 3–16 chữ hoặc số.";
   }
   return null;
 }
@@ -85,11 +89,13 @@ const LEFT_COPY = {
 };
 
 export default function Login() {
+  const [searchParams] = useSearchParams();
+  const referralFromLink = (searchParams.get("ref") || "").trim().toUpperCase();
   // "login"   — email/username + password form
   // "register" — email + password + confirm password form
   // "verify"  — 6-digit OTP form (the email field is reused, the user
   //             can't edit it without going back to register).
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState(() => referralFromLink ? "register" : "login");
 
   // Form state. Kept shared across modes so toggling is instant, but
   // `switchMode` wipes everything to avoid the "old email still in the
@@ -98,6 +104,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState(referralFromLink);
   const [rememberMe, setRememberMe] = useState(true);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
@@ -145,8 +152,9 @@ export default function Login() {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setReferralCode(referralFromLink);
     setOtp(["", "", "", "", "", ""]);
-  }, []);
+  }, [referralFromLink]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -187,6 +195,7 @@ export default function Login() {
       email,
       password,
       confirmPassword,
+      referralCode,
     });
     if (validationError) {
       setError(validationError);
@@ -195,7 +204,11 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      await register({ email: email.trim(), password });
+      await register({
+        email: email.trim(),
+        password,
+        referralCode: referralCode.trim().toUpperCase() || undefined,
+      });
       setMode("verify");
       setOtp(["", "", "", "", "", ""]);
       // Focus the first OTP slot after the form re-renders.
@@ -241,7 +254,11 @@ export default function Login() {
     setError(null);
     setIsLoading(true);
     try {
-      await register({ email: email.trim(), password });
+      await register({
+        email: email.trim(),
+        password,
+        referralCode: referralCode.trim().toUpperCase() || undefined,
+      });
       setOtp(["", "", "", "", "", ""]);
       setTimeout(() => otpInputRefs.current[0]?.focus(), 50);
     } catch (err) {
@@ -259,14 +276,17 @@ export default function Login() {
     setError(null);
     setIsGoogleLoading(true);
     try {
-      await googleLogin({ idToken: credentialResponse.credential });
+      await googleLogin({
+        idToken: credentialResponse.credential,
+        referralCode: referralFromLink || undefined,
+      });
       navigate(postLoginTarget, { replace: true });
     } catch (err) {
       setError(err?.message || "Đăng nhập với Google thất bại. Vui lòng thử lại.");
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [googleLogin, navigate]);
+  }, [googleLogin, navigate, referralFromLink]);
 
   const handleGoogleError = useCallback(() => {
     setError("Đăng nhập với Google thất bại. Vui lòng thử lại.");
@@ -571,6 +591,24 @@ export default function Login() {
                 icon={Lock}
                 required
               />
+              <FormField
+                id="reg-referral"
+                label="Mã giới thiệu (không bắt buộc)"
+                value={referralCode}
+                onChange={(e) => setReferralCode(
+                  e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 16)
+                )}
+                disabled={anyLoading}
+                autoComplete="off"
+                placeholder="Ví dụ: VC12AB34CD"
+                icon={Ticket}
+                maxLength={16}
+              />
+              {referralCode && (
+                <p className="-mt-2 text-[11px] leading-relaxed text-emerald-300/80">
+                  Bạn nhận 5.000 credit sau khi tác vụ đầu tiên hoàn thành trong thời hạn chương trình.
+                </p>
+              )}
 
               {error && (
                 <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-950/30 border border-rose-900/40 text-rose-200">
