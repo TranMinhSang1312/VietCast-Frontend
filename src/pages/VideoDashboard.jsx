@@ -65,8 +65,6 @@ const LANGUAGE_VOICE_MAP = {
     { value: "gcp:vi-VN-Neural2-D", label: "Google Neural2 Nam ⚡", provider: "Google AI", description: "Giọng nam Google Neural2 cao cấp, trầm ấm" },
     { value: "gcp:vi-VN-Wavenet-A", label: "Google WaveNet Nữ", provider: "Google AI", description: "Giọng nữ Google WaveNet chuẩn" },
     { value: "gcp:vi-VN-Wavenet-B", label: "Google WaveNet Nam", provider: "Google AI", description: "Giọng nam Google WaveNet chuẩn" },
-    { value: "eleven:vi-female", label: "ElevenLabs Nữ ✨", provider: "ElevenLabs", description: "Giọng nữ tự nhiên, giàu cảm xúc" },
-    { value: "eleven:vi-male", label: "ElevenLabs Nam ✨", provider: "ElevenLabs", description: "Giọng nam tự nhiên, rõ và ấm" },
   ],
   "English": [],
   "日本語": [],
@@ -89,7 +87,7 @@ const TRANSLATION_STYLES = [
 
 
 function supportsVoicePreview(voiceValue) {
-  return voiceValue.startsWith("gcp:") || voiceValue.startsWith("eleven:");
+  return voiceValue.startsWith("gcp:");
 }
 
 async function getVoicePreviewErrorMessage(error) {
@@ -1137,11 +1135,6 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                       </option>
                     ))}
                   </select>
-                  {selectedVoice.startsWith("eleven:") && (
-                    <p className="text-xs text-amber-300/90">
-                      Nếu hạn mức ElevenLabs trong tháng đã hết, VietCast sẽ tự tạo lại toàn bộ giọng đọc bằng Google cùng giới tính và không thu thêm credit.
-                    </p>
-                  )}
                   {voicePreviewError && (
                     <p className="text-xs text-rose-300" role="alert">
                       {voicePreviewError}
