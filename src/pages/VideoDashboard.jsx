@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink, ScanText } from "lucide-react";
 import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
@@ -207,6 +207,9 @@ export default function VideoDashboard() {
   const [hardsub, setHardsub] = useState(
     () => localStorage.getItem("vc_hardsub") === "true",
   );
+  const [visualOcr, setVisualOcr] = useState(
+    () => localStorage.getItem("vc_visualOcr") === "true",
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const [voicePreviewError, setVoicePreviewError] = useState(null);
@@ -337,6 +340,10 @@ export default function VideoDashboard() {
   useEffect(() => {
     localStorage.setItem("vc_sourceLanguage", sourceLanguage);
   }, [sourceLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem("vc_visualOcr", String(visualOcr));
+  }, [visualOcr]);
 
   useEffect(() => {
     publishActiveVideoTask(result);
@@ -729,6 +736,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && selectedVoice ? selectedVoice : null,
             hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
+            visualOcr: (audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle") ? visualOcr : false,
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
@@ -740,6 +748,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           sourceLanguage: data.sourceLanguage ?? sourceLanguage,
           targetLanguage: data.targetLanguage ?? targetLanguage,
           hardsub: data.hardsub ?? pendingSubmission.hardsub,
+          visualOcr: data.visualOcr ?? visualOcr,
           submittedAt: pendingSubmission.submittedAt,
         };
         // Persist synchronously: if navigation unmounts this component before
@@ -1264,6 +1273,48 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         className={[
                           "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
                           hardsub ? "translate-x-5" : "translate-x-0",
+                        ].join(" ")}
+                      />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Visual OCR Toggle Switch */}
+              {(audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle") && (
+                <div className="rounded-xl border border-white/[0.08] bg-slate-950/40 p-4 transition hover:border-white/[0.14]">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <ScanText className="h-4 w-4 text-emerald-400" />
+                        <span className="text-sm font-semibold text-slate-100">
+                          Nhận diện chữ trên màn hình (Google Vision OCR)
+                        </span>
+                        <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
+                          Khuyên dùng cho Douyin / TikTok
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Sử dụng Google Vision OCR để nhận diện chính xác từng dòng phụ đề chữ Hán trên màn hình video (rất hữu ích cho video có thuật ngữ chuyên môn hoặc video không có tiếng nói rõ).
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={visualOcr}
+                      disabled={isLoading || isProcessing}
+                      onClick={() => {
+                        setVisualOcr(!visualOcr);
+                      }}
+                      className={[
+                        "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50",
+                        visualOcr ? "bg-emerald-500" : "bg-slate-700",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          visualOcr ? "translate-x-5" : "translate-x-0",
                         ].join(" ")}
                       />
                     </button>
