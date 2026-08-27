@@ -118,16 +118,20 @@ export default function Login() {
     return lockedMsg;
   });
 
-  const { isAuthenticated, login, register, verifyEmail, googleLogin } = useAuth();
+  const { user, isAuthenticated, login, register, verifyEmail, googleLogin } = useAuth();
+  const { isMaintenance } = useMaintenance();
   const navigate = useNavigate();
-  const postLoginTarget = "/dashboard";
 
   useEffect(() => {
-    const existingToken = localStorage.getItem("vc_token");
-    if (isAuthenticated || existingToken) {
-      navigate(postLoginTarget, { replace: true });
+    if (isAuthenticated) {
+      if (user?.role === "ADMIN") {
+        navigate("/admin", { replace: true });
+      } else if (!isMaintenance) {
+        navigate("/dashboard", { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user?.role, isMaintenance, navigate]);
+
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const googleConfigured = Boolean(googleClientId);
@@ -173,11 +177,16 @@ export default function Login() {
           expiresAt: authResult.bonusExpiresAt ?? null,
         }
         : null;
-      navigate(postLoginTarget, {
+      const target = authResult?.role === "ADMIN"
+        ? "/admin"
+        : (isMaintenance ? "/maintenance" : "/dashboard");
+
+      navigate(target, {
         replace: true,
         state: signupBenefit ? { signupBenefit } : undefined,
       });
     } catch (err) {
+
       setError(err?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
