@@ -21,11 +21,11 @@ import { formatVND, formatNumber, formatRelative } from "../../utils/format";
 import PeriodSelector from "../../components/admin/PeriodSelector";
 import RevenueChart from "../../components/admin/RevenueChart";
 import UserGrowthChart from "../../components/admin/UserGrowthChart";
+import MaintenanceWidget from "../../components/admin/MaintenanceWidget";
 
 /**
  * Thứ tự type hiển thị trên chart doanh thu — khớp với
- * Transaction.Type enum ở backend. Backend luôn trả đầy đủ 5 key với
- * zeros cho bucket rỗng, nên legend ổn định qua mỗi lần reload.
+ * Transaction.Type enum ở backend.
  */
 const TRANSACTION_TYPE_ORDER = [
   "TOPUP",
@@ -35,13 +35,6 @@ const TRANSACTION_TYPE_ORDER = [
   "TTS",
 ];
 
-/**
- * Trang dashboard chính cho admin. Gồm:
- *   - 4 KPI card (từ /dashboard/stats)
- *   - PeriodSelector chung cho cả 2 biểu đồ
- *   - Biểu đồ doanh thu (đa-line theo type)
- *   - Biểu đồ tăng trưởng người dùng (newUsers + totalUsers)
- */
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [revenue, setRevenue] = useState({ points: [], granularity: null });
@@ -84,44 +77,34 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  const loadCost = useCallback(async (windowDays) => {
+  const loadCost = useCallback(async (w) => {
     setCostLoading(true);
     try {
-      const [summary, lowMarginRows] = await Promise.all([
-        fetchCostSummary({ windowDays }),
-        fetchLowMarginJobs({ limit: 10 }),
+      const [summary, low] = await Promise.all([
+        fetchCostSummary(w),
+        fetchLowMarginJobs(50),
       ]);
       setCost(summary);
-      setLowMargin(Array.isArray(lowMarginRows) ? lowMarginRows : []);
+      setLowMargin(low);
     } catch (err) {
-      // Cost widget is operator-side; surface the error inline rather
-      // than blowing away the whole page's error banner.
-      console.error("[AdminDashboard] cost summary failed:", err);
-      setCost(null);
+      console.warn("Cost dashboard load failed:", err);
     } finally {
       setCostLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const id = setTimeout(() => void loadStats(), 0);
-    return () => clearTimeout(id);
+    loadStats();
   }, [loadStats]);
+
   useEffect(() => {
-    const id = setTimeout(
-      () => void loadSeries(range.granularity, range.periods),
-      0,
-    );
-    return () => clearTimeout(id);
-  }, [loadSeries, range]);
+    loadSeries(range.granularity, range.periods);
+  }, [loadSeries, range.granularity, range.periods]);
+
   useEffect(() => {
-    const id = setTimeout(() => void loadCost(costWindow), 0);
-    return () => clearTimeout(id);
+    loadCost(costWindow);
   }, [loadCost, costWindow]);
 
-  // Derive revenue type set with stable legend order — backend returns
-  // the full set already, but we re-derive defensively so a future
-  // backend change cannot silently break the legend.
   const revenueTypes = useMemo(() => {
     const seen = new Set();
     (revenue.points || []).forEach((p) => {
@@ -168,6 +151,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Maintenance Control Widget */}
+      <MaintenanceWidget />
+
       {/* KPI cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
@@ -196,10 +182,7 @@ export default function AdminDashboard() {
         />
       </section>
 
-      {/* Cost widget — operator-side margin tracker.
-          Powers the "Tổng cost / revenue / margin %" KPIs and a per-mode
-          breakdown, plus a list of the latest loss-leading jobs so the
-          operator can spot regressions early. */}
+      {/* Cost widget */}
       <section className="rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4 sm:p-6 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="inline-flex items-center gap-2 text-slate-300">
@@ -378,6 +361,8 @@ export default function AdminDashboard() {
           </div>
         )}
       </section>
+
+      {/* Revenue & Growth Section */}
       <section className="rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4 sm:p-6 space-y-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="inline-flex items-center gap-2 text-slate-300">

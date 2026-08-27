@@ -8,13 +8,16 @@ import {
   Outlet,
   useLocation,
   useNavigate,
+  Link,
 } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import { MaintenanceProvider, useMaintenance } from "./contexts/MaintenanceContext";
 import Login from "./pages/Login";
+import Maintenance from "./pages/Maintenance";
 import Sidebar, { MobileBottomNav } from "./components/layout/Sidebar";
 import CreditPill from "./components/layout/CreditPill";
 import TopupModal from "./components/topup/TopupModal";
-import { Gift, LogOut, Loader2, Shield, X } from "lucide-react";
+import { Gift, LogOut, Loader2, Shield, X, AlertTriangle } from "lucide-react";
 import { formatCredit, formatCountdown } from "./utils/format";
 import DelogoTaskMonitor from "./components/delogo/DelogoTaskMonitor";
 import VideoTaskMonitor from "./components/tasks/VideoTaskMonitor";
@@ -69,14 +72,30 @@ function TabFallback() {
   );
 }
 
-// Shell rendered for any authenticated user route. Each tab maps to its
-// own URL so deep-linking, browser-back, and shared links all work.
+// Shell rendered for any authenticated user route.
 function PublicPage({ children }) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-slate-950">
       <div className="flex-1">{children}</div>
       <SiteFooter />
     </div>
+  );
+}
+
+function MaintenanceBanner() {
+  return (
+    <aside aria-label="Thông báo bảo trì hệ thống" className="sticky top-0 z-50 flex items-center justify-center gap-2 border-b border-amber-600/30 bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 shadow-lg">
+      <AlertTriangle className="h-4 w-4 shrink-0" />
+      <span>⚠️ HỆ THỐNG ĐANG Ở CHẾ ĐỘ BẢO TRÌ. Người dùng thông thường đang bị khóa ngoài.</span>
+    </aside>
+  );
+}
+
+function LinkWrapped({ to, children, className, title }) {
+  return (
+    <Link to={to} className={className} title={title}>
+      {children}
+    </Link>
   );
 }
 
@@ -95,8 +114,6 @@ function AppShell() {
     (state) => state.delogo.videoObjectUrl
   );
 
-  // The authenticated area scrolls inside <main>. Locking the document
-  // prevents iOS rubber-band scrolling from dragging the entire app shell.
   useEffect(() => {
     document.documentElement.classList.add("app-shell-active");
     document.body.classList.add("app-shell-active");
@@ -115,14 +132,10 @@ function AppShell() {
     await logout();
   };
 
-  // Sync profile on mount AND on route navigation so the Header CreditPill
-  // always displays the fresh, up-to-date credit balance.
   useEffect(() => {
     syncProfile();
   }, [location.pathname, syncProfile]);
 
-  // Navigation state makes this a one-time welcome message. Clear the
-  // route state immediately so refresh/back does not repeat it.
   useEffect(() => {
     const incoming = location.state?.signupBenefit;
     if (!incoming) return;
@@ -132,15 +145,6 @@ function AppShell() {
     });
   }, [location.pathname, location.search, location.state, navigate]);
 
-  // Cross-component channel for opening the topup modal from inside
-  // any tab (e.g. VideoDashboard's "Insufficient credit" warning).
-  // We use a CustomEvent rather than a React Context because:
-  //   - the dashboard tab is lazy-loaded, so a shared context would
-  //     force-evaluate TopupModal's mount code on every navigation;
-  //   - the dispatch is fire-and-forget — the modal does not need
-  //     a synchronous response, so a DOM event is the right tool;
-  //   - the prefill amount flows through `event.detail` so the modal
-  //     can pre-fill the credit input on open.
   useEffect(() => {
     const onOpenTopup = (ev) => {
       const amount = ev?.detail?.prefillAmount;
@@ -151,10 +155,6 @@ function AppShell() {
     return () => window.removeEventListener("vietcast:open-topup", onOpenTopup);
   }, []);
 
-  // SIGNUP_BONUS pill: refresh the profile every 60s so an expired
-  // bonus disappears within a minute of its deadline, even when the
-  // user isn't navigating. Cheap call (one SELECT), and avoids
-  // requiring a hard refresh on every page.
   useEffect(() => {
     const id = setInterval(() => {
       if (user?.bonusCreditBalance) {
@@ -172,13 +172,8 @@ function AppShell() {
       />
 
       <div className="flex min-h-[100dvh] min-w-0 flex-1 flex-col md:h-[100dvh] md:min-h-0">
-        {/* Top bar — slim and quiet. Only balance + topup + admin chip
-            + username + logout live here. Navigation lives in the
-            sidebar. The bar uses subtle white/[0.04] borders to stay
-            consistent with the rest of the new design system. */}
         <header className="sticky top-0 z-40 shrink-0 bg-slate-950/95 border-b border-white/[0.06] backdrop-blur-xl md:static md:z-10 md:bg-slate-950/80">
           <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3">
-            {/* Mobile-only brand. */}
             <div className="md:hidden flex items-center gap-2 select-none">
               <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <svg
@@ -207,11 +202,6 @@ function AppShell() {
                 </LinkWrapped>
               )}
 
-              {/* Credit balance + Topup trigger.
-                  CreditPill renders the permanent balance, the live
-                  SIGNUP_BONUS chip, and the bonus countdown in one
-                  block so the user can see their total available
-                  credit at a glance. */}
               <CreditPill user={user} onTopup={() => setIsTopupOpen(true)} />
 
               <button
@@ -298,81 +288,107 @@ function AppShell() {
   );
 }
 
-// Tiny inline shim so we can use className syntax with react-router
-// Link without re-importing at the top of every block.
-import { Link } from "react-router-dom";
-function LinkWrapped({ to, children, className, title }) {
+function AppRoutes() {
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isMaintenance, isLoading: maintLoading } = useMaintenance();
+
+  if (authLoading || maintLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-slate-400 text-sm">Đang tải...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const isAdmin = isAuthenticated && user?.role === "ADMIN";
+
+  // MAINTENANCE MODE GUARD:
+  // When maintenance is active and user is NOT ADMIN, lock out all routes
+  // and force redirect to /maintenance.
+  if (isMaintenance && !isAdmin) {
+    return (
+      <Routes>
+        <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/login" element={<PublicPage><Login /></PublicPage>} />
+        {/* Strict wildcard lockout: all address bar inputs bounce to /maintenance */}
+        <Route path="*" element={<Navigate to="/maintenance" replace />} />
+      </Routes>
+    );
+  }
+
+  // NORMAL & ADMIN ROUTING:
   return (
-    <Link to={to} className={className} title={title}>
-      {children}
-    </Link>
+    <>
+      {isMaintenance && isAdmin && <MaintenanceBanner />}
+      <Routes>
+        <Route path="/maintenance" element={<Maintenance />} />
+
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />
+            ) : (
+              <PublicPage><LandingPage /></PublicPage>
+            )
+          }
+        />
+
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />
+            ) : (
+              <PublicPage><Login /></PublicPage>
+            )
+          }
+        />
+
+        <Route path="/payment/success" element={<PublicPage><PaymentSuccess /></PublicPage>} />
+        <Route path="/payment/cancel" element={<PublicPage><PaymentCancel /></PublicPage>} />
+        <Route path="/pricing" element={<PublicPage><Pricing /></PublicPage>} />
+
+        <Route
+          element={
+            isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />
+          }
+        >
+          <Route path="/dashboard"         element={<VideoDashboard />} />
+          <Route path="/watermark-remover" element={<WatermarkPage />} />
+          <Route path="/video-history"     element={<VideoHistory />} />
+          <Route path="/topup-history" element={<TopupHistory />} />
+          <Route path="/credit-usage"  element={<CreditUsageHistory />} />
+          <Route path="/referrals"     element={<Referrals />} />
+
+          <Route
+            path="/admin/*"
+            element={
+              !isAuthenticated
+                ? <Navigate to="/login" replace />
+                : <AdminApp />
+            }
+          />
+
+          <Route
+            path="/*"
+            element={<Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />}
+          />
+        </Route>
+      </Routes>
+    </>
   );
 }
 
 function App() {
-  const { isAuthenticated, isLoading } = useAuth();
-
   return (
     <BrowserRouter>
-      {isLoading ? (
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-950">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-slate-400 text-sm">Đang tải...</span>
-          </div>
-        </div>
-      ) : (
-        <Routes>
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicPage><LandingPage /></PublicPage>
-            }
-          />
-
-          <Route
-            path="/login"
-            element={
-              isAuthenticated ? <Navigate to="/dashboard" replace /> : <PublicPage><Login /></PublicPage>
-            }
-          />
-
-          <Route path="/payment/success" element={<PublicPage><PaymentSuccess /></PublicPage>} />
-          <Route path="/payment/cancel" element={<PublicPage><PaymentCancel /></PublicPage>} />
-
-          {/* Pricing is a public marketing page — anonymous visitors should
-              see it without being bounced to /login. Authenticated users
-              also land here (it's the same component either way). */}
-          <Route path="/pricing" element={<PublicPage><Pricing /></PublicPage>} />
-
-          <Route
-            element={
-              isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />
-            }
-          >
-            <Route path="/dashboard"         element={<VideoDashboard />} />
-            <Route path="/watermark-remover" element={<WatermarkPage />} />
-            <Route path="/video-history"     element={<VideoHistory />} />
-            <Route path="/topup-history" element={<TopupHistory />} />
-            <Route path="/credit-usage"  element={<CreditUsageHistory />} />
-            <Route path="/referrals"     element={<Referrals />} />
-
-            <Route
-              path="/admin/*"
-              element={
-                !isAuthenticated
-                  ? <Navigate to="/login" replace />
-                  : <AdminApp />
-              }
-            />
-
-            <Route
-              path="/*"
-              element={<Navigate to="/dashboard" replace />}
-            />
-          </Route>
-        </Routes>
-      )}
+      <MaintenanceProvider>
+        <AppRoutes />
+      </MaintenanceProvider>
     </BrowserRouter>
   );
 }
