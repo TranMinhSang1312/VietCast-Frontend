@@ -90,8 +90,10 @@ const TRANSLATION_STYLES = [
 
 
 function supportsVoicePreview(voiceValue) {
-  return voiceValue.startsWith("gcp:");
+  if (!voiceValue) return false;
+  return voiceValue.startsWith("gcp:") || voiceValue.startsWith("edge:") || voiceValue.startsWith("vi-VN-");
 }
+
 
 async function getVoicePreviewErrorMessage(error) {
   const payload = error?.response?.data;
@@ -251,6 +253,28 @@ export default function VideoDashboard() {
     const requestId = voicePreviewRequestRef.current;
     setPreviewingVoice(voiceValue);
     setVoicePreviewError(null);
+
+    // Instant static audio preview for Edge-TTS
+    if (voiceValue.startsWith("edge:") || voiceValue.startsWith("vi-VN-")) {
+      const cleanVoice = voiceValue.replace("edge:", "");
+      const staticAudioUrl = `/audio/voice-previews/edge_${cleanVoice}.mp3`;
+      try {
+        const audio = new Audio(staticAudioUrl);
+        voiceAudioRef.current = audio;
+        audio.onended = stopVoicePreview;
+        audio.onerror = () => {
+          setVoicePreviewError("Không thể phát giọng mẫu trên trình duyệt này.");
+          stopVoicePreview();
+        };
+        await audio.play();
+        return;
+      } catch {
+        stopVoicePreview();
+        setVoicePreviewError("Chưa thể phát giọng mẫu. Vui lòng thử lại sau.");
+        return;
+      }
+    }
+
     try {
       const response = await axios.get(
         `${API_BASE_URL}/api/v1/tts/preview`,
@@ -281,6 +305,7 @@ export default function VideoDashboard() {
       setVoicePreviewError(message);
     }
   }, [previewingVoice, stopVoicePreview]);
+
 
   useEffect(() => () => stopVoicePreview(), [stopVoicePreview]);
 
