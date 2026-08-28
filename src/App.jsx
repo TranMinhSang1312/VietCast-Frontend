@@ -306,18 +306,27 @@ function AppRoutes() {
   const isAdmin = isAuthenticated && user?.role === "ADMIN";
 
   // MAINTENANCE MODE GUARD:
-  // When maintenance is active and user is NOT ADMIN, lock out all routes
-  // and force redirect to /maintenance.
+  // When maintenance is active and user is NOT ADMIN:
+  // Allow Landing Page (/) for visitors to view, but lock all internal app routes to /maintenance.
   if (isMaintenance && !isAdmin) {
     return (
       <Routes>
+        <Route
+          path="/"
+          element={
+            <PublicPage>
+              <LandingPage />
+            </PublicPage>
+          }
+        />
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/login" element={<PublicPage><Login /></PublicPage>} />
-        {/* Strict wildcard lockout: all address bar inputs bounce to /maintenance */}
+        {/* Strict wildcard lockout: all feature and dashboard routes bounce to /maintenance */}
         <Route path="*" element={<Navigate to="/maintenance" replace />} />
       </Routes>
     );
   }
+
 
   // NORMAL & ADMIN ROUTING:
   return (

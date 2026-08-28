@@ -9,8 +9,8 @@ export default function Maintenance() {
   const [isChecking, setIsChecking] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showAdminButton, setShowAdminButton] = useState(false);
-  const [secretClickCount, setSecretClickCount] = useState(0);
   const [emailOrUsername, setEmailOrUsername] = useState("");
+
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -79,20 +79,6 @@ export default function Maintenance() {
     };
   }, []);
 
-  // Secret 5-click easter egg on wrench icon
-  const handleSecretIconClick = () => {
-    setSecretClickCount((prev) => {
-      const next = prev + 1;
-      if (next >= 5) {
-        setLoginError("");
-        setShowAdminButton(true);
-        setIsLoginModalOpen(true);
-        return 0;
-      }
-      return next;
-    });
-  };
-
   const handleAdminLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
@@ -150,12 +136,8 @@ export default function Maintenance() {
       </div>
 
       <div className="relative z-10 w-full max-w-xl mx-auto text-center flex flex-col items-center">
-        {/* Animated Status Icon (with secret 5-click easter egg) */}
-        <div 
-          onClick={handleSecretIconClick}
-          title=""
-          className="relative mb-6 cursor-default select-none active:scale-95 transition-transform"
-        >
+        {/* Animated Status Icon */}
+        <div className="relative mb-6 select-none pointer-events-none">
           <div className="absolute inset-0 bg-amber-500/20 rounded-3xl blur-xl animate-pulse" />
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-900/90 border border-amber-500/30 flex items-center justify-center shadow-2xl shadow-amber-500/20 backdrop-blur-xl">
             <Wrench className="w-10 h-10 sm:w-12 sm:h-12 text-amber-400 animate-bounce duration-1000" />
@@ -163,6 +145,7 @@ export default function Maintenance() {
             <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border-2 border-slate-950" />
           </div>
         </div>
+
 
         {/* Brand Tag */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-4">
