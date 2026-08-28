@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BarChart3, Users, LogOut, Coins, Shield, Loader2, Cookie } from "lucide-react";
+import { BarChart3, Users, LogOut, Shield, Loader2, Cookie } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
 // Lazy-load tab contents so the admin bundle does NOT load when the user
@@ -11,24 +11,24 @@ const CookieManager   = lazy(() => import("./CookieManager"));
 
 const TABS = [
   { id: "dashboard", label: "Tổng quan", icon: BarChart3, path: "/admin" },
-  { id: "users",      label: "Người dùng", icon: Users,     path: "/admin/users" },
+  { id: "users",      label: "Quản lý Người dùng", icon: Users,     path: "/admin/users" },
   { id: "cookies",    label: "Quản lý Cookie", icon: Cookie,  path: "/admin/cookies" },
 ];
 
 function TabFallback() {
   return (
-    <div className="min-h-[40vh] w-full flex items-center justify-center">
+    <div className="min-h-[60vh] w-full flex items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-slate-400">
-        <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
-        <span className="text-sm">Đang tải…</span>
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+        <span className="text-sm font-medium">Đang tải dữ liệu quản trị…</span>
       </div>
     </div>
   );
 }
 
 /**
- * Shell cho toàn bộ surface admin: nav + outlet. Được route `/admin`
- * render từ App.jsx sau khi gate `user.role === "ADMIN"` pass.
+ * Dedicated Standalone Admin Console Shell.
+ * Exclusively for ADMIN roles - without any regular user clutter.
  */
 export default function AdminApp() {
   const location = useLocation();
@@ -42,23 +42,29 @@ export default function AdminApp() {
   }
 
   return (
-    <div className="min-h-full w-full bg-slate-950 text-slate-100">
-      <nav className="sticky top-0 z-10 backdrop-blur-xl bg-slate-950/70 border-b border-slate-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500/10 border border-violet-500/30 px-2.5 py-1 text-xs font-semibold text-violet-300">
-                <Shield className="w-3.5 h-3.5" />
-                ADMIN
-              </span>
-              <span className="text-sm font-semibold text-slate-300">VietCast</span>
-              <Link
-                to="/dashboard"
-                className="ml-2 text-xs text-slate-400 hover:text-slate-200 underline underline-offset-2"
-              >
-                ← Về app
-              </Link>
-              <div className="order-last flex w-full gap-1 overflow-x-auto rounded-xl border border-white/[0.06] bg-slate-900/60 p-1 sm:order-none sm:ml-2 sm:w-auto">
+    <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {/* Sleek Dedicated Admin Navbar */}
+      <header className="sticky top-0 z-30 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+          <div className="flex items-center justify-between gap-4 py-3.5">
+            {/* Brand & Tabs */}
+            <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30 text-white font-bold">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-extrabold text-white tracking-tight">VietCast</span>
+                    <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+                      Admin
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Tabs */}
+              <nav className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
                 {TABS.map((tab) => {
                   const Icon = tab.icon;
                   const active = activeTabId === tab.id;
@@ -66,10 +72,10 @@ export default function AdminApp() {
                     <Link
                       key={tab.id}
                       to={tab.path}
-                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${
+                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition active:scale-95 ${
                         active
-                          ? "bg-indigo-500 text-white shadow-[0_8px_30px_-12px_rgba(99,102,241,0.4)]"
-                          : "text-slate-300 hover:text-slate-100"
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -77,39 +83,42 @@ export default function AdminApp() {
                     </Link>
                   );
                 })}
-              </div>
+              </nav>
             </div>
 
-            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-4">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-white/[0.06]">
-                <Coins className="w-4 h-4 text-yellow-300" />
-                <span className="text-sm font-medium text-slate-200">
-                  {user?.creditBalance ?? 0} credit
-                </span>
+            {/* Admin User Info & Logout */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-slate-400 font-mono">{user?.email || user?.username}</span>
               </div>
-              <div className="hidden sm:block text-sm text-slate-400">{user?.username}</div>
+
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/30 transition active:scale-95"
+                title="Đăng xuất khỏi hệ thống"
               >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Đăng xuất</span>
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="font-semibold">Đăng xuất</span>
               </button>
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
-      <Suspense fallback={<TabFallback />}>
-        {activeTabId === "users" ? (
-          <AdminUsers />
-        ) : activeTabId === "cookies" ? (
-          <CookieManager />
-        ) : (
-          <AdminDashboard />
-        )}
-      </Suspense>
+      {/* Main Admin Surface */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <Suspense fallback={<TabFallback />}>
+          {activeTabId === "users" ? (
+            <AdminUsers />
+          ) : activeTabId === "cookies" ? (
+            <CookieManager />
+          ) : (
+            <AdminDashboard />
+          )}
+        </Suspense>
+      </main>
     </div>
   );
 }

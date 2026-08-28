@@ -361,9 +361,26 @@ function AppRoutes() {
         <Route path="/payment/cancel" element={<PublicPage><PaymentCancel /></PublicPage>} />
         <Route path="/pricing" element={<PublicPage><Pricing /></PublicPage>} />
 
+        {/* DEDICATED STANDALONE ADMIN ROUTE (No user sidebar, no user header) */}
+        <Route
+          path="/admin/*"
+          element={
+            !isAuthenticated
+              ? <Navigate to="/login" replace />
+              : !isAdmin
+              ? <Navigate to="/dashboard" replace />
+              : <AdminApp />
+          }
+        />
+
+        {/* REGULAR USER APP SHELL */}
         <Route
           element={
-            isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />
+            !isAuthenticated
+              ? <Navigate to="/login" replace />
+              : isAdmin
+              ? <Navigate to="/admin" replace />
+              : <AppShell />
           }
         >
           <Route path="/dashboard"         element={<VideoDashboard />} />
@@ -372,24 +389,16 @@ function AppRoutes() {
           <Route path="/topup-history" element={<TopupHistory />} />
           <Route path="/credit-usage"  element={<CreditUsageHistory />} />
           <Route path="/referrals"     element={<Referrals />} />
-
-          <Route
-            path="/admin/*"
-            element={
-              !isAuthenticated
-                ? <Navigate to="/login" replace />
-                : <AdminApp />
-            }
-          />
-
-          <Route
-            path="/*"
-            element={<Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />}
-          />
         </Route>
+
+        <Route
+          path="*"
+          element={<Navigate to={isAdmin ? "/admin" : isAuthenticated ? "/dashboard" : "/"} replace />}
+        />
       </Routes>
     </>
   );
+
 }
 
 function App() {
