@@ -8,6 +8,8 @@ export default function Maintenance() {
   const [status, setStatus] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [showAdminButton, setShowAdminButton] = useState(false);
+  const [secretClickCount, setSecretClickCount] = useState(0);
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -43,6 +45,54 @@ export default function Maintenance() {
     return () => clearInterval(timer);
   }, []);
 
+  // Secret admin access handlers:
+  // 1. Console script: admin() or openAdminLogin()
+  // 2. Keyboard shortcut: Ctrl + Shift + A
+  useEffect(() => {
+    const triggerAdminModal = () => {
+      setLoginError("");
+      setShowAdminButton(true);
+      setIsLoginModalOpen(true);
+      return "🔐 Đã mở cửa sổ Đăng nhập Quản Trị Viên!";
+    };
+
+    // Expose secret commands in F12 Console
+    window.admin = triggerAdminModal;
+    window.loginAdmin = triggerAdminModal;
+    window.openAdminLogin = triggerAdminModal;
+
+    // Keyboard shortcut: Ctrl + Shift + A (hoặc Cmd + Shift + A trên Mac)
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "A" || e.key === "a")) {
+        e.preventDefault();
+        triggerAdminModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      delete window.admin;
+      delete window.loginAdmin;
+      delete window.openAdminLogin;
+    };
+  }, []);
+
+  // Secret 5-click easter egg on wrench icon
+  const handleSecretIconClick = () => {
+    setSecretClickCount((prev) => {
+      const next = prev + 1;
+      if (next >= 5) {
+        setLoginError("");
+        setShowAdminButton(true);
+        setIsLoginModalOpen(true);
+        return 0;
+      }
+      return next;
+    });
+  };
+
   const handleAdminLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError("");
@@ -73,9 +123,39 @@ export default function Maintenance() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-amber-500/10 via-indigo-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-30 pointer-events-none" />
 
+      {/* Top-Right Corner Secret/Admin Access */}
+      <div className="absolute top-4 right-4 z-20">
+        {isAuthenticated && user?.role === "ADMIN" ? (
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition shadow-lg shadow-indigo-600/30 active:scale-95"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Vào Trang Quản Trị</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        ) : showAdminButton ? (
+          <button
+            type="button"
+            onClick={() => {
+              setLoginError("");
+              setIsLoginModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition active:scale-95 shadow-md"
+          >
+            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Đăng nhập Admin</span>
+          </button>
+        ) : null}
+      </div>
+
       <div className="relative z-10 w-full max-w-xl mx-auto text-center flex flex-col items-center">
-        {/* Animated Status Icon */}
-        <div className="relative mb-6">
+        {/* Animated Status Icon (with secret 5-click easter egg) */}
+        <div 
+          onClick={handleSecretIconClick}
+          title=""
+          className="relative mb-6 cursor-default select-none active:scale-95 transition-transform"
+        >
           <div className="absolute inset-0 bg-amber-500/20 rounded-3xl blur-xl animate-pulse" />
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-900/90 border border-amber-500/30 flex items-center justify-center shadow-2xl shadow-amber-500/20 backdrop-blur-xl">
             <Wrench className="w-10 h-10 sm:w-12 sm:h-12 text-amber-400 animate-bounce duration-1000" />
@@ -111,7 +191,7 @@ export default function Maintenance() {
         )}
 
         {/* Auto Refresh Status Pill */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={fetchStatus}
@@ -122,35 +202,9 @@ export default function Maintenance() {
             <span>Kiểm tra lại trạng thái</span>
           </button>
         </div>
-
-        {/* Admin Access Section */}
-        <div className="w-full max-w-md pt-6 border-t border-slate-800/60 flex flex-col items-center gap-3">
-          {isAuthenticated && user?.role === "ADMIN" ? (
-            <Link
-              to="/admin"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition shadow-lg shadow-indigo-600/30 active:scale-95"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Truy cập Trang Quản Trị (Admin)</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setLoginError("");
-                setIsLoginModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition py-1 px-3 rounded-lg hover:bg-white/[0.04] active:scale-95"
-            >
-              <Shield className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Dành cho Quản trị viên: Đăng nhập quản trị</span>
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Admin Login Modal */}
+      {/* Admin Login Modal (Triggered by F12 console admin() or Ctrl+Shift+A or 5-clicks) */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-5 text-slate-100 text-left">
@@ -164,7 +218,7 @@ export default function Maintenance() {
                     Đăng nhập Quản Trị Viên
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Đăng nhập để vào khu vực Quản trị trong thời gian bảo trì.
+                    Khu vực dành riêng cho Quản trị viên trong thời gian bảo trì.
                   </p>
                 </div>
               </div>
@@ -194,6 +248,7 @@ export default function Maintenance() {
                   <input
                     type="text"
                     required
+                    autoFocus
                     value={emailOrUsername}
                     onChange={(e) => setEmailOrUsername(e.target.value)}
                     placeholder="admin@vietcast.com"
@@ -236,7 +291,7 @@ export default function Maintenance() {
                   {isLoggingIn ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang đăng nhập...</span>
+                      <span>Đang xác thực...</span>
                     </>
                   ) : (
                     <span>Đăng nhập Admin</span>
