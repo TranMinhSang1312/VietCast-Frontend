@@ -61,11 +61,14 @@ const SECONDARY_AUDIO_MODES = SECONDARY_VIDEO_MODE_IDS.map((id) =>
 // Dynamic voice mapping per target language
 const LANGUAGE_VOICE_MAP = {
   "Tiếng Việt": [
+    { value: "edge:vi-VN-HoaiMyNeural", label: "Edge Hoài My Nữ (Miễn phí) ✨", provider: "Microsoft Edge", description: "Giọng nữ truyền cảm, tự nhiên hàng đầu cho Review Phim & TikTok" },
+    { value: "edge:vi-VN-NamMinhNeural", label: "Edge Nam Minh Nam (Miễn phí) ✨", provider: "Microsoft Edge", description: "Giọng nam truyền cảm, trầm ấm cho Review Phim & Tin tức" },
     { value: "gcp:vi-VN-Neural2-A", label: "Google Neural2 Nữ ⚡", provider: "Google AI", description: "Giọng nữ Google Neural2 cao cấp, đọc mượt & chuẩn Studio" },
     { value: "gcp:vi-VN-Neural2-D", label: "Google Neural2 Nam ⚡", provider: "Google AI", description: "Giọng nam Google Neural2 cao cấp, trầm ấm" },
     { value: "gcp:vi-VN-Wavenet-A", label: "Google WaveNet Nữ", provider: "Google AI", description: "Giọng nữ Google WaveNet chuẩn" },
     { value: "gcp:vi-VN-Wavenet-B", label: "Google WaveNet Nam", provider: "Google AI", description: "Giọng nam Google WaveNet chuẩn" },
   ],
+
   "English": [],
   "日本語": [],
   "한국어": [],
