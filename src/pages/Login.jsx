@@ -250,7 +250,10 @@ export default function Login() {
           expiresAt: authResult.bonusExpiresAt ?? null,
         }
         : null;
-      navigate(postLoginTarget, {
+      const target = authResult?.role === "ADMIN"
+        ? "/admin"
+        : (isMaintenance ? "/maintenance" : "/dashboard");
+      navigate(target, {
         replace: true,
         state: signupBenefit ? { signupBenefit } : undefined,
       });
@@ -287,17 +290,20 @@ export default function Login() {
     setError(null);
     setIsGoogleLoading(true);
     try {
-      await googleLogin({
+      const authResult = await googleLogin({
         idToken: credentialResponse.credential,
         referralCode: referralFromLink || undefined,
       });
-      navigate(postLoginTarget, { replace: true });
+      const target = authResult?.role === "ADMIN"
+        ? "/admin"
+        : (isMaintenance ? "/maintenance" : "/dashboard");
+      navigate(target, { replace: true });
     } catch (err) {
       setError(err?.message || "Đăng nhập với Google thất bại. Vui lòng thử lại.");
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [googleLogin, navigate, referralFromLink]);
+  }, [googleLogin, isMaintenance, navigate, referralFromLink]);
 
   const handleGoogleError = useCallback(() => {
     setError("Đăng nhập với Google thất bại. Vui lòng thử lại.");
