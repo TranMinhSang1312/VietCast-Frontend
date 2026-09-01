@@ -48,13 +48,13 @@ const ENDPOINTS = Object.freeze({
 /**
  * Email / username + password login.
  *
- * @param {{ emailOrUsername: string, password: string }} body
+ * @param {{ emailOrUsername: string, password: string, rememberMe?: boolean }} body
  * @returns {Promise<AuthResponseBody>}
  */
-export async function login({ emailOrUsername, password }) {
+export async function login({ emailOrUsername, password, rememberMe = false }) {
   const { data } = await axios.post(
     ENDPOINTS.login,
-    { emailOrUsername, password },
+    { emailOrUsername, password, rememberMe },
     { skipAuth: true, withCredentials: true }
   );
   return data;
