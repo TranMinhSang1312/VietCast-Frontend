@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink, ScanText } from "lucide-react";
 import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
@@ -212,6 +212,9 @@ export default function VideoDashboard() {
   const [hardsub, setHardsub] = useState(
     () => localStorage.getItem("vc_hardsub") === "true",
   );
+  const [visualOcr, setVisualOcr] = useState(
+    () => localStorage.getItem("vc_visualOcr") === "true",
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [previewingVoice, setPreviewingVoice] = useState(null);
   const [voicePreviewError, setVoicePreviewError] = useState(null);
@@ -367,10 +370,8 @@ export default function VideoDashboard() {
   }, [sourceLanguage]);
 
   useEffect(() => {
-    // OCR is intentionally unavailable in the customer UI for now. Clear the
-    // old preference so a returning browser cannot silently reactivate it.
-    localStorage.removeItem("vc_visualOcr");
-  }, []);
+    localStorage.setItem("vc_visualOcr", String(visualOcr));
+  }, [visualOcr]);
 
   useEffect(() => {
     publishActiveVideoTask(result);
@@ -746,6 +747,9 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         sourceLanguage,
         targetLanguage,
         hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
+        visualOcr: (audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle")
+          ? visualOcr
+          : false,
         submittedAt: new Date().toISOString(),
       };
       publishActiveVideoTask(pendingSubmission);
@@ -767,7 +771,9 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
             // AI-dub mode; otherwise the engine skips TTS anyway.
             voice: (audioMode === "dub" || audioMode === "mix") && selectedVoice ? selectedVoice : null,
             hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
-            visualOcr: false,
+            visualOcr: (audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle")
+              ? visualOcr
+              : false,
           },
           { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
@@ -779,6 +785,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           sourceLanguage: data.sourceLanguage ?? sourceLanguage,
           targetLanguage: data.targetLanguage ?? targetLanguage,
           hardsub: data.hardsub ?? pendingSubmission.hardsub,
+          visualOcr: data.visualOcr ?? pendingSubmission.visualOcr,
           submittedAt: pendingSubmission.submittedAt,
         };
         // Persist synchronously: if navigation unmounts this component before
@@ -857,6 +864,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       targetLanguage,
       translationStyle,
       hardsub,
+      visualOcr,
       syncProfile,
     ],
   );
@@ -1303,6 +1311,49 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         className={[
                           "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
                           hardsub ? "translate-x-5" : "translate-x-0",
+                        ].join(" ")}
+                      />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Visual OCR is opt-in because cloud video text detection adds
+                  processing time and is only useful when subtitles are burned
+                  into the source video. */}
+              {(audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle") && (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4 transition hover:border-emerald-500/35">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <ScanText className="h-4 w-4 text-emerald-400" />
+                        <span className="text-sm font-semibold text-slate-100">
+                          Đọc phụ đề có sẵn trong video bằng OCR
+                        </span>
+                        <span className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                          THỬ NGHIỆM
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        Dùng Google Cloud OCR để bổ sung lời thoại từ chữ đã in trên video. Hữu ích khi âm thanh khó nghe hoặc có nhiều ngôn ngữ; thời gian xử lý sẽ lâu hơn.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-label="Đọc phụ đề có sẵn trong video bằng OCR"
+                      aria-checked={visualOcr}
+                      disabled={isLoading || isProcessing}
+                      onClick={() => setVisualOcr((enabled) => !enabled)}
+                      className={[
+                        "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50",
+                        visualOcr ? "bg-emerald-500" : "bg-slate-700",
+                      ].join(" ")}
+                    >
+                      <span
+                        className={[
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                          visualOcr ? "translate-x-5" : "translate-x-0",
                         ].join(" ")}
                       />
                     </button>
