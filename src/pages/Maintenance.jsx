@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Wrench, Shield, Clock, RefreshCw, AlertTriangle, ArrowRight, Lock, User, X, Loader2 } from "lucide-react";
 import { getSystemStatus } from "../services/system";
@@ -18,7 +18,7 @@ export default function Maintenance() {
   const { user, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       setIsChecking(true);
       const data = await getSystemStatus();
@@ -36,14 +36,17 @@ export default function Maintenance() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [isAuthenticated, navigate, user]);
 
   useEffect(() => {
-    fetchStatus();
+    const initialPoll = window.setTimeout(fetchStatus, 0);
     // Auto-poll every 12 seconds to auto-recover when admin finishes maintenance
     const timer = setInterval(fetchStatus, 12000);
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      window.clearTimeout(initialPoll);
+      clearInterval(timer);
+    };
+  }, [fetchStatus]);
 
   // Secret admin access handlers:
   // 1. Console script: admin() or openAdminLogin()

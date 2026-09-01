@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getSystemStatus } from "../services/system";
-
-const MaintenanceContext = createContext(null);
+import MaintenanceContext from "./maintenanceContextStore";
 
 export function MaintenanceProvider({ children }) {
   const [maintenanceInfo, setMaintenanceInfo] = useState(null);
@@ -21,10 +20,13 @@ export function MaintenanceProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshStatus();
+    const initialPoll = window.setTimeout(refreshStatus, 0);
     // Poll status periodically (every 30s)
     const interval = setInterval(refreshStatus, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialPoll);
+      clearInterval(interval);
+    };
   }, [refreshStatus]);
 
   const value = {
@@ -40,12 +42,4 @@ export function MaintenanceProvider({ children }) {
       {children}
     </MaintenanceContext.Provider>
   );
-}
-
-export function useMaintenance() {
-  const ctx = useContext(MaintenanceContext);
-  if (!ctx) {
-    throw new Error("useMaintenance must be used within a MaintenanceProvider");
-  }
-  return ctx;
 }

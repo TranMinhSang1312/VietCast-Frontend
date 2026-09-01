@@ -94,15 +94,21 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    loadStats();
+    const initialLoad = window.setTimeout(loadStats, 0);
+    return () => window.clearTimeout(initialLoad);
   }, [loadStats]);
 
   useEffect(() => {
-    loadSeries(range.granularity, range.periods);
+    const initialLoad = window.setTimeout(
+      () => loadSeries(range.granularity, range.periods),
+      0,
+    );
+    return () => window.clearTimeout(initialLoad);
   }, [loadSeries, range.granularity, range.periods]);
 
   useEffect(() => {
-    loadCost(costWindow);
+    const initialLoad = window.setTimeout(() => loadCost(costWindow), 0);
+    return () => window.clearTimeout(initialLoad);
   }, [loadCost, costWindow]);
 
   const revenueTypes = useMemo(() => {

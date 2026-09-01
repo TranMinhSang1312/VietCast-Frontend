@@ -7,21 +7,18 @@ import {
   Scissors, 
   CheckCircle, 
   DownloadSimple, 
-  PlayCircle, 
   WarningCircle, 
   Sparkle, 
-  XCircle, 
-  FileText,
   TextAlignLeft,
   Target,
   Sparkle as SparkleIcon,
 } from "@phosphor-icons/react";
 import { Loader2 } from "lucide-react";
-import ReactCrop, { centerCrop, convertToPixelCrop, makeAspectCrop } from "react-image-crop";
+import ReactCrop, { convertToPixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE_URL_PROVIDER } from "../config";
 
-import { PRICING, estimateProcessingTime, formatVnd } from "../config/pricing";
+import { PRICING, formatVnd } from "../config/pricing";
 import { handleApiError } from "../utils/apiError";
 import {
   isVideoUploadCancelled,
@@ -306,7 +303,6 @@ export default function WatermarkPage() {
   const billableMinutes = Math.max(1, durationSeconds / 60);
   const filterCost = Math.round(billableMinutes * PRICING.visualFilterPerMinute);
   const totalCost = Math.max(PRICING.visualFilterPerMinute, filterCost);
-  const processingEta = estimateProcessingTime(durationSeconds, "original", true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

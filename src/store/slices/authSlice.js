@@ -26,8 +26,8 @@ function toUserPayload(data) {
   };
 }
 
-// Helper to safely load initial state from localStorage
-const storedToken = localStorage.getItem(TOKEN_KEY);
+// User display data may be cached, but access credentials never persist in
+// browser storage. The HttpOnly refresh cookie restores auth on every boot.
 const storedUserStr = localStorage.getItem(USER_KEY);
 let initialUser = null;
 if (storedUserStr) {
@@ -39,10 +39,10 @@ if (storedUserStr) {
 }
 
 const initialState = {
-  token: storedToken || null,
+  token: null,
   user: initialUser,
-  isLoggedIn: Boolean(storedToken),
-  isLoading: !storedToken, // If stored token exists, don't block boot UI with fullscreen loader
+  isLoggedIn: false,
+  isLoading: true,
   error: null,
 };
 
@@ -187,8 +187,7 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+        setAuthToken(token);
       }
       if (user) {
         localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -219,7 +218,6 @@ const authSlice = createSlice({
       state.isLoggedIn = false;
       state.error = null;
       clearAuthToken();
-      localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
     },
   },

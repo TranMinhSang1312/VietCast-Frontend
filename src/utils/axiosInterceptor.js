@@ -6,7 +6,7 @@
 // (the default one):
 //
 //   1. REQUEST interceptor
-//      Reads the JWT from localStorage (key: 'vietcast_token') and sets
+//      Reads the short-lived JWT from process memory and sets
 //      `Authorization: Bearer <token>` on every outgoing request. Plain
 //      string match, no expiry checking — the backend authoritatively
 //      rejects expired tokens with 401 and the auth-gate then routes
@@ -39,10 +39,11 @@
 import axios from "axios";
 import { handleApiError, ApiError } from "./apiError";
 
-// The key used in localStorage MUST match the one used by AuthContext
-// and VideoDashboard. Changing it here without changing them both will
-// silently break every authenticated request.
+// Legacy key removed from persistent storage on boot. Access tokens live only
+// in memory; the HttpOnly refresh cookie restores a session after reload.
 const TOKEN_KEY = "vietcast_token";
+let memoryToken = null;
+localStorage.removeItem(TOKEN_KEY);
 
 // Allow callers (especially OAuth callbacks) to temporarily suppress
 // the Authorization header for a single request. e.g.:
@@ -71,7 +72,7 @@ axios.interceptors.request.use(
       }
       return config;
     }
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = memoryToken;
     if (token) {
       // `config.headers` is always defined for an axios request but
       // it can be an AxiosHeaders instance (axios ≥ 1.x) — the
@@ -170,17 +171,18 @@ axios.interceptors.response.use(
         );
 
         const newAccessToken = data.token || data.accessToken;
-        if (newAccessToken) {
-          setAuthToken(newAccessToken);
-          processQueue(null, newAccessToken);
-
-          if (originalRequest.headers && typeof originalRequest.headers.set === "function") {
-            originalRequest.headers.set("Authorization", `Bearer ${newAccessToken}`);
-          } else if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          }
-          return axios(originalRequest);
+        if (!newAccessToken) {
+          throw new Error("Máy chủ không trả về access token sau khi làm mới phiên.");
         }
+        setAuthToken(newAccessToken);
+        processQueue(null, newAccessToken);
+
+        if (originalRequest.headers && typeof originalRequest.headers.set === "function") {
+          originalRequest.headers.set("Authorization", `Bearer ${newAccessToken}`);
+        } else if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        }
+        return axios(originalRequest);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         clearAuthToken();
@@ -211,11 +213,11 @@ export const api = axios;
 
 /**
  * Currently-cached JWT, or null if the user is anonymous. Cheap to
- * call — just reads from localStorage. Use this when the component
+ * call — just reads process memory. Use this when the component
  * needs the raw token string (e.g. to build a WebSocket connection).
  */
 export function getAuthToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return memoryToken;
 }
 
 /**
@@ -224,6 +226,7 @@ export function getAuthToken() {
  * 401-triggered auto-logout in a non-React module).
  */
 export function clearAuthToken() {
+  memoryToken = null;
   localStorage.removeItem(TOKEN_KEY);
   if (axios.defaults.headers.common) {
     delete axios.defaults.headers.common.Authorization;
@@ -241,7 +244,8 @@ export function setAuthToken(token) {
     clearAuthToken();
     return;
   }
-  localStorage.setItem(TOKEN_KEY, token);
+  memoryToken = token;
+  localStorage.removeItem(TOKEN_KEY);
   if (axios.defaults.headers.common) {
     axios.defaults.headers.common.Authorization = `Bearer ${token}`;
   }

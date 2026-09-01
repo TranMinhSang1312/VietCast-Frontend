@@ -10,10 +10,8 @@ import { API_BASE_URL_PROVIDER } from "../config";
  * can re-use the same call sites.
  *
  * Auth is handled automatically by the global request interceptor in config.js
- * which attaches the JWT token from localStorage to every axios request.
+ * which attaches the in-memory access token and refreshes via HttpOnly cookie.
  */
-
-const TOKEN_KEY = "vietcast_token";
 
 let cachedBaseUrl = null;
 async function baseUrl() {
@@ -45,18 +43,6 @@ async function baseUrl() {
 export async function recordUsageLog(row) {
   if (!row || !row.taskId) {
     console.warn("[history] recordUsageLog called without taskId; skipping");
-    return null;
-  }
-
-  // No auth token → bounce to login. We can do this synchronously since
-  // the request interceptor in config.js only attaches the token IF one
-  // is present — the server will then 401/403 and we would just loop.
-  // We use ``window.location.assign`` (not hash assignment) because
-  // this app uses BrowserRouter, not HashRouter; setting a hash on
-  // a BrowserRouter URL does NOT trigger React Router's route matcher.
-  if (!localStorage.getItem(TOKEN_KEY)) {
-    console.warn("[history] No auth token found, redirecting to login...");
-    window.location.assign("/login");
     return null;
   }
 

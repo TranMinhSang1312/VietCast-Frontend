@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Wrench, AlertTriangle, ShieldCheck, Clock, Check, X, Loader2 } from "lucide-react";
 import { getAdminMaintenanceStatus, setAdminMaintenanceMode } from "../../services/system";
 
@@ -12,7 +12,7 @@ export default function MaintenanceWidget({ onStatusChange }) {
   const [estimatedEndTime, setEstimatedEndTime] = useState("");
   const [error, setError] = useState("");
 
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAdminMaintenanceStatus();
@@ -24,11 +24,12 @@ export default function MaintenanceWidget({ onStatusChange }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadStatus();
-  }, []);
+    const initialLoad = window.setTimeout(loadStatus, 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [loadStatus]);
 
   const openToggleModal = (enable) => {
     setTargetEnabled(enable);
