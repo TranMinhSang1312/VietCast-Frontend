@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, memo } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import {
     History,
     Loader2,
@@ -28,6 +29,7 @@ import {
 const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const POLL_INTERVAL_MS = 7000;
 const PAGE_SIZE = 10;
+const RESULT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const MODE_ICONS = Object.freeze({
     original: Mic,
@@ -71,6 +73,13 @@ function formatTimestamp(value) {
     const hh = String(date.getHours()).padStart(2, "0");
     const mi = String(date.getMinutes()).padStart(2, "0");
     return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+}
+
+function hasExpiredResult(video, now = Date.now()) {
+    if (video?.status !== "COMPLETED") return false;
+    const retentionStart = new Date(video.updatedAt || video.createdAt || "");
+    if (Number.isNaN(retentionStart.getTime())) return false;
+    return retentionStart.getTime() + RESULT_RETENTION_MS <= now;
 }
 
 const StatusPill = memo(function StatusPill({ status }) {
@@ -131,7 +140,7 @@ const ProgressBar = memo(function ProgressBar({ video }) {
         </div>
     );
 });
-const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
+const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry, onRecreate }) {
     const status = video.status;
     const isCompleted = status === "COMPLETED";
     const isFailed = status === "FAILED";
@@ -140,6 +149,8 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     const [downloadingType, setDownloadingType] = useState(null); // 'video' | 'srt' | null
     const [actionError, setActionError] = useState(null);
     const [subtitlePreviewOpen, setSubtitlePreviewOpen] = useState(false);
+    const [artifactUnavailable, setArtifactUnavailable] = useState(false);
+    const resultExpired = artifactUnavailable || hasExpiredResult(video);
 
     const knownMode = Object.hasOwn(MODE_ICONS, video.audioMode);
     const policy = getVideoModePolicy(video.audioMode);
@@ -169,7 +180,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
     };
 
     const handleDownload = async (type) => {
-        if (downloadingType) return; // single in-flight per row
+        if (downloadingType || resultExpired) return; // single in-flight per row
         setActionError(null);
         setDownloadingType(type);
         try {
@@ -198,10 +209,10 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             // public URL so the user can still get the file inline.
             const code = err.response?.data?.code;
             const status = err.response?.status;
-            const msg = err.response?.data?.message;
             const fallbackUrl = type === "srt" ? video.srtUrl : video.videoUrl;
             if (code === "FILE_EXPIRED" || status === 410) {
-                setActionError(msg || "Tệp này đã hết hạn lưu trữ 7 ngày trên hệ thống. Vui lòng thực hiện lại tác vụ nếu cần.");
+                setArtifactUnavailable(true);
+                setActionError(null);
             } else if (code === "UNSUPPORTED_URL" && fallbackUrl) {
                 window.open(fallbackUrl, "_blank", "noopener");
             } else {
@@ -212,6 +223,11 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
             setDownloadingType(null);
         }
     };
+
+    const handleArtifactExpired = useCallback(() => {
+        setSubtitlePreviewOpen(false);
+        setArtifactUnavailable(true);
+    }, []);
 
     return (
         <article className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-md sm:rounded-3xl sm:p-6">
@@ -265,8 +281,22 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                 </div>
             )}
 
+            {isCompleted && resultExpired && (
+                <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm text-amber-100">
+                    <div className="flex items-start gap-2.5">
+                        <Clock className="mt-0.5 h-4.5 w-4.5 shrink-0 text-amber-300" />
+                        <div>
+                            <p className="font-semibold">Tệp kết quả đã hết hạn</p>
+                            <p className="mt-1 text-xs leading-relaxed text-amber-100/75">
+                                Video và phụ đề đã được tự động xóa sau 7 ngày lưu trữ. Lịch sử tác vụ vẫn được giữ lại để bạn tham khảo.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <footer className="mt-5 flex flex-wrap gap-2.5">
-                {isCompleted && mode.video && video.videoUrl && (
+                {isCompleted && !resultExpired && mode.video && video.videoUrl && (
                     <button
                         type="button"
                         onClick={() => handleDownload("video")}
@@ -286,7 +316,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     </button>
                 )}
 
-                {isCompleted && mode.srt && video.srtUrl && (
+                {isCompleted && !resultExpired && mode.srt && video.srtUrl && (
                     <button
                         type="button"
                         onClick={() => setSubtitlePreviewOpen(true)}
@@ -297,7 +327,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     </button>
                 )}
 
-                {isCompleted && mode.srt && video.srtUrl && (
+                {isCompleted && !resultExpired && mode.srt && video.srtUrl && (
                     <button
                         type="button"
                         onClick={() => handleDownload("srt")}
@@ -313,11 +343,22 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     </button>
                 )}
 
-                {isCompleted && ((mode.video && !video.videoUrl) || (mode.srt && !video.srtUrl)) && (
+                {isCompleted && !resultExpired && ((mode.video && !video.videoUrl) || (mode.srt && !video.srtUrl)) && (
                     <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-2.5 text-xs text-amber-200">
                         <AlertCircle className="h-4 w-4" />
                         Chưa nhận đủ file đầu ra
                     </span>
+                )}
+
+                {isCompleted && resultExpired && video.originalUrl && (
+                    <button
+                        type="button"
+                        onClick={() => onRecreate(video.originalUrl)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4.5 py-2.5 text-xs font-semibold text-white transition hover:bg-indigo-500 active:scale-[0.98]"
+                    >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span>Tạo lại từ link nguồn</span>
+                    </button>
                 )}
 
                 {isFailed && (
@@ -344,6 +385,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
                     taskId={video.taskId}
                     open
                     onClose={() => setSubtitlePreviewOpen(false)}
+                    onExpired={handleArtifactExpired}
                 />
             )}
         </article>
@@ -351,6 +393,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry }) {
 });
 
 export default function VideoHistory() {
+    const navigate = useNavigate();
     const [history, setHistory] = useState([]);
     const [page, setPage] = useState(0);
     const [pageInfo, setPageInfo] = useState({ totalItems: 0, totalPages: 0 });
@@ -482,6 +525,11 @@ export default function VideoHistory() {
 
     const handleManualRefresh = useCallback(() => fetchHistory(true), [fetchHistory]);
 
+    const handleRecreateTask = useCallback((originalUrl) => {
+        if (originalUrl) localStorage.setItem("vc_url", originalUrl);
+        navigate("/dashboard");
+    }, [navigate]);
+
     const hasItems = Array.isArray(history) && history.length > 0;
 
     return (
@@ -562,6 +610,7 @@ export default function VideoHistory() {
                                 key={video.taskId}
                                 video={video}
                                 onRetry={handleRetryTask}
+                                onRecreate={handleRecreateTask}
                             />
                         ))}
                     </div>

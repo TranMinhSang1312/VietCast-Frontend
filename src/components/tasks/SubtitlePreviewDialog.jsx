@@ -18,7 +18,7 @@ function fallbackCopy(text) {
   if (!copied) throw new Error("Copy command was rejected");
 }
 
-export default function SubtitlePreviewDialog({ taskId, open, onClose }) {
+export default function SubtitlePreviewDialog({ taskId, open, onClose, onExpired }) {
   const [content, setContent] = useState("");
   const [filename, setFilename] = useState("");
   const [loading, setLoading] = useState(true);
@@ -39,6 +39,7 @@ export default function SubtitlePreviewDialog({ taskId, open, onClose }) {
     }).catch((requestError) => {
       if (requestError.code === "ERR_CANCELED") return;
       const status = requestError.response?.status;
+      if (status === 410) onExpired?.();
       setError(
         status === 410
           ? "T\u1EC7p ph\u1EE5 \u0111\u1EC1 \u0111\u00E3 h\u1EBFt h\u1EA1n l\u01B0u tr\u1EEF."
@@ -49,7 +50,7 @@ export default function SubtitlePreviewDialog({ taskId, open, onClose }) {
     });
 
     return () => controller.abort();
-  }, [open, taskId]);
+  }, [open, taskId, onExpired]);
 
   useEffect(() => {
     if (!open) return undefined;
