@@ -69,6 +69,36 @@ const CROP_PRESETS = [
 ];
 
 const MAX_CROP_AREA_PERCENT = 40; // Chuẩn công nghiệp: tối đa 40% diện tích video
+const MAX_SRT_CHARACTERS = 1_000_000;
+const SRT_TIMECODE_PATTERN = /\d{1,3}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{1,3}:\d{2}:\d{2}[,.]\d{3}/;
+
+async function readValidatedSrtFile(file) {
+  if (!file?.name?.toLowerCase().endsWith(".srt")) {
+    throw new Error("Vui lòng chọn đúng tệp phụ đề có định dạng .srt.");
+  }
+  if (file.size <= 0) {
+    throw new Error("Tệp SRT đang trống. Vui lòng chọn lại tệp có nội dung phụ đề.");
+  }
+
+  let content;
+  try {
+    content = await file.text();
+  } catch (error) {
+    throw new Error("Không thể đọc tệp SRT này. Vui lòng chọn lại tệp phụ đề.", { cause: error });
+  }
+
+  const normalized = content.replace(/^\uFEFF/, "").trim();
+  if (!normalized) {
+    throw new Error("Tệp SRT đang trống. Vui lòng chọn lại tệp có nội dung phụ đề.");
+  }
+  if (normalized.length > MAX_SRT_CHARACTERS) {
+    throw new Error("Tệp SRT quá lớn. Nội dung tối đa là 1.000.000 ký tự.");
+  }
+  if (!SRT_TIMECODE_PATTERN.test(normalized)) {
+    throw new Error("Tệp không có mốc thời gian SRT hợp lệ. Vui lòng kiểm tra lại phụ đề.");
+  }
+  return normalized;
+}
 
 export default function WatermarkPage() {
   const dispatch = useDispatch();
@@ -315,6 +345,19 @@ export default function WatermarkPage() {
       return;
     }
 
+    // Validate the optional subtitle before uploading a potentially large
+    // video. A selected-but-unreadable file must never silently degrade into
+    // a delogo-only task.
+    let srtText = null;
+    if (selectedSrtFile) {
+      try {
+        srtText = await readValidatedSrtFile(selectedSrtFile);
+      } catch (srtError) {
+        dispatch(setDelogoError(srtError.message));
+        return;
+      }
+    }
+
     dispatch(beginDelogoSubmission());
     const uploadController = new AbortController();
     uploadAbortControllerRef.current = uploadController;
@@ -341,23 +384,15 @@ export default function WatermarkPage() {
         message: "Upload hoàn tất. Đang khởi tạo tác vụ...",
       }));
 
-      // Step 2: Read optional custom .srt file content
-      let srtText = null;
-      if (selectedSrtFile) {
-        try {
-          srtText = await selectedSrtFile.text();
-        } catch (srtErr) {
-          console.warn("Could not read SRT file content:", srtErr);
-        }
-      }
-
-      // Step 3: Submit process payload with the real public R2 video URL
+      // Step 2: Submit process payload with the real public R2 video URL.
+      // srtText was already validated before upload, so hardsub cannot be
+      // accidentally disabled while the UI still shows a selected file.
       const payload = {
         url: r2VideoUrl,
         audioMode: "original",
         logoCoordinates: logoCoords ? logoCoords.str : null,
         subtitleMask: subMaskCoords ? subMaskCoords.str : null,
-        hardsub: Boolean(srtText),
+        hardsub: srtText !== null,
         srtContent: srtText,
       };
 
