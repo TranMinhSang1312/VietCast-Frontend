@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import axios from "axios";
-import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink, ScanText } from "lucide-react";
+import { Loader2, CheckCircle2, Download, AlertCircle, Film, Coins, Subtitles, ExternalLink, ScanText, Link2, UploadCloud, FileVideo, X } from "lucide-react";
 import { MagicWand, SlidersHorizontal, Microphone, SpeakerSimpleX, ClosedCaptioning } from "@phosphor-icons/react";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL_PROVIDER } from "../config";
@@ -14,6 +14,12 @@ import {
 import { getPublicTaskFailureMessage } from "../utils/taskMessages";
 import { openVideoInline } from "../utils/mobileVideo";
 import SubtitlePreviewDialog from "../components/tasks/SubtitlePreviewDialog";
+import {
+  isVideoUploadCancelled,
+  requestVideoUploadTicket,
+  uploadVideoToR2,
+  validateVideoUploadFile,
+} from "../services/videoUpload";
 import {
   VIDEO_TASK_STORAGE_KEY,
   getPipelineProgress,
@@ -117,6 +123,13 @@ const API_BASE_URL = API_BASE_URL_PROVIDER.sync;
 const ACTIVE_TASK_STORAGE_KEY = VIDEO_TASK_STORAGE_KEY;
 const TASK_RECOVERY_LOOKBACK_MS = 10 * 60 * 1000;
 
+function formatUploadSize(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+  if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 function extractUrl(raw) {
   if (!raw || !raw.trim()) return null;
   const match = raw.trim().match(/https?:\/\/\S+/);
@@ -194,6 +207,20 @@ export default function VideoDashboard() {
   const { user, syncProfile } = useAuth();
 
   const [url, setUrl] = useState(() => localStorage.getItem("vc_url") || "");
+  const [sourceMode, setSourceMode] = useState(() =>
+    localStorage.getItem("vc_sourceMode") === "upload" ? "upload" : "link"
+  );
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState(null);
+  const [uploadMetadata, setUploadMetadata] = useState({
+    durationSeconds: 0,
+    width: 0,
+    height: 0,
+  });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const uploadFileInputRef = useRef(null);
+  const uploadAbortControllerRef = useRef(null);
   const [audioMode, setAudioMode] = useState(() => localStorage.getItem("vc_audioMode") || "mix");
   const [voice, setVoice] = useState(() => localStorage.getItem("vc_voice") || "gcp:vi-VN-Neural2-A");
   const [targetLanguage, setTargetLanguage] = useState(() => {
@@ -309,6 +336,14 @@ export default function VideoDashboard() {
 
   useEffect(() => () => stopVoicePreview(), [stopVoicePreview]);
 
+  useEffect(() => () => {
+    uploadAbortControllerRef.current?.abort();
+  }, []);
+
+  useEffect(() => () => {
+    if (uploadPreviewUrl) URL.revokeObjectURL(uploadPreviewUrl);
+  }, [uploadPreviewUrl]);
+
   useEffect(() => {
     localStorage.setItem("vc_hardsub", hardsub ? "true" : "false");
   }, [hardsub]);
@@ -354,6 +389,10 @@ export default function VideoDashboard() {
   }, [url]);
 
   useEffect(() => {
+    localStorage.setItem("vc_sourceMode", sourceMode);
+  }, [sourceMode]);
+
+  useEffect(() => {
     localStorage.setItem("vc_audioMode", audioMode);
   }, [audioMode]);
 
@@ -396,6 +435,65 @@ export default function VideoDashboard() {
     setVideoError(false);
     clearPollInterval();
   }, [clearPollInterval]);
+
+  const clearUploadSelection = useCallback(() => {
+    setUploadFile(null);
+    setUploadPreviewUrl(null);
+    setUploadMetadata({ durationSeconds: 0, width: 0, height: 0 });
+    setUploadProgress(0);
+    if (uploadFileInputRef.current) uploadFileInputRef.current.value = "";
+  }, []);
+
+  const selectUploadFile = useCallback((file) => {
+    try {
+      validateVideoUploadFile(file);
+      setUploadFile(file);
+      setUploadPreviewUrl(URL.createObjectURL(file));
+      setUploadMetadata({ durationSeconds: 0, width: 0, height: 0 });
+      setUploadProgress(0);
+      setCostPreview(null);
+      setError(null);
+    } catch (fileError) {
+      clearUploadSelection();
+      setError(fileError.message || "Tệp video không hợp lệ.");
+    }
+  }, [clearUploadSelection]);
+
+  const handleUploadFileChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (file) selectUploadFile(file);
+  }, [selectUploadFile]);
+
+  const handleUploadDrop = useCallback((event) => {
+    event.preventDefault();
+    if (isLoading || result?.status === "PROCESSING") return;
+    const file = event.dataTransfer?.files?.[0];
+    if (file) selectUploadFile(file);
+  }, [isLoading, result?.status, selectUploadFile]);
+
+  const handleUploadMetadata = useCallback((event) => {
+    const media = event.currentTarget;
+    const durationSeconds = Math.ceil(Number(media.duration) || 0);
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      setError("Không thể đọc thời lượng video. Vui lòng chọn một tệp khác.");
+      return;
+    }
+    setUploadMetadata({
+      durationSeconds,
+      width: media.videoWidth || 0,
+      height: media.videoHeight || 0,
+    });
+    setError(null);
+  }, []);
+
+  const handleSourceModeChange = useCallback((nextMode) => {
+    if (nextMode === sourceMode || isLoading || result?.status === "PROCESSING") return;
+    if (result) resetResultState();
+    setSourceMode(nextMode);
+    setError(null);
+    setCostPreview(null);
+    setCostPreviewLoading(false);
+  }, [isLoading, resetResultState, result, sourceMode]);
 
   const handleUrlChange = useCallback(
     (e) => {
@@ -469,9 +567,10 @@ const handleReset = useCallback(() => {
         setCostPreviewLoading(false);
         setShowCreditWarning(false);
         setVoicePreviewError(null);
+        clearUploadSelection();
         stopVoicePreview();
         clearPollInterval();
-    }, [clearPollInterval, stopVoicePreview, targetLanguage]);
+    }, [clearPollInterval, clearUploadSelection, stopVoicePreview, targetLanguage]);
 
     const handleDownload = useCallback(async (taskId, type) => {
         if (!taskId) return;
@@ -523,6 +622,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
   const seconds = Math.max(0, Number(durationSeconds) || 0);
   const minutes = seconds / 60;
   const policy = getVideoModePolicy(mode);
+  const overCap = seconds > PRICING.maxMinutes * 60;
   const baseCost = Math.max(
     policy.minimumPrice,
     Math.round(minutes * policy.perMinuteRate),
@@ -535,10 +635,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
 
   const estimatedCost = (baseCost + hardsubCost) || PRICING.dubPerMinute;
   const currentBalance = Number(userBalance) || 0;
-  const sufficient = currentBalance >= estimatedCost;
+  const sufficient = !overCap && currentBalance >= estimatedCost;
 
   return {
     durationSeconds: seconds,
+    estimatedMinutes: Math.max(1, Math.ceil(minutes)),
     totalRequired: estimatedCost,
     estimatedCost,
     currentBalance: currentBalance,
@@ -546,6 +647,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
     sufficient,
     missingCredits: sufficient ? 0 : Math.max(0, Math.round(estimatedCost - currentBalance)),
     audioMode: mode,
+    overCap,
+    maxMinutes: PRICING.maxMinutes,
+    hint: overCap
+      ? `Video vượt quá giới hạn ${PRICING.maxMinutes} phút. Vui lòng cắt ngắn trước khi xử lý.`
+      : "Chi phí được ước tính từ thời lượng tệp; máy chủ sẽ xác minh lại trước khi tạo tác vụ.",
   };
 }
 
@@ -569,6 +675,32 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         setCostPreviewLoading(false);
         lastPreviewUrlRef.current = "";
         cachedDurationRef.current = null;
+      }, 0);
+      return () => clearTimeout(handle);
+    }
+
+    if (sourceMode === "upload") {
+      const seconds = uploadMetadata.durationSeconds;
+      if (!uploadFile || !seconds) {
+        const handle = setTimeout(() => {
+          if (requestId !== previewRequestIdRef.current) return;
+          setCostPreview(null);
+          setCostPreviewLoading(false);
+        }, 0);
+        return () => clearTimeout(handle);
+      }
+
+      const userBalance = (Number(user?.creditBalance) || 0)
+        + (Number(user?.bonusCreditBalance) || 0);
+      const handle = setTimeout(() => {
+        if (requestId !== previewRequestIdRef.current) return;
+        setCostPreview(computeInstantCostPreview(
+          seconds,
+          audioMode,
+          userBalance,
+          hardsub,
+        ));
+        setCostPreviewLoading(false);
       }, 0);
       return () => clearTimeout(handle);
     }
@@ -638,7 +770,17 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       clearTimeout(handle);
       controller.abort();
     };
-  }, [url, audioMode, hardsub, user?.creditBalance, user?.bonusCreditBalance, result]);
+  }, [
+    url,
+    sourceMode,
+    uploadFile,
+    uploadMetadata.durationSeconds,
+    audioMode,
+    hardsub,
+    user?.creditBalance,
+    user?.bonusCreditBalance,
+    result,
+  ]);
 
   const refreshUserCredit = useCallback(async () => {
     try {
@@ -702,16 +844,38 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
     async (e) => {
       e.preventDefault();
 
-      const raw = url.trim();
-      if (!raw) {
-        setError("Vui lòng nhập URL video.");
-        return;
-      }
+      let cleanUrl = null;
+      if (sourceMode === "link") {
+        const raw = url.trim();
+        if (!raw) {
+          setError("Vui lòng nhập URL video.");
+          return;
+        }
 
-      const cleanUrl = extractUrl(raw);
-      if (!cleanUrl) {
-        setError("Không tìm thấy đường dẫn video hợp lệ trong nội dung bạn dán.");
-        return;
+        cleanUrl = extractUrl(raw);
+        if (!cleanUrl) {
+          setError("Không tìm thấy đường dẫn video hợp lệ trong nội dung bạn dán.");
+          return;
+        }
+      } else {
+        if (!uploadFile) {
+          setError("Vui lòng chọn video từ thiết bị.");
+          return;
+        }
+        try {
+          validateVideoUploadFile(uploadFile);
+        } catch (fileError) {
+          setError(fileError.message || "Tệp video không hợp lệ.");
+          return;
+        }
+        if (!uploadMetadata.durationSeconds) {
+          setError("Hệ thống đang đọc thông tin video. Vui lòng chờ một chút rồi thử lại.");
+          return;
+        }
+        if (uploadMetadata.durationSeconds > PRICING.maxMinutes * 60) {
+          setError(`Video vượt quá giới hạn ${PRICING.maxMinutes} phút. Vui lòng cắt ngắn trước khi xử lý.`);
+          return;
+        }
       }
 
       if ((audioMode === "dub" || audioMode === "mix") && !selectedVoice) {
@@ -729,6 +893,10 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       //   - the post-hoc charge then throws InsufficientCreditException
       //     and the user effectively gets a free render.
       // The backend re-checks on POST /process — this is purely UX.
+      if (costPreview?.overCap === true) {
+        setError(`Video vượt quá giới hạn ${PRICING.maxMinutes} phút. Vui lòng cắt ngắn trước khi xử lý.`);
+        return;
+      }
       if (costPreview && costPreview.sufficient === false) {
         setShowCreditWarning(true);
         return;
@@ -739,25 +907,50 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
       recoveryAttemptedRef.current = false;
       const clientRequestId = globalThis.crypto?.randomUUID?.()
         || `vc-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-      const pendingSubmission = {
-        clientRequestId,
-        status: "PROCESSING",
-        url: cleanUrl,
-        audioMode,
-        sourceLanguage,
-        targetLanguage,
-        hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
-        visualOcr: (audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle")
-          ? visualOcr
-          : false,
-        submittedAt: new Date().toISOString(),
-      };
-      publishActiveVideoTask(pendingSubmission);
-      setResult(pendingSubmission);
-      setVideoReady(false);
-      setVideoError(false);
+      let pendingSubmission = null;
+      const uploadController = sourceMode === "upload" ? new AbortController() : null;
+      if (uploadController) uploadAbortControllerRef.current = uploadController;
 
       try {
+        if (sourceMode === "upload") {
+          setIsUploading(true);
+          setUploadProgress(0);
+          const uploadTicket = await requestVideoUploadTicket(
+            uploadFile,
+            uploadController.signal,
+          );
+          cleanUrl = await uploadVideoToR2({
+            file: uploadFile,
+            ticket: uploadTicket,
+            signal: uploadController.signal,
+            onProgress: setUploadProgress,
+          });
+          setIsUploading(false);
+        }
+
+        pendingSubmission = {
+          clientRequestId,
+          status: "PROCESSING",
+          url: cleanUrl,
+          sourceMode,
+          sourceName: sourceMode === "upload" ? uploadFile?.name : null,
+          audioMode,
+          sourceLanguage,
+          targetLanguage,
+          hardsub: (audioMode === "dub" || audioMode === "mix") ? hardsub : false,
+          visualOcr: (audioMode === "dub" || audioMode === "mix" || audioMode === "subtitle")
+            ? visualOcr
+            : false,
+          submittedAt: new Date().toISOString(),
+        };
+        // A recoverable task exists only after the source upload is complete.
+        // Closing the page during PUT leaves no phantom PROCESSING card; the
+        // R2 inputs/ lifecycle removes that abandoned object automatically.
+        publishActiveVideoTask(pendingSubmission);
+        setResult(pendingSubmission);
+        setVideoReady(false);
+        setVideoError(false);
+
         const { data } = await axios.post(
           `${API_BASE_URL}/api/v1/videos/process`,
           {
@@ -780,6 +973,8 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         const acceptedResult = {
           ...data,
           url: data.url ?? cleanUrl,
+          sourceMode: pendingSubmission.sourceMode,
+          sourceName: pendingSubmission.sourceName,
           audioMode: data.audioMode ?? audioMode,
           voice: data.voice ?? selectedVoice,
           sourceLanguage: data.sourceLanguage ?? sourceLanguage,
@@ -794,6 +989,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         setResult(acceptedResult);
         refreshUserCredit();
       } catch (err) {
+        if (sourceMode === "upload" && isVideoUploadCancelled(err, uploadController?.signal)) {
+          if (pendingSubmission) resetResultState();
+          setError("Đã hủy tải video lên. Bạn có thể chọn lại tệp hoặc thử lại khi sẵn sàng.");
+          return;
+        }
         const status = err?.response?.status || err?.status;
         const code = err?.response?.data?.code || err?.code;
         const backendMessage = err?.response?.data?.message;
@@ -801,7 +1001,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
         // A timeout/network disconnect is ambiguous: the backend may have
         // accepted and even completed the task after the browser stopped
         // waiting. Recover it before showing an error or clearing the UI.
-        if (!err?.response || code === "ECONNABORTED") {
+        if (pendingSubmission && (!err?.response || code === "ECONNABORTED")) {
           try {
             const recovered = await recoverSubmittedTask(pendingSubmission);
             if (recovered) {
@@ -824,7 +1024,7 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           }
         }
 
-        resetResultState();
+        if (pendingSubmission) resetResultState();
         if (code === "VIDEO_TOO_LONG" || status === 413) {
           // Cap enforcement surface. The preview may have failed
           // (yt-dlp timeout) so the user saw no banner, but /process
@@ -835,6 +1035,8 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
             backendMessage ||
               "Video vượt quá giới hạn 90 phút. Vui lòng cắt video trước khi xử lý."
           );
+        } else if (code === "UPLOAD_INCOMPLETE" || code === "UPLOAD_NOT_OWNED") {
+          setError(backendMessage || "Video tải lên chưa hoàn chỉnh. Vui lòng chọn lại tệp và thử lại.");
         } else if (status === 402 || status === 403 || code === "INSUFFICIENT_CREDIT") {
           try {
             await syncProfile();
@@ -847,14 +1049,23 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           );
         } else {
           console.error("[video-submit] Không thể khởi tạo tác vụ", err);
-          setError("Chưa thể bắt đầu xử lý video lúc này. Vui lòng thử lại sau ít phút.");
+          setError(
+            sourceMode === "upload"
+              ? (backendMessage || "Chưa thể tải hoặc xử lý tệp video lúc này. Vui lòng thử lại.")
+              : "Chưa thể bắt đầu xử lý video lúc này. Vui lòng thử lại sau ít phút."
+          );
         }
       } finally {
+        uploadAbortControllerRef.current = null;
+        setIsUploading(false);
         setIsLoading(false);
       }
     },
     [
       url,
+      sourceMode,
+      uploadFile,
+      uploadMetadata.durationSeconds,
       audioMode,
       selectedVoice,
       costPreview,
@@ -990,22 +1201,155 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
           {/* Left Column: Form Controls */}
           <section className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-8 lg:col-span-7">
             <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6" noValidate>
-              {/* URL input */}
-              <div>
-                <label htmlFor="video-url" className="block text-sm font-semibold text-zinc-300 mb-2">
-                  Đường dẫn Video <span className="text-zinc-500 font-normal">(TikTok / YouTube / Douyin)</span>
-                </label>
-                <input
-                  id="video-url"
-                  type="url"
-                  inputMode="url"
-                  placeholder="Dán link video tại đây..."
-                  value={url}
-                  onChange={handleUrlChange}
-                  onPaste={handleUrlPaste}
-                  disabled={isLoading || isProcessing}
-                  className="w-full px-4 py-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-zinc-100 placeholder:text-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed text-base font-mono"
-                />
+              {/* Source selector: one processing pipeline, two ways to supply the source. */}
+              <div className="space-y-3">
+                <div
+                  role="tablist"
+                  aria-label="Nguồn video"
+                  className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-slate-950/80 p-1"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={sourceMode === "link"}
+                    disabled={isLoading || isProcessing}
+                    onClick={() => handleSourceModeChange("link")}
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+                      sourceMode === "link"
+                        ? "bg-indigo-500/20 text-white ring-1 ring-indigo-400/40"
+                        : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    <Link2 className="h-4 w-4" />
+                    Dán liên kết
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={sourceMode === "upload"}
+                    disabled={isLoading || isProcessing}
+                    onClick={() => handleSourceModeChange("upload")}
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+                      sourceMode === "upload"
+                        ? "bg-indigo-500/20 text-white ring-1 ring-indigo-400/40"
+                        : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+                    } disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    <UploadCloud className="h-4 w-4" />
+                    Tải video lên
+                  </button>
+                </div>
+
+                {sourceMode === "link" ? (
+                  <div>
+                    <label htmlFor="video-url" className="block text-sm font-semibold text-zinc-300 mb-2">
+                      Đường dẫn Video <span className="text-zinc-500 font-normal">(TikTok / YouTube / Douyin)</span>
+                    </label>
+                    <input
+                      id="video-url"
+                      type="url"
+                      inputMode="url"
+                      placeholder="Dán link video tại đây..."
+                      value={url}
+                      onChange={handleUrlChange}
+                      onPaste={handleUrlPaste}
+                      disabled={isLoading || isProcessing}
+                      className="w-full px-4 py-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-zinc-100 placeholder:text-slate-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed text-base font-mono"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <input
+                      ref={uploadFileInputRef}
+                      id="video-file"
+                      type="file"
+                      accept="video/mp4,.mp4,video/quicktime,.mov,video/webm,.webm"
+                      disabled={isLoading || isProcessing}
+                      onChange={handleUploadFileChange}
+                      className="sr-only"
+                    />
+
+                    {!uploadFile ? (
+                      <label
+                        htmlFor="video-file"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={handleUploadDrop}
+                        className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-indigo-400/30 bg-indigo-500/[0.04] px-5 py-8 text-center transition hover:border-indigo-400/60 hover:bg-indigo-500/[0.07]"
+                      >
+                        <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/25">
+                          <UploadCloud className="h-6 w-6" />
+                        </span>
+                        <span className="text-sm font-bold text-slate-100">Chọn hoặc kéo video vào đây</span>
+                        <span className="mt-1 text-xs leading-relaxed text-slate-500">
+                          MP4, MOV hoặc WebM · tối đa 2 GB · tối đa {PRICING.maxMinutes} phút
+                        </span>
+                      </label>
+                    ) : (
+                      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/80">
+                        <div className="relative aspect-video bg-black">
+                          <video
+                            src={uploadPreviewUrl || undefined}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            onLoadedMetadata={handleUploadMetadata}
+                            onError={() => setError("Trình duyệt không thể đọc tệp video này. Vui lòng thử MP4, MOV hoặc WebM khác.")}
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3 border-t border-white/[0.06] px-3 py-3">
+                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300">
+                            <FileVideo className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-100">{uploadFile.name}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              {formatUploadSize(uploadFile.size)}
+                              {uploadMetadata.durationSeconds > 0 && ` · ${Math.floor(uploadMetadata.durationSeconds / 60)}:${String(uploadMetadata.durationSeconds % 60).padStart(2, "0")}`}
+                              {uploadMetadata.width > 0 && ` · ${uploadMetadata.width}×${uploadMetadata.height}`}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            aria-label="Bỏ video đã chọn"
+                            title="Chọn video khác"
+                            disabled={isLoading || isProcessing}
+                            onClick={clearUploadSelection}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {isUploading && (
+                      <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.05] px-4 py-3">
+                        <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+                          <span className="font-semibold text-indigo-100">Đang tải video trực tiếp lên R2</span>
+                          <span className="font-mono text-indigo-300">{uploadProgress}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-[width] duration-200"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => uploadAbortControllerRef.current?.abort()}
+                          className="mt-3 text-xs font-semibold text-rose-300 transition hover:text-rose-200"
+                        >
+                          Hủy tải lên
+                        </button>
+                      </div>
+                    )}
+
+                    <p className="text-[11px] leading-relaxed text-slate-500">
+                      Video chỉ được đưa vào hàng chờ sau khi tải lên hoàn tất. Tệp nguồn được xóa sau khi xử lý thành công.
+                    </p>
+                  </div>
+                )}
 
                 {/* ----- Cost preview panel -----
                     Renders inline below the URL field the moment the
@@ -1368,21 +1712,29 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                 // we keep the breakdown above as the user-visible
                 // source of truth.
                 const previewFailedBalance =
-                  costPreview && costPreview.sufficient === false;
+                  costPreview && costPreview.sufficient === false && costPreview.overCap !== true;
                 const voiceUnavailable =
                   (audioMode === "dub" || audioMode === "mix") && !selectedVoice;
+                const sourceUnavailable = sourceMode === "upload"
+                  ? !uploadFile || !uploadMetadata.durationSeconds
+                  : false;
+                const sourceOverCap = costPreview?.overCap === true;
                 const isDisabled =
                   isLoading ||
                   previewFailedBalance ||
                   costPreviewLoading ||
-                  voiceUnavailable;
+                  voiceUnavailable ||
+                  sourceUnavailable ||
+                  sourceOverCap;
                 return (
                   <>
                     <button
                       type="submit"
                       disabled={isDisabled}
                       title={
-                        previewFailedBalance
+                        sourceOverCap
+                          ? `Video vượt quá giới hạn ${PRICING.maxMinutes} phút.`
+                          : previewFailedBalance
                           ? "Số dư chưa đủ. Vui lòng nạp thêm trước khi bắt đầu."
                           : voiceUnavailable
                           ? "Ngôn ngữ này chưa có giọng AI để lồng tiếng."
@@ -1409,7 +1761,12 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                           : "shimmer-btn bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-300 text-slate-950 shadow-[0_18px_50px_-15px_rgba(16,185,129,0.6)] hover:shadow-[0_22px_60px_-10px_rgba(16,185,129,0.8)] active:scale-[0.97]")
                       }
                     >
-                      {isLoading || costPreviewLoading ? (
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Đang tải video lên · {uploadProgress}%</span>
+                        </>
+                      ) : isLoading || costPreviewLoading ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
                           <span>{costPreviewLoading && !isLoading ? "Đang tính chi phí..." : "Đang phân tích..."}</span>
@@ -1423,6 +1780,11 @@ function computeInstantCostPreview(durationSeconds, mode, userBalance, hardsubFl
                         <>
                           <AlertCircle className="w-5 h-5" />
                           <span>Số dư chưa đủ để bắt đầu</span>
+                        </>
+                      ) : sourceOverCap ? (
+                        <>
+                          <AlertCircle className="w-5 h-5" />
+                          <span>Video vượt quá {PRICING.maxMinutes} phút</span>
                         </>
                       ) : (
                         <>

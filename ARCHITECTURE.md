@@ -37,3 +37,12 @@ badges, but must not recreate pricing/output maps.
 - `store/`: durable client state.
 - `config/pricing.js`: global numeric pricing constants.
 - `config/videoModes.js`: per-mode Strategy registry.
+
+## Video source boundary
+
+`VideoDashboard` presents link and device-upload tabs but submits both through
+the same processing contract. Device files use `services/videoUpload.js` to
+request a short-lived upload ticket and stream directly from the browser to R2
+with progress and cancellation. Only after the upload succeeds does the page
+publish an active task and call `/api/v1/videos/process`, avoiding phantom
+processing cards when a user closes the page during upload.

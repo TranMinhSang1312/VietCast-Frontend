@@ -82,6 +82,15 @@ function hasExpiredResult(video, now = Date.now()) {
     return retentionStart.getTime() + RESULT_RETENTION_MS <= now;
 }
 
+function isUploadedSource(value) {
+    if (!value) return false;
+    try {
+        return new URL(value).pathname.startsWith("/inputs/");
+    } catch {
+        return String(value).includes("/inputs/");
+    }
+}
+
 const StatusPill = memo(function StatusPill({ status }) {
     const style = STATUS_STYLES[status] ?? {
         ...FALLBACK_STATUS_STYLE,
@@ -254,9 +263,15 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry, onRecr
                 </div>
             </header>
 
-            {video.originalUrl && (
+            {video.originalUrl && !isUploadedSource(video.originalUrl) && (
                 <p className="text-sm text-zinc-400 truncate mb-4 select-none font-mono">
                   Source: <span className="underline underline-offset-2">{video.originalUrl}</span>
+                </p>
+            )}
+
+            {video.originalUrl && isUploadedSource(video.originalUrl) && (
+                <p className="mb-4 truncate text-sm text-zinc-400 select-none">
+                    Nguồn: <span className="font-medium text-zinc-300">Video tải lên từ thiết bị</span>
                 </p>
             )}
 
@@ -350,7 +365,7 @@ const VideoHistoryItem = memo(function VideoHistoryItem({ video, onRetry, onRecr
                     </span>
                 )}
 
-                {isCompleted && resultExpired && video.originalUrl && (
+                {isCompleted && resultExpired && video.originalUrl && !isUploadedSource(video.originalUrl) && (
                     <button
                         type="button"
                         onClick={() => onRecreate(video.originalUrl)}
